@@ -10,19 +10,24 @@ yarn-error.log*
 .expo-shared/
 dist/
 web-build/
+expo-env.d.ts
+.metro-health-check*
 
-# Native build artefacts
-ios/build/
-ios/Pods/
-ios/.xcode.env.local
-android/build/
-android/app/build/
-android/.gradle/
-android/captures/
+# Native build artefacts (produced by `expo prebuild`; not committed in the managed workflow)
+ios/
+android/
+*.orig.*
 *.keystore
 *.p12
+*.p8
+*.pem
 *.mobileprovision
 *.jks
+*.key
+.kotlin/
+
+# TypeScript
+*.tsbuildinfo
 
 # Environment variables and secrets
 .env
