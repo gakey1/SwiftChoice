@@ -9,6 +9,10 @@ import {
 } from "@expo-google-fonts/dm-sans";
 
 import { DesignSystemDemo } from "@/screens/_DesignSystemDemo";
+// Import Firebase at app boot so init runs once. If env vars are missing
+// or config is malformed, the import throws here and the app fails fast
+// with a clear error from src/services/firebase.ts.
+import "@/services/firebase";
 import { T } from "@/theme/tokens";
 
 export default function App() {
