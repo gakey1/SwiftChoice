@@ -16,7 +16,7 @@ Before cloning, set up these on your machine:
 
 You also need:
 
-- A Google account that has been invited to the SwiftChoice Firebase project. Ask Yvonne if you do not have access yet.
+- A Google account that has been invited to the SwiftChoice Firebase project. Ask the team lead if you do not have access yet.
 
 ## Getting started
 
@@ -237,7 +237,7 @@ The `@/*` path alias resolves to `./src/*`. Restart your editor's TypeScript ser
 Use the iOS Simulator or Android emulator instead. Expo Go in the stores is often behind the latest SDK. We move to development builds in Sprint 1 anyway.
 
 **Firebase deploy says "permission denied" or "no active project".**
-Run `npx firebase login` to sign in, then `npx firebase use default` to select the SwiftChoice project. If your account is not a project member, ask Yvonne to add you.
+Run `npx firebase login` to sign in, then `npx firebase use default` to select the SwiftChoice project. If your account is not a project member, ask the team lead to add you.
 
 ## Team
 
