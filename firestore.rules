@@ -1,0 +1,19 @@
+rules_version = "2";
+
+// SwiftChoice Firestore security rules.
+// Closed by default. The only writable paths are under users/{uid}/,
+// and only when the requesting user's authentication UID matches the
+// owning user's ID.
+//
+// This rule covers every nested document and subcollection under a
+// user's own tree: profile doc, fuelPool, focusPool, priorityPool,
+// decisions. Anything outside users/{uid}/ is rejected.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/{document=**} {
+      allow read, write: if request.auth != null
+                         && request.auth.uid == uid;
+    }
+  }
+}
