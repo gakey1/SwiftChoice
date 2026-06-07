@@ -1,3 +1,4 @@
+import type { ComponentProps } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 
 import { RegisterScreen } from "@/screens/auth/RegisterScreen";
@@ -6,6 +7,13 @@ import { registerWithEmail } from "@/services/auth";
 jest.mock("@/services/auth", () => ({ registerWithEmail: jest.fn() }));
 
 const mockRegister = registerWithEmail as jest.Mock;
+
+function renderScreen() {
+  const navigate = jest.fn();
+  const props = { navigation: { navigate } } as unknown as ComponentProps<typeof RegisterScreen>;
+  render(<RegisterScreen {...props} />);
+  return { navigate };
+}
 
 function fillValidForm() {
   fireEvent.changeText(screen.getByTestId("register-email"), "a@b.com");
@@ -19,7 +27,7 @@ describe("RegisterScreen", () => {
   });
 
   it("shows inline validation errors and does not call the service on invalid input", () => {
-    render(<RegisterScreen />);
+    renderScreen();
     fireEvent.press(screen.getByText("Create account"));
 
     expect(screen.getByTestId("register-email-error")).toBeTruthy();
@@ -28,7 +36,7 @@ describe("RegisterScreen", () => {
 
   it("calls the register service with valid input", async () => {
     mockRegister.mockResolvedValue("uid-123");
-    render(<RegisterScreen />);
+    renderScreen();
     fillValidForm();
     fireEvent.press(screen.getByText("Create account"));
 
@@ -39,12 +47,18 @@ describe("RegisterScreen", () => {
 
   it("surfaces a form-level error when the service rejects", async () => {
     mockRegister.mockRejectedValue({ code: "auth/email-already-in-use" });
-    render(<RegisterScreen />);
+    renderScreen();
     fillValidForm();
     fireEvent.press(screen.getByText("Create account"));
 
     await waitFor(() => {
       expect(screen.getByTestId("register-form-error")).toBeTruthy();
     });
+  });
+
+  it("navigates to Login from the footer link", () => {
+    const { navigate } = renderScreen();
+    fireEvent.press(screen.getByText("Log in"));
+    expect(navigate).toHaveBeenCalledWith("Login");
   });
 });

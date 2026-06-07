@@ -56,6 +56,29 @@ export function validateRegisterForm(fields: RegisterFields): RegisterErrors {
   return errors;
 }
 
-export function hasErrors(errors: RegisterErrors): boolean {
-  return Object.keys(errors).length > 0;
+export function hasErrors(errors: Record<string, string | undefined>): boolean {
+  return Object.values(errors).some((message) => message !== undefined);
+}
+
+// --- Login (US05) ---
+
+export type LoginFields = {
+  email: string;
+  password: string;
+};
+
+export type LoginErrors = {
+  email?: string;
+  password?: string;
+};
+
+export function validateLoginForm(fields: LoginFields): LoginErrors {
+  const errors: LoginErrors = {};
+  const email = validateEmail(fields.email);
+  if (email) errors.email = email;
+  // Login only requires a non-empty password. The length policy applies at
+  // registration; an existing account may predate any policy change, so we do
+  // not re-impose it here.
+  if (!fields.password) errors.password = "Enter your password.";
+  return errors;
 }

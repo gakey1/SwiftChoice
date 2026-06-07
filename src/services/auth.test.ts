@@ -1,10 +1,11 @@
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 
-import { registerWithEmail } from "@/services/auth";
+import { loginWithEmail, registerWithEmail } from "@/services/auth";
 import { createUserDocument } from "@/services/firestore/users";
 
 jest.mock("firebase/auth", () => ({
   createUserWithEmailAndPassword: jest.fn(),
+  signInWithEmailAndPassword: jest.fn(),
 }));
 jest.mock("@/services/firebase", () => ({ auth: {}, db: {} }));
 jest.mock("@/services/firestore/users", () => ({
@@ -12,6 +13,7 @@ jest.mock("@/services/firestore/users", () => ({
 }));
 
 const mockCreate = createUserWithEmailAndPassword as jest.Mock;
+const mockSignIn = signInWithEmailAndPassword as jest.Mock;
 const mockCreateDoc = createUserDocument as jest.Mock;
 
 describe("registerWithEmail", () => {
@@ -37,5 +39,28 @@ describe("registerWithEmail", () => {
       code: "auth/email-already-in-use",
     });
     expect(mockCreateDoc).not.toHaveBeenCalled();
+  });
+});
+
+describe("loginWithEmail", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("signs in with a trimmed email and returns the uid", async () => {
+    mockSignIn.mockResolvedValue({ user: { uid: "uid-9" } });
+
+    const uid = await loginWithEmail("  user@b.com ", "secretpw");
+
+    expect(mockSignIn).toHaveBeenCalledWith({}, "user@b.com", "secretpw");
+    expect(uid).toBe("uid-9");
+  });
+
+  it("propagates auth errors", async () => {
+    mockSignIn.mockRejectedValue({ code: "auth/invalid-credential" });
+
+    await expect(loginWithEmail("a@b.com", "x")).rejects.toMatchObject({
+      code: "auth/invalid-credential",
+    });
   });
 });

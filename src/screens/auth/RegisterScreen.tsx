@@ -3,33 +3,25 @@
 //
 // The design system is a logged-in-only prototype with no auth screen, so
 // this is built in the same visual language: warm canvas, the logo lockup,
-// DM Sans, token-styled inputs, and the shared Button atom. Auth is a
-// universal teal surface, so module-colour scoping does not apply.
+// DM Sans, the shared TextField, and the Button atom. Auth is a universal
+// teal surface, so module-colour scoping does not apply.
 
 import { useState } from "react";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
-import type { TextInputProps } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import { Button } from "@/components/Button";
+import { TextField } from "@/components/TextField";
 import { registerErrorMessage } from "@/features/auth/errorMessages";
-import {
-  hasErrors,
-  validateRegisterForm,
-  type RegisterErrors,
-} from "@/features/auth/validation";
+import { hasErrors, validateRegisterForm, type RegisterErrors } from "@/features/auth/validation";
+import type { AuthStackParamList } from "@/navigation/types";
 import { registerWithEmail } from "@/services/auth";
 import { T } from "@/theme/tokens";
 
-export function RegisterScreen() {
+type RegisterScreenProps = NativeStackScreenProps<AuthStackParamList, "Register">;
+
+export function RegisterScreen({ navigation }: RegisterScreenProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -72,7 +64,7 @@ export function RegisterScreen() {
           <Text style={styles.title}>Create your account</Text>
           <Text style={styles.subtitle}>One clear choice at a time.</Text>
 
-          <Field
+          <TextField
             label="Email"
             value={email}
             onChangeText={setEmail}
@@ -84,7 +76,7 @@ export function RegisterScreen() {
             error={errors.email}
             testID="register-email"
           />
-          <Field
+          <TextField
             label="Password"
             value={password}
             onChangeText={setPassword}
@@ -95,7 +87,7 @@ export function RegisterScreen() {
             error={errors.password}
             testID="register-password"
           />
-          <Field
+          <TextField
             label="Confirm password"
             value={confirmPassword}
             onChangeText={setConfirmPassword}
@@ -118,57 +110,26 @@ export function RegisterScreen() {
               {submitting ? "Creating account..." : "Create account"}
             </Button>
           </View>
+
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Already have an account? </Text>
+            <Text
+              style={styles.footerLink}
+              accessibilityRole="button"
+              onPress={() => navigation.navigate("Login")}
+            >
+              Log in
+            </Text>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-type FieldProps = {
-  label: string;
-  value: string;
-  onChangeText: (value: string) => void;
-  placeholder?: string;
-  error?: string | undefined;
-  secureTextEntry?: boolean;
-  keyboardType?: TextInputProps["keyboardType"];
-  autoCapitalize?: TextInputProps["autoCapitalize"];
-  autoComplete?: TextInputProps["autoComplete"];
-  textContentType?: TextInputProps["textContentType"];
-  testID?: string;
-};
-
-function Field({ label, value, onChangeText, placeholder, error, testID, ...inputProps }: FieldProps) {
-  return (
-    <View style={styles.field}>
-      <Text style={styles.label}>{label}</Text>
-      <TextInput
-        style={[styles.input, error ? styles.inputError : null]}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={T.fg3}
-        accessibilityLabel={label}
-        testID={testID}
-        {...inputProps}
-      />
-      {error ? (
-        <Text style={styles.fieldError} testID={`${testID}-error`}>
-          {error}
-        </Text>
-      ) : null}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: T.canvas,
-  },
-  flex: {
-    flex: 1,
-  },
+  safe: { flex: 1, backgroundColor: T.canvas },
+  flex: { flex: 1 },
   content: {
     paddingHorizontal: T.spacing.pageX,
     paddingTop: T.spacing[6],
@@ -188,16 +149,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  logoLetter: {
-    color: T.tealOn,
-    fontFamily: T.font.bold,
-    fontSize: T.fontSize.title,
-  },
-  wordmark: {
-    fontFamily: T.font.bold,
-    fontSize: T.fontSize.title,
-    color: T.fg1,
-  },
+  logoLetter: { color: T.tealOn, fontFamily: T.font.bold, fontSize: T.fontSize.title },
+  wordmark: { fontFamily: T.font.bold, fontSize: T.fontSize.title, color: T.fg1 },
   title: {
     fontFamily: T.font.bold,
     fontSize: T.fontSize.display,
@@ -210,42 +163,14 @@ const styles = StyleSheet.create({
     color: T.fg2,
     marginBottom: T.spacing[6],
   },
-  field: {
-    marginBottom: T.spacing[4],
-  },
-  label: {
-    fontFamily: T.font.semibold,
-    fontSize: T.fontSize.body,
-    color: T.fg1,
-    marginBottom: T.spacing[2],
-  },
-  input: {
-    height: 52,
-    borderWidth: 1,
-    borderColor: T.border,
-    borderRadius: T.radii.input,
-    backgroundColor: T.surface,
-    paddingHorizontal: T.spacing[4],
-    fontFamily: T.font.regular,
-    fontSize: T.fontSize.subtitle,
-    color: T.fg1,
-  },
-  inputError: {
-    borderColor: T.badgeHigh,
-  },
-  fieldError: {
-    fontFamily: T.font.regular,
-    fontSize: T.fontSize.caption,
-    color: T.badgeHigh,
-    marginTop: T.spacing[1],
-  },
   formError: {
     fontFamily: T.font.medium,
     fontSize: T.fontSize.body,
     color: T.badgeHigh,
     marginBottom: T.spacing[4],
   },
-  action: {
-    marginTop: T.spacing[2],
-  },
+  action: { marginTop: T.spacing[2] },
+  footer: { flexDirection: "row", justifyContent: "center", marginTop: T.spacing[5] },
+  footerText: { fontFamily: T.font.regular, fontSize: T.fontSize.body, color: T.fg2 },
+  footerLink: { fontFamily: T.font.semibold, fontSize: T.fontSize.body, color: T.teal },
 });
