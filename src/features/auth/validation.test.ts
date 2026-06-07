@@ -3,6 +3,7 @@ import {
   MIN_PASSWORD_LENGTH,
   validateConfirmPassword,
   validateEmail,
+  validateLoginForm,
   validatePassword,
   validateRegisterForm,
 } from "@/features/auth/validation";
@@ -62,5 +63,22 @@ describe("validateRegisterForm", () => {
     expect(errors.email).toBeDefined();
     expect(errors.password).toBeDefined();
     expect(errors.confirmPassword).toBeDefined();
+  });
+});
+
+describe("validateLoginForm", () => {
+  it("returns no errors for valid input", () => {
+    const errors = validateLoginForm({ email: "a@b.com", password: "anything" });
+    expect(hasErrors(errors)).toBe(false);
+  });
+
+  it("requires a well-formed email", () => {
+    expect(validateLoginForm({ email: "bad", password: "anything" }).email).toBeDefined();
+  });
+
+  it("requires a non-empty password but does not enforce length", () => {
+    expect(validateLoginForm({ email: "a@b.com", password: "" }).password).toBeDefined();
+    // A short password is fine on login; the length policy is registration-only.
+    expect(validateLoginForm({ email: "a@b.com", password: "x" }).password).toBeUndefined();
   });
 });

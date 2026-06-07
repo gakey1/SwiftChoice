@@ -31,3 +31,23 @@ export function registerErrorMessage(err: unknown): string {
       return "Could not create your account. Please try again.";
   }
 }
+
+// Login errors collapse to one message regardless of cause (US05 acceptance
+// criterion, coding-standards.md §6). Distinguishing "wrong password" from "no
+// such account" would let an attacker enumerate which emails are registered.
+export function loginErrorMessage(err: unknown): string {
+  if (!isFirebaseError(err)) return "Something went wrong. Please try again.";
+  switch (err.code) {
+    case "auth/invalid-email":
+    case "auth/user-not-found":
+    case "auth/wrong-password":
+    case "auth/invalid-credential":
+      return "Incorrect email or password.";
+    case "auth/too-many-requests":
+      return "Too many attempts. Please try again in a few minutes.";
+    case "auth/network-request-failed":
+      return "Network error. Check your connection.";
+    default:
+      return "Sign-in failed. Please try again.";
+  }
+}
