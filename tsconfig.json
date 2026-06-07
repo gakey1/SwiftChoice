@@ -6,6 +6,7 @@
     "noImplicitOverride": true,
     "exactOptionalPropertyTypes": true,
     "noFallthroughCasesInSwitch": true,
+    "types": ["jest"],
     "paths": {
       "@/*": ["./src/*"]
     }
