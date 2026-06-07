@@ -11,6 +11,7 @@ import type { AppStackParamList, AuthStackParamList } from "@/navigation/types";
 import { LoginScreen } from "@/screens/auth/LoginScreen";
 import { RegisterScreen } from "@/screens/auth/RegisterScreen";
 import { HomeScreen } from "@/screens/home/HomeScreen";
+import { SettingsScreen } from "@/screens/settings/SettingsScreen";
 import { T } from "@/theme/tokens";
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -31,6 +32,7 @@ export function RootNavigator() {
     return (
       <AppStack.Navigator screenOptions={{ headerShown: false }}>
         <AppStack.Screen name="Home" component={HomeScreen} />
+        <AppStack.Screen name="Settings" component={SettingsScreen} />
       </AppStack.Navigator>
     );
   }
