@@ -9,4 +9,5 @@ export type AuthStackParamList = {
 
 export type AppStackParamList = {
   Home: undefined;
+  Settings: undefined;
 };

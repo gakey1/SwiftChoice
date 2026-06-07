@@ -2,7 +2,7 @@
 // Screens call these functions; the raw SDK calls live here so they can be
 // mocked in tests and swapped without touching UI.
 
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "firebase/auth";
 
 import { auth } from "@/services/firebase";
 import { createUserDocument } from "@/services/firestore/users";
@@ -25,4 +25,10 @@ export async function registerWithEmail(email: string, password: string): Promis
 export async function loginWithEmail(email: string, password: string): Promise<string> {
   const credential = await signInWithEmailAndPassword(auth, email.trim(), password);
   return credential.user.uid;
+}
+
+// Signs the current user out (US06). The auth listener flips the session to
+// null and RootNavigator returns to the Login screen; no manual navigation.
+export async function logout(): Promise<void> {
+  await signOut(auth);
 }

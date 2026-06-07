@@ -1,11 +1,12 @@
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "firebase/auth";
 
-import { loginWithEmail, registerWithEmail } from "@/services/auth";
+import { loginWithEmail, logout, registerWithEmail } from "@/services/auth";
 import { createUserDocument } from "@/services/firestore/users";
 
 jest.mock("firebase/auth", () => ({
   createUserWithEmailAndPassword: jest.fn(),
   signInWithEmailAndPassword: jest.fn(),
+  signOut: jest.fn(),
 }));
 jest.mock("@/services/firebase", () => ({ auth: {}, db: {} }));
 jest.mock("@/services/firestore/users", () => ({
@@ -14,6 +15,7 @@ jest.mock("@/services/firestore/users", () => ({
 
 const mockCreate = createUserWithEmailAndPassword as jest.Mock;
 const mockSignIn = signInWithEmailAndPassword as jest.Mock;
+const mockSignOut = signOut as jest.Mock;
 const mockCreateDoc = createUserDocument as jest.Mock;
 
 describe("registerWithEmail", () => {
@@ -62,5 +64,19 @@ describe("loginWithEmail", () => {
     await expect(loginWithEmail("a@b.com", "x")).rejects.toMatchObject({
       code: "auth/invalid-credential",
     });
+  });
+});
+
+describe("logout", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("signs the user out", async () => {
+    mockSignOut.mockResolvedValue(undefined);
+
+    await logout();
+
+    expect(mockSignOut).toHaveBeenCalledWith({});
   });
 });

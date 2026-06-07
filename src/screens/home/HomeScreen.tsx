@@ -1,19 +1,31 @@
 // Placeholder Home. US02 (Tracy) replaces this with the real Home screen.
 // Kept minimal on purpose; the "Home" route name stays fixed so US04 auth
-// routing does not change when US02 lands. The signed-in email is shown
-// only to confirm the register-to-Home flow end to end.
+// routing does not change when US02 lands. The signed-in email confirms the
+// session, and the temporary Settings link reaches the logout action (US06)
+// until Tracy's US01 bottom nav provides the real navigation.
 
 import { StyleSheet, Text, View } from "react-native";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import { useAuth } from "@/hooks/useAuth";
+import type { AppStackParamList } from "@/navigation/types";
 import { T } from "@/theme/tokens";
 
-export function HomeScreen() {
+type HomeScreenProps = NativeStackScreenProps<AppStackParamList, "Home">;
+
+export function HomeScreen({ navigation }: HomeScreenProps) {
   const { user } = useAuth();
   return (
     <View style={styles.root}>
       <Text style={styles.title}>Home</Text>
       {user?.email ? <Text style={styles.sub}>Signed in as {user.email}</Text> : null}
+      <Text
+        style={styles.link}
+        accessibilityRole="button"
+        onPress={() => navigation.navigate("Settings")}
+      >
+        Settings
+      </Text>
     </View>
   );
 }
@@ -35,5 +47,11 @@ const styles = StyleSheet.create({
     fontFamily: T.font.regular,
     fontSize: T.fontSize.body,
     color: T.fg2,
+  },
+  link: {
+    fontFamily: T.font.semibold,
+    fontSize: T.fontSize.body,
+    color: T.teal,
+    marginTop: T.spacing[4],
   },
 });
