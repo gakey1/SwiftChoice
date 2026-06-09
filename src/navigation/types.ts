@@ -1,13 +1,14 @@
-// Route param lists for the two top-level stacks.
-// The "Home" route name is fixed: US02 (Tracy) replaces the placeholder
-// Home screen but keeps this name, so auth routing does not change.
+// Route param lists. The signed-out side is a stack (auth screens); the
+// signed-in side is a bottom-tab navigator. Tab route names match the
+// BottomNav keys so the shared tab bar maps straight onto them.
 
 export type AuthStackParamList = {
   Register: undefined;
   Login: undefined;
 };
 
-export type AppStackParamList = {
-  Home: undefined;
-  Settings: undefined;
+export type AppTabsParamList = {
+  home: undefined;
+  history: undefined;
+  settings: undefined;
 };
