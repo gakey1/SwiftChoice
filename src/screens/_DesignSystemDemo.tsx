@@ -6,8 +6,7 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useState } from "react";
 
-import { BottomNav } from "@/components/BottomNav";
-import type { BottomNavKey } from "@/components/BottomNav";
+
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Icon } from "@/components/Icon";
@@ -18,12 +17,19 @@ import { SectionLabel } from "@/components/SectionLabel";
 import { MODULES } from "@/theme/modules";
 import { T } from "@/theme/tokens";
 
-type Budget = "$" | "$$" | "$$$";
-const BUDGET_OPTIONS: readonly Budget[] = ["$", "$$", "$$$"] as const;
-
+type Budget =
+  | "Under $20"
+  | "$20 - $50"
+  | "$50 - $100"
+  | "$100+";
+const BUDGET_OPTIONS: string[] = [
+  "Under $20",
+  "$20 - $50",
+  "$50 - $100",
+  "$100+",
+];
 export function DesignSystemDemo() {
-  const [nav, setNav] = useState<BottomNavKey>("home");
-  const [budget, setBudget] = useState<Budget>("$$");
+  const [budget, setBudget] = useState<string>("$20 - $50");
 
   return (
     <View style={styles.frame}>
@@ -94,7 +100,7 @@ export function DesignSystemDemo() {
         <View style={{ height: T.spacing[6] }} />
       </ScrollView>
 
-      <BottomNav active={nav} onNavigate={setNav} />
+     
     </View>
   );
 }
