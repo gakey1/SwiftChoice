@@ -2,8 +2,8 @@
 // navigation and colour rules: lives under screens/home, named export, teal on
 // this universal surface (green stays on Focus screens), typed module prop.
 //
-// The weekly stats are a static placeholder; the live data lands with the
-// dashboard story (US27) in Sprint 4.
+// The weekly snapshot shows an empty-state until there is decision history to
+// summarise. The live figures land with the dashboard story (US27) in Sprint 4.
 
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
@@ -85,19 +85,11 @@ export function HomeScreen() {
 
         <Card style={styles.analyticsCard}>
           <Text style={styles.analyticsHeader}>THIS WEEK</Text>
-          <View style={styles.statsRow}>
-            <View style={styles.statCol}>
-              <Text style={styles.statValue}>12</Text>
-              <Text style={styles.statLabel}>Decisions</Text>
-            </View>
-            <View style={styles.statCol}>
-              <Text style={styles.statValue}>3min</Text>
-              <Text style={styles.statLabel}>Avg. saved</Text>
-            </View>
-            <View style={styles.statCol}>
-              <Text style={styles.statValue}>18%</Text>
-              <Text style={styles.statLabel}>Reroll rate</Text>
-            </View>
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyTitle}>No decisions yet this week</Text>
+            <Text style={styles.emptyBody}>
+              Your weekly snapshot appears here once you start making decisions.
+            </Text>
           </View>
         </Card>
       </ScrollView>
@@ -162,13 +154,17 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginBottom: T.spacing[3],
   },
-  statsRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  statCol: { alignItems: "center", flex: 1 },
-  statValue: {
-    fontFamily: T.font.bold,
-    fontSize: T.fontSize.display,
-    color: T.teal,
+  emptyState: { paddingVertical: T.spacing[2] },
+  emptyTitle: {
+    fontFamily: T.font.medium,
+    fontSize: T.fontSize.body,
+    color: T.fg1,
     marginBottom: 4,
   },
-  statLabel: { fontFamily: T.font.regular, fontSize: T.fontSize.caption, color: T.fg2 },
+  emptyBody: {
+    fontFamily: T.font.regular,
+    fontSize: T.fontSize.body,
+    color: T.fg2,
+    lineHeight: 20,
+  },
 });

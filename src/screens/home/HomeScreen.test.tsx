@@ -15,4 +15,10 @@ describe("HomeScreen", () => {
     expect(screen.getByText("Focus")).toBeTruthy();
     expect(screen.getByText("Priority")).toBeTruthy();
   });
+
+  it("shows the weekly snapshot empty-state instead of placeholder figures", () => {
+    render(<HomeScreen />);
+
+    expect(screen.getByText(/no decisions yet this week/i)).toBeTruthy();
+  });
 });
