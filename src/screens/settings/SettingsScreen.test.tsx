@@ -7,6 +7,15 @@ jest.mock("@/services/auth", () => ({ logout: jest.fn() }));
 jest.mock("@/hooks/useAuth", () => ({
   useAuth: () => ({ user: { email: "a@b.com" }, initializing: false }),
 }));
+jest.mock("@/components/Icon", () => ({ Icon: () => null }));
+jest.mock("@/services/localdb/preferencesStorage", () => ({
+  loadPreferences: jest.fn().mockResolvedValue({
+    dietaryRestrictions: "None set",
+    defaultBudget: "$20 - $50",
+    workHours: "9am - 5pm",
+  }),
+  savePreferences: jest.fn().mockResolvedValue(undefined),
+}));
 
 const mockLogout = logout as jest.Mock;
 
