@@ -2,9 +2,8 @@
 // listener route to Home. Built in the same language as RegisterScreen.
 //
 // Every auth error collapses to one generic message (US05 acceptance
-// criterion, coding-standards.md §6): the screen never reveals whether the
-// email or the password was wrong, which would let an attacker enumerate
-// registered accounts.
+// criterion): the screen never reveals whether the email or the password was
+// wrong, which would let an attacker enumerate registered accounts.
 
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";

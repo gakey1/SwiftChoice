@@ -3,8 +3,5 @@ dist
 .expo
 ios
 android
-_shadow
-briefs
-docs
 package-lock.json
 *.lock

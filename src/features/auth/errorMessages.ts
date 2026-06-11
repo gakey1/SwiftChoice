@@ -33,8 +33,8 @@ export function registerErrorMessage(err: unknown): string {
 }
 
 // Login errors collapse to one message regardless of cause (US05 acceptance
-// criterion, coding-standards.md §6). Distinguishing "wrong password" from "no
-// such account" would let an attacker enumerate which emails are registered.
+// criterion). Distinguishing "wrong password" from "no such account" would let
+// an attacker enumerate which emails are registered.
 export function loginErrorMessage(err: unknown): string {
   if (!isFirebaseError(err)) return "Something went wrong. Please try again.";
   switch (err.code) {
