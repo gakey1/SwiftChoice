@@ -1,8 +1,4 @@
-// Loads and saves the user's local preferences (dietary restrictions, default
-// budget, work hours). Each field is stored under its own key via the
-// secureStorage wrapper. Missing keys fall back to DEFAULT_PREFERENCES.
-
-import { getItem, setItem } from "@/services/localdb/secureStorage";
+import { getDb } from "@/services/localdb/db";
 
 export type UserPreferences = {
   dietaryRestrictions: string;
@@ -23,19 +19,58 @@ const HOURS_KEY = "preference_hours";
 export async function savePreferences(
   preferences: UserPreferences
 ): Promise<void> {
-  await setItem(DIET_KEY, preferences.dietaryRestrictions);
-  await setItem(BUDGET_KEY, preferences.defaultBudget);
-  await setItem(HOURS_KEY, preferences.workHours);
+  const db = await getDb();
+
+  await db.withTransactionAsync(async () => {
+    await db.runAsync(
+      "INSERT OR REPLACE INTO preferences (key, value) VALUES (?, ?)",
+      [DIET_KEY, preferences.dietaryRestrictions]
+    );
+
+    await db.runAsync(
+      "INSERT OR REPLACE INTO preferences (key, value) VALUES (?, ?)",
+      [BUDGET_KEY, preferences.defaultBudget]
+    );
+
+    await db.runAsync(
+      "INSERT OR REPLACE INTO preferences (key, value) VALUES (?, ?)",
+      [HOURS_KEY, preferences.workHours]
+    );
+  });
 }
 
 export async function loadPreferences(): Promise<UserPreferences> {
-  const savedDiet = await getItem(DIET_KEY);
-  const savedBudget = await getItem(BUDGET_KEY);
-  const savedHours = await getItem(HOURS_KEY);
+  const db = await getDb();
+
+  const dietRow = await db.getFirstAsync<{ value: string }>(
+    "SELECT value FROM preferences WHERE key = ?",
+    [DIET_KEY]
+  );
+
+  const budgetRow = await db.getFirstAsync<{ value: string }>(
+    "SELECT value FROM preferences WHERE key = ?",
+    [BUDGET_KEY]
+  );
+
+  const hoursRow = await db.getFirstAsync<{ value: string }>(
+    "SELECT value FROM preferences WHERE key = ?",
+    [HOURS_KEY]
+  );
 
   return {
-    dietaryRestrictions: savedDiet ?? DEFAULT_PREFERENCES.dietaryRestrictions,
-    defaultBudget: savedBudget ?? DEFAULT_PREFERENCES.defaultBudget,
-    workHours: savedHours ?? DEFAULT_PREFERENCES.workHours,
+    dietaryRestrictions:
+      dietRow?.value ?? DEFAULT_PREFERENCES.dietaryRestrictions,
+    defaultBudget: budgetRow?.value ?? DEFAULT_PREFERENCES.defaultBudget,
+    workHours: hoursRow?.value ?? DEFAULT_PREFERENCES.workHours,
   };
+}
+
+export async function clearPreferences(): Promise<void> {
+  const db = await getDb();
+
+  await db.runAsync("DELETE FROM preferences");
+}
+
+export async function getPreferenceDefaults(): Promise<UserPreferences> {
+  return loadPreferences();
 }
