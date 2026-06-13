@@ -10,9 +10,11 @@ import { AppTabs } from "@/navigation/AppTabs";
 import type { AuthStackParamList } from "@/navigation/types";
 import { LoginScreen } from "@/screens/auth/LoginScreen";
 import { RegisterScreen } from "@/screens/auth/RegisterScreen";
+import FuelScreen from "@/screens/fuel";
 import { T } from "@/theme/tokens";
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
+const AppStack = createNativeStackNavigator();
 
 export function RootNavigator() {
   const { user, initializing } = useAuth();
@@ -26,7 +28,18 @@ export function RootNavigator() {
   }
 
   if (user) {
-    return <AppTabs />;
+    return (
+      <AppStack.Navigator screenOptions={{ headerShown: false }}>
+        <AppStack.Screen name="MainTabs" component={AppTabs} />
+        <AppStack.Screen 
+          name="Fuel" 
+          component={FuelScreen} 
+          options={{ 
+            animation: "slide_from_bottom" 
+          }} 
+        />
+      </AppStack.Navigator>
+    );
   }
 
   return (
