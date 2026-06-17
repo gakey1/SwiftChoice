@@ -10,7 +10,7 @@ import { AppTabs } from "@/navigation/AppTabs";
 import type { AuthStackParamList } from "@/navigation/types";
 import { LoginScreen } from "@/screens/auth/LoginScreen";
 import { RegisterScreen } from "@/screens/auth/RegisterScreen";
-import FuelScreen from "@/screens/fuel";
+import { FuelScreen } from "@/screens/fuel/FuelScreen";
 import { T } from "@/theme/tokens";
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();

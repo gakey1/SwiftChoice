@@ -5,6 +5,7 @@ import { Icon } from "@/components/Icon";
 import { Card } from "@/components/Card";
 import { T } from "@/theme/tokens";
 import { MODULES } from "@/theme/modules";
+import { useNavigation } from "@react-navigation/native";
 
 type FilterGroupProps = {
   label: string;
@@ -63,7 +64,8 @@ function FilterOptionGroup({
   );
 }
 
-export default function FuelScreen() {
+export function FuelScreen() {
+  const navigation = useNavigation();
   //State for the primary toggle selection
   const [mealType, setMealType] = useState<"in" | "out">("out");
 
@@ -71,20 +73,24 @@ export default function FuelScreen() {
   const [prepTime, setPrepTime] = useState<"short" | "medium" | "long">("medium");
   const [distance, setDistance] = useState<"near" | "mid" | "far">("mid");
 
-  const primaryColor = MODULES.fuel?.c700 || "#D98A43";
+  const primaryColor = MODULES.fuel.c700;
 
   return (
     <SafeAreaView style={styles.frame} edges={["top", "left", "right"]}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         
-        <TouchableOpacity style={styles.backButton} activeOpacity={0.6}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          activeOpacity={0.6}
+          onPress={() => navigation.goBack()}
+        >
           <Icon name="chevron-left" size={16} />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
 
         <View style={styles.titleContainer}>
-          <View style={[styles.iconPlaceholder, { backgroundColor: "#FDF3E7" }]}>
-            <Icon name={"utensils" as any} size={24} color={primaryColor} />
+          <View style={[styles.iconPlaceholder, { backgroundColor: MODULES.fuel.tint }]}>
+            <Icon name="coffee" size={24} color={primaryColor} />
           </View>
           <View>
             <Text style={styles.h1}>Fuel</Text>
@@ -120,7 +126,7 @@ export default function FuelScreen() {
           label="Budget"
           options={["$", "$$", "$$$"]}
           selectedValue={budget}
-          onSelect={(val) => setBudget(val as any)}
+          onSelect={(val) => setBudget(val as "$" | "$$" | "$$$")}
           activeColor={primaryColor}
         />
         <FilterOptionGroup
@@ -128,7 +134,7 @@ export default function FuelScreen() {
           options={["short", "medium", "long"]}
           displayValues={["< 15 min", "15-30 min", "30+ min"]}
           selectedValue={prepTime}
-          onSelect={(val) => setPrepTime(val as any)}
+          onSelect={(val) => setPrepTime(val as "short" | "medium" | "long")}
           activeColor={primaryColor}
         />
         <FilterOptionGroup
@@ -136,7 +142,7 @@ export default function FuelScreen() {
           options={["near", "mid", "far"]}
           displayValues={["< 1 km", "1-5 km", "5+ km"]}
           selectedValue={distance}
-          onSelect={(val) => setDistance(val as any)}
+          onSelect={(val) => setDistance(val as "near" | "mid" | "far")}
           activeColor={primaryColor}
         />
       </ScrollView>
@@ -165,7 +171,7 @@ const styles = StyleSheet.create({
   toggleRowCard: { 
     flexDirection: "row", 
     padding: 6, 
-    backgroundColor: "#F4F3F0", 
+    backgroundColor: T.neutral, 
     borderRadius: 16,
     borderWidth: 0
   },
@@ -176,7 +182,7 @@ const styles = StyleSheet.create({
     borderRadius: 12, 
 },
   toggleBtnActive: { 
-    backgroundColor: "#FFFFFF", 
+    backgroundColor: T.surface, 
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -191,9 +197,9 @@ const styles = StyleSheet.create({
   optionsRow: { flexDirection: "row", gap: T.spacing[3], width: "100%" },
   optionCard: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: T.surface,
     borderWidth: 1,
-    borderColor: "#EAE9E5",
+    borderColor: T.border,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center",
