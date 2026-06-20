@@ -53,9 +53,9 @@ export function FuelResultScreen() {
 
         {/* Main Soft-Minimal Recommendation Card */}
         <Card style={styles.resultCard}>
-          {/* Main Visual Badge (Placeholder icon/emoji frame) */}
+          {/* Main Visual Badge (Placeholder icon frame) */}
           <View style={[styles.avatarBadge, { backgroundColor: MODULES.fuel.tint }]}>
-            <Text style={styles.avatarEmoji}>🍲</Text>
+            <Icon name="coffee" size={36} color={primaryColor} />
           </View>
 
           {/* Core Content */}
@@ -160,7 +160,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: T.spacing[4],
   },
-  avatarEmoji: { fontSize: 32 },
   itemName: { fontFamily: T.font.bold, fontSize: T.fontSize.display, color: T.fg1, marginBottom: 4, textAlign: "center" },
   cuisineType: { fontFamily: T.font.regular, fontSize: T.fontSize.body, color: T.fg2, marginBottom: T.spacing[5] },
   
@@ -185,5 +184,12 @@ const styles = StyleSheet.create({
     borderColor: T.border 
   },
   rerollBtnText: { color: T.fg1, fontFamily: T.font.bold, fontSize: T.fontSize.body },
-  footerCaption: { fontFamily: T.font.regular, fontSize: T.fontSize.caption, color: T.fg2, textAlign: "center", marginTop: T.spacing[2] },
+  footerCaption: { 
+    fontFamily: T.font.regular, 
+    fontSize: T.fontSize.caption, 
+    color: T.fg2, 
+    textAlign: "center", 
+    marginTop: T.spacing[3],
+    opacity: 0.7,
+},
 });
