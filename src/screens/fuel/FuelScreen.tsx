@@ -6,6 +6,7 @@ import { Card } from "@/components/Card";
 import { T } from "@/theme/tokens";
 import { MODULES } from "@/theme/modules";
 import { useNavigation } from "@react-navigation/native";
+import { getRecommendation, FoodOption } from "@/services/recommendation/recommendationEngine";
 
 type FilterGroupProps = {
   label: string;
@@ -73,7 +74,19 @@ export function FuelScreen() {
   const [prepTime, setPrepTime] = useState<"short" | "medium" | "long">("medium");
   const [distance, setDistance] = useState<"near" | "mid" | "far">("mid");
 
+  const [recommendation, setRecommendation] = useState<FoodOption | null>(null);
+
   const primaryColor = MODULES.fuel.c700;
+
+  const handleGetRecommendation = () => {
+  const result = getRecommendation({
+    type: mealType,
+    budget: budget,
+    prepTime: prepTime,
+    distance: distance,
+  });
+  setRecommendation(result);
+};
 
   return (
     <SafeAreaView style={styles.frame} edges={["top", "left", "right"]}>
@@ -145,6 +158,31 @@ export function FuelScreen() {
           onSelect={(val) => setDistance(val as "near" | "mid" | "far")}
           activeColor={primaryColor}
         />
+
+        {/* Action Trigger Button */}
+        <TouchableOpacity
+          style={[styles.actionButton, { backgroundColor: primaryColor }]}
+          onPress={handleGetRecommendation}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.actionButtonText}>Swift Choice Now</Text>
+        </TouchableOpacity>
+
+        {/* Result Area Display */}
+        {recommendation && (
+          <Card style={[styles.resultCard, { borderColor: primaryColor }]}>
+            <Text style={styles.resultLabel}>Your Recommendation</Text>
+            <Text style={styles.resultName}>{recommendation.item_name}</Text>
+          </Card>
+        )}
+
+        {recommendation === null && recommendation !== undefined && (
+          <View style={styles.noResultContainer}>
+            <Text style={styles.noResultText}>
+              No exact match found in the pool. Try changing your filters!
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -206,4 +244,54 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   optionText: { fontFamily: T.font.regular, fontSize: T.fontSize.body, color: T.fg2 },
+  actionButton: {
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: T.spacing[3],
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  actionButtonText: {
+    color: T.surface,
+    fontFamily: T.font.bold,
+    fontSize: T.fontSize.body,
+  },
+  resultCard: {
+    marginTop: T.spacing[2],
+    padding: T.spacing[4],
+    backgroundColor: T.surface,
+    borderWidth: 1.5,
+    borderRadius: 16,
+    alignItems: "center",
+    gap: T.spacing[1],
+  },
+  resultLabel: {
+    fontFamily: T.font.regular,
+    fontSize: T.fontSize.caption,
+    color: T.fg2,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  resultName: {
+    fontFamily: T.font.bold,
+    fontSize: T.fontSize.display,
+    color: T.fg1,
+    textAlign: "center",
+  },
+  noResultContainer: {
+    marginTop: T.spacing[2],
+    padding: T.spacing[3],
+    alignItems: "center",
+  },
+  noResultText: {
+    fontFamily: T.font.regular,
+    fontSize: T.fontSize.body,
+    color: T.fg2,
+    textAlign: "center",
+  },
 });

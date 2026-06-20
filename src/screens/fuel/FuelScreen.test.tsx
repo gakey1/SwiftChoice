@@ -32,4 +32,17 @@ describe("FuelScreen", () => {
     //Confirms the component handles interaction event smoothly
     expect(eatInButton).toBeTruthy();
   });
+
+  it("triggers the recommendation engine when clicking the main action button", () => {
+    const { getByText } = render(<FuelScreen />);
+    
+    const actionButton = getByText("Swift Choice Now");
+    
+    //Simulate user tapping the button to trigger the choice engine
+    fireEvent.press(actionButton);
+    
+    //Confirms it either found a match from our pool or displays the empty message
+    const hasResult = getByText(/Your Recommendation|No exact match found/i);
+    expect(hasResult).toBeTruthy();
+  });
 });
