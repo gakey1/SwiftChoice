@@ -16,6 +16,7 @@ import {
 import "@/services/firebase";
 import { AuthProvider } from "@/hooks/useAuth";
 import { RootNavigator } from "@/navigation/RootNavigator";
+import { globalNavigationRef } from '@/navigation/navigationRef';
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -30,7 +31,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <NavigationContainer>
+        <NavigationContainer ref={globalNavigationRef}>
           <RootNavigator />
         </NavigationContainer>
       </AuthProvider>

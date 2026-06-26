@@ -8,23 +8,27 @@ import { T } from "@/theme/tokens";
 import { MODULES } from "@/theme/modules";
 import { FoodOption, FilterCriteria } from "@/services/recommendation/recommendationEngine";
 
-// Define the navigation parameter types for this screen
 type FuelResultRouteParams = {
-  FuelResult: {
-    recommendation: FoodOption;
-    criteria: FilterCriteria;
-  };
+  recommendation: FoodOption;
+  criteria: FilterCriteria;
+  
 };
 
 export function FuelResultScreen() {
   const navigation = useNavigation();
-  const route = useRoute<RouteProp<FuelResultRouteParams, "FuelResult">>();
-  
-  // Destructure the parameters passed from the input screen
-  const { recommendation, criteria } = route.params;
+  const route = useRoute<RouteProp<{ params: FuelResultRouteParams }, 'params'>>();
+  const recommendation = route.params?.recommendation;
+  const criteria = route.params?.criteria;
   const primaryColor = MODULES.fuel.c700;
 
-  // Format the helper caption at the bottom based on user filters
+  if (!recommendation || !criteria) {
+    return (
+      <View style={{ flex: 1, backgroundColor: T.canvas, justifyContent: "center", alignItems: "center" }}>
+        <Text style={{ color: T.fg2, fontFamily: T.font.regular }}>Finding a sweet option...</Text>
+      </View>
+    );
+  }
+
   const filterCaption = `Based on your filters: ${
     criteria.type === "in" ? "Eat In" : "Eat Out"
   }, ${criteria.budget}, ${
