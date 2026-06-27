@@ -13,13 +13,13 @@ jest.mock("@/services/localdb/db", () => ({
 
 const mockGetDb = getDb as jest.Mock;
 
-// In-memory test data so we can test the storage functions
-// without needing a real SQLite database.
 let rows: { id: number; name: string }[] = [];
 let nextId = 1;
 
 const mockDb = {
-  getAllAsync: jest.fn(async () => [...rows].sort((a, b) => a.name.localeCompare(b.name))),
+  getAllAsync: jest.fn(async () =>
+    [...rows].sort((a, b) => a.name.localeCompare(b.name))
+  ),
 
   runAsync: jest.fn(async (sql: string, params?: unknown[]) => {
     if (sql.startsWith("INSERT INTO fuel_pool")) {
@@ -31,14 +31,12 @@ const mockDb = {
     if (sql.startsWith("UPDATE fuel_pool")) {
       const name = params?.[0] as string;
       const id = params?.[1] as number;
-
       rows = rows.map((row) => (row.id === id ? { ...row, name } : row));
       return;
     }
 
     if (sql.startsWith("DELETE FROM fuel_pool WHERE id")) {
       const id = params?.[0] as number;
-
       rows = rows.filter((row) => row.id !== id);
       return;
     }
@@ -65,6 +63,22 @@ describe("fuelPoolStorage", () => {
       { id: 1, name: "Momo" },
       { id: 2, name: "Pasta" },
     ]);
+  });
+
+  it("trims Fuel pool item names before saving", async () => {
+    await addFuelItem("  Momo  ");
+
+    await expect(getFuelPool()).resolves.toEqual([
+      { id: 1, name: "Momo" },
+    ]);
+  });
+
+  it("does not add an empty Fuel pool item", async () => {
+    await expect(addFuelItem("   ")).rejects.toThrow(
+      "Fuel item name cannot be empty."
+    );
+
+    expect(rows).toEqual([]);
   });
 
   it("updates a Fuel pool item", async () => {

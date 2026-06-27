@@ -19,12 +19,15 @@ export async function getFuelPool(): Promise<FuelPoolItem[]> {
 
 // Adds a new food option to the Fuel pool.
 export async function addFuelItem(name: string): Promise<void> {
+  const trimmedName = name.trim();
+
+  if (!trimmedName) {
+    throw new Error("Fuel item name cannot be empty.");
+  }
+
   const db = await getDb();
 
-  await db.runAsync(
-    "INSERT INTO fuel_pool (name) VALUES (?)",
-    [name]
-  );
+  await db.runAsync("INSERT INTO fuel_pool (name) VALUES (?)", [trimmedName]);
 }
 
 // Updates an existing food option.

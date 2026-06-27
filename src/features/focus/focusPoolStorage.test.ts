@@ -13,8 +13,6 @@ jest.mock("@/services/localdb/db", () => ({
 
 const mockGetDb = getDb as jest.Mock;
 
-// In-memory test data so the storage functions can be tested
-// without connecting to the real SQLite database.
 let rows: { id: number; name: string }[] = [];
 let nextId = 1;
 
@@ -33,14 +31,12 @@ const mockDb = {
     if (sql.startsWith("UPDATE focus_pool")) {
       const name = params?.[0] as string;
       const id = params?.[1] as number;
-
       rows = rows.map((row) => (row.id === id ? { ...row, name } : row));
       return;
     }
 
     if (sql.startsWith("DELETE FROM focus_pool WHERE id")) {
       const id = params?.[0] as number;
-
       rows = rows.filter((row) => row.id !== id);
       return;
     }
@@ -67,6 +63,22 @@ describe("focusPoolStorage", () => {
       { id: 2, name: "Cafe" },
       { id: 1, name: "Library" },
     ]);
+  });
+
+  it("trims Focus pool item names before saving", async () => {
+    await addFocusItem("  Library  ");
+
+    await expect(getFocusPool()).resolves.toEqual([
+      { id: 1, name: "Library" },
+    ]);
+  });
+
+  it("does not add an empty Focus pool item", async () => {
+    await expect(addFocusItem("   ")).rejects.toThrow(
+      "Focus item name cannot be empty."
+    );
+
+    expect(rows).toEqual([]);
   });
 
   it("updates a Focus pool item", async () => {

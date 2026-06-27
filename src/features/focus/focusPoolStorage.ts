@@ -19,12 +19,15 @@ export async function getFocusPool(): Promise<FocusPoolItem[]> {
 
 // Adds a new study/work location to the Focus pool.
 export async function addFocusItem(name: string): Promise<void> {
+  const trimmedName = name.trim();
+
+  if (!trimmedName) {
+    throw new Error("Focus item name cannot be empty.");
+  }
+
   const db = await getDb();
 
-  await db.runAsync(
-    "INSERT INTO focus_pool (name) VALUES (?)",
-    [name]
-  );
+  await db.runAsync("INSERT INTO focus_pool (name) VALUES (?)", [trimmedName]);
 }
 
 // Updates an existing Focus pool item.
