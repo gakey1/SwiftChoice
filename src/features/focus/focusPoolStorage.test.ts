@@ -1,0 +1,99 @@
+import {
+  addFocusItem,
+  clearFocusPool,
+  deleteFocusItem,
+  getFocusPool,
+  updateFocusItem,
+} from "@/features/focus/focusPoolStorage";
+import { getDb } from "@/services/localdb/db";
+
+jest.mock("@/services/localdb/db", () => ({
+  getDb: jest.fn(),
+}));
+
+const mockGetDb = getDb as jest.Mock;
+
+// In-memory test data so the storage functions can be tested
+// without connecting to the real SQLite database.
+let rows: { id: number; name: string }[] = [];
+let nextId = 1;
+
+const mockDb = {
+  getAllAsync: jest.fn(async () =>
+    [...rows].sort((a, b) => a.name.localeCompare(b.name))
+  ),
+
+  runAsync: jest.fn(async (sql: string, params?: unknown[]) => {
+    if (sql.startsWith("INSERT INTO focus_pool")) {
+      rows.push({ id: nextId, name: params?.[0] as string });
+      nextId += 1;
+      return;
+    }
+
+    if (sql.startsWith("UPDATE focus_pool")) {
+      const name = params?.[0] as string;
+      const id = params?.[1] as number;
+
+      rows = rows.map((row) => (row.id === id ? { ...row, name } : row));
+      return;
+    }
+
+    if (sql.startsWith("DELETE FROM focus_pool WHERE id")) {
+      const id = params?.[0] as number;
+
+      rows = rows.filter((row) => row.id !== id);
+      return;
+    }
+
+    if (sql.startsWith("DELETE FROM focus_pool")) {
+      rows = [];
+    }
+  }),
+};
+
+describe("focusPoolStorage", () => {
+  beforeEach(() => {
+    rows = [];
+    nextId = 1;
+    jest.clearAllMocks();
+    mockGetDb.mockResolvedValue(mockDb);
+  });
+
+  it("adds and returns Focus pool items", async () => {
+    await addFocusItem("Library");
+    await addFocusItem("Cafe");
+
+    await expect(getFocusPool()).resolves.toEqual([
+      { id: 2, name: "Cafe" },
+      { id: 1, name: "Library" },
+    ]);
+  });
+
+  it("updates a Focus pool item", async () => {
+    await addFocusItem("Library");
+
+    await updateFocusItem(1, "University Library");
+
+    await expect(getFocusPool()).resolves.toEqual([
+      { id: 1, name: "University Library" },
+    ]);
+  });
+
+  it("deletes a single Focus pool item", async () => {
+    await addFocusItem("Library");
+    await addFocusItem("Cafe");
+
+    await deleteFocusItem(1);
+
+    await expect(getFocusPool()).resolves.toEqual([{ id: 2, name: "Cafe" }]);
+  });
+
+  it("clears all Focus pool items", async () => {
+    await addFocusItem("Library");
+    await addFocusItem("Cafe");
+
+    await clearFocusPool();
+
+    await expect(getFocusPool()).resolves.toEqual([]);
+  });
+});
