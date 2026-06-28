@@ -6,10 +6,13 @@
 // summarise. The live figures land with the dashboard story (US27) in Sprint 4.
 
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { Card } from "@/components/Card";
 import { Icon } from "@/components/Icon";
 import { ModuleIcon } from "@/components/ModuleIcon";
+import type { AppStackParamList } from "@/navigation/types";
 import { MODULES, type Module } from "@/theme/modules";
 import { T } from "@/theme/tokens";
 
@@ -38,6 +41,7 @@ function ModuleRowCard({ title, subtitle, module, onPress }: ModuleRowCardProps)
 }
 
 export function HomeScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   return (
     <View style={styles.frame}>
       <ScrollView
@@ -62,7 +66,7 @@ export function HomeScreen() {
             subtitle="Decide what to eat"
             module={MODULES.fuel}
             onPress={() => {
-              // TODO: navigate to the Fuel input screen (Sprint 2).
+              navigation.navigate("Fuel");
             }}
           />
           <ModuleRowCard

@@ -1,3 +1,4 @@
+import React from "react";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
@@ -15,6 +16,7 @@ import {
 import "@/services/firebase";
 import { AuthProvider } from "@/hooks/useAuth";
 import { RootNavigator } from "@/navigation/RootNavigator";
+import { globalNavigationRef } from '@/navigation/navigationRef';
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -29,7 +31,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <NavigationContainer>
+        <NavigationContainer ref={globalNavigationRef}>
           <RootNavigator />
         </NavigationContainer>
       </AuthProvider>
