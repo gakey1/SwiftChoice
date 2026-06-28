@@ -61,3 +61,16 @@ export async function clearFuelPool(): Promise<void> {
     "DELETE FROM fuel_pool"
   );
 }
+
+// Returns Fuel items in the format needed by the recommendation engine.
+export async function getFuelRecommendationPool(): Promise<FuelPoolItem[]> {
+  return getFuelPool();
+}
+
+// Checks if the Fuel pool has no saved options.
+// The UI can use this to show a friendly empty state.
+export async function isFuelPoolEmpty(): Promise<boolean> {
+  const items = await getFuelPool();
+
+  return items.length === 0;
+}

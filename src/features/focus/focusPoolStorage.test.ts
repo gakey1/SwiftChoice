@@ -3,6 +3,8 @@ import {
   clearFocusPool,
   deleteFocusItem,
   getFocusPool,
+  getFocusRecommendationPool,
+  isFocusPoolEmpty,
   updateFocusItem,
 } from "@/features/focus/focusPoolStorage";
 import { getDb } from "@/services/localdb/db";
@@ -31,12 +33,14 @@ const mockDb = {
     if (sql.startsWith("UPDATE focus_pool")) {
       const name = params?.[0] as string;
       const id = params?.[1] as number;
+
       rows = rows.map((row) => (row.id === id ? { ...row, name } : row));
       return;
     }
 
     if (sql.startsWith("DELETE FROM focus_pool WHERE id")) {
       const id = params?.[0] as number;
+
       rows = rows.filter((row) => row.id !== id);
       return;
     }
@@ -63,6 +67,22 @@ describe("focusPoolStorage", () => {
       { id: 2, name: "Cafe" },
       { id: 1, name: "Library" },
     ]);
+  });
+
+  it("returns Focus items for the recommendation logic", async () => {
+    await addFocusItem("Library");
+
+    await expect(getFocusRecommendationPool()).resolves.toEqual([
+      { id: 1, name: "Library" },
+    ]);
+  });
+
+  it("checks whether the Focus pool is empty", async () => {
+    await expect(isFocusPoolEmpty()).resolves.toBe(true);
+
+    await addFocusItem("Library");
+
+    await expect(isFocusPoolEmpty()).resolves.toBe(false);
   });
 
   it("trims Focus pool item names before saving", async () => {
@@ -97,7 +117,9 @@ describe("focusPoolStorage", () => {
 
     await deleteFocusItem(1);
 
-    await expect(getFocusPool()).resolves.toEqual([{ id: 2, name: "Cafe" }]);
+    await expect(getFocusPool()).resolves.toEqual([
+      { id: 2, name: "Cafe" },
+    ]);
   });
 
   it("clears all Focus pool items", async () => {

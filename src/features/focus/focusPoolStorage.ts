@@ -61,3 +61,16 @@ export async function clearFocusPool(): Promise<void> {
     "DELETE FROM focus_pool"
   );
 }
+
+// Returns Focus items in the format needed by the Focus recommendation logic.
+export async function getFocusRecommendationPool(): Promise<FocusPoolItem[]> {
+  return getFocusPool();
+}
+
+// Checks if the Focus pool has no saved options.
+// The UI can use this to show a friendly empty state.
+export async function isFocusPoolEmpty(): Promise<boolean> {
+  const items = await getFocusPool();
+
+  return items.length === 0;
+}

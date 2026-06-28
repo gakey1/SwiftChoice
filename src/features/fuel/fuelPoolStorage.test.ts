@@ -3,6 +3,8 @@ import {
   clearFuelPool,
   deleteFuelItem,
   getFuelPool,
+  getFuelRecommendationPool,
+  isFuelPoolEmpty,
   updateFuelItem,
 } from "@/features/fuel/fuelPoolStorage";
 import { getDb } from "@/services/localdb/db";
@@ -31,12 +33,14 @@ const mockDb = {
     if (sql.startsWith("UPDATE fuel_pool")) {
       const name = params?.[0] as string;
       const id = params?.[1] as number;
+
       rows = rows.map((row) => (row.id === id ? { ...row, name } : row));
       return;
     }
 
     if (sql.startsWith("DELETE FROM fuel_pool WHERE id")) {
       const id = params?.[0] as number;
+
       rows = rows.filter((row) => row.id !== id);
       return;
     }
@@ -63,6 +67,22 @@ describe("fuelPoolStorage", () => {
       { id: 1, name: "Momo" },
       { id: 2, name: "Pasta" },
     ]);
+  });
+
+  it("returns Fuel items for the recommendation engine", async () => {
+    await addFuelItem("Momo");
+
+    await expect(getFuelRecommendationPool()).resolves.toEqual([
+      { id: 1, name: "Momo" },
+    ]);
+  });
+
+  it("checks whether the Fuel pool is empty", async () => {
+    await expect(isFuelPoolEmpty()).resolves.toBe(true);
+
+    await addFuelItem("Momo");
+
+    await expect(isFuelPoolEmpty()).resolves.toBe(false);
   });
 
   it("trims Fuel pool item names before saving", async () => {
@@ -97,7 +117,9 @@ describe("fuelPoolStorage", () => {
 
     await deleteFuelItem(1);
 
-    await expect(getFuelPool()).resolves.toEqual([{ id: 2, name: "Burger" }]);
+    await expect(getFuelPool()).resolves.toEqual([
+      { id: 2, name: "Burger" },
+    ]);
   });
 
   it("clears all Fuel pool items", async () => {
