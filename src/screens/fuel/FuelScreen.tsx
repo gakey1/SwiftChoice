@@ -5,7 +5,8 @@ import { Icon } from "@/components/Icon";
 import { Card } from "@/components/Card";
 import { T } from "@/theme/tokens";
 import { MODULES } from "@/theme/modules";
-import { getRecommendation, FoodOption } from "@/services/recommendation/recommendationEngine";
+import { getRecommendation } from "@/services/recommendation/recommendationEngine";
+import type { FoodOption } from "@/services/recommendation/recommendationEngine";
 
 type FilterGroupProps = {
   label: string;
@@ -76,7 +77,7 @@ export function FuelScreen() {
           
           <View style={styles.headerContainer}>
             <Text style={styles.contextSubtitle}>Your Fuel recommendation</Text>
-            <Text style={styles.h1}>Here's what to eat</Text>
+            <Text style={styles.h1}>{"Here's what to eat"}</Text>
           </View>
 
           <Card style={styles.resultCardCustom}>

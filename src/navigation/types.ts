@@ -12,3 +12,10 @@ export type AppTabsParamList = {
   history: undefined;
   settings: undefined;
 };
+
+// Signed-in stack that wraps the tabs, so module screens (Fuel, later Focus
+// and Priority) push over the tab bar. The tabs themselves are one route.
+export type AppStackParamList = {
+  MainTabs: undefined;
+  Fuel: undefined;
+};

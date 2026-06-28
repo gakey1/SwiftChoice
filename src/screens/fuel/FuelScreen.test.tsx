@@ -2,6 +2,10 @@ import React from "react";
 import { render, fireEvent } from "@testing-library/react-native";
 import { FuelScreen } from "./FuelScreen";
 
+// Stub the native icon set so this test does not pull in expo-font / expo-asset,
+// which are not resolvable under Jest.
+jest.mock("@expo/vector-icons", () => ({ Feather: "Feather" }));
+
 //Mock the useNavigation hook from React Navigation
 jest.mock("@react-navigation/native", () => ({
   useNavigation: () => ({
@@ -36,13 +40,13 @@ describe("FuelScreen", () => {
   it("triggers the recommendation engine when clicking the main action button", () => {
     const { getByText } = render(<FuelScreen />);
     
-    const actionButton = getByText("Swift Choice Now");
-    
+    const actionButton = getByText("Decide for Me");
+
     //Simulate user tapping the button to trigger the choice engine
     fireEvent.press(actionButton);
-    
+
     //Confirms it either found a match from our pool or displays the empty message
-    const hasResult = getByText(/Your Recommendation|No exact match found/i);
+    const hasResult = getByText(/Your Fuel recommendation|No exact match found/i);
     expect(hasResult).toBeTruthy();
   });
 });

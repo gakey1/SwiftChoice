@@ -11,10 +11,8 @@ import type { AppTabsParamList } from "@/navigation/types";
 import { HistoryScreen } from "@/screens/history/HistoryScreen";
 import { HomeScreen } from "@/screens/home/HomeScreen";
 import { SettingsScreen } from "@/screens/settings/SettingsScreen";
-import { FuelResultScreen } from "@/screens/fuel/FuelResultScreen";
-import { FuelScreen } from "@/screens/fuel/FuelScreen";
 
-const Tab = createBottomTabNavigator<any>();
+const Tab = createBottomTabNavigator<AppTabsParamList>();
 
 // Render the design-system BottomNav as the tab bar: map the active route to
 // its key, and a tab press back to navigation. Route names are the nav keys.
@@ -33,23 +31,6 @@ export function AppTabs() {
       <Tab.Screen name="home" component={HomeScreen} />
       <Tab.Screen name="history" component={HistoryScreen} />
       <Tab.Screen name="settings" component={SettingsScreen} />
-      <Tab.Screen 
-        name="fuel" 
-        component={FuelScreen} 
-        options={{
-          title: "Fuel" // Adds a clean text label to your tab bar icon
-        }}
-      />
-
-      {/* 2. MATCH RESULT DISPLAY SCREEN (Hidden from tab bar layout) */}
-      <Tab.Screen 
-        name="FuelResult" 
-        component={FuelResultScreen} 
-        options={{ 
-          tabBarButton: () => null, // Hides the icon from the bottom strip
-          headerShown: false        // Minimal soft UI with no stack double headers
-        }}
-      />
     </Tab.Navigator>
   );
 }
