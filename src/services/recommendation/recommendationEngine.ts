@@ -32,6 +32,8 @@ export const FOOD_POOL: FoodOption[] = [
   
   { fuel_id: "out_4", user_id: "user_123", item_name: "Cozy Neighborhood Cafe", type: "out", budget_level: "$$", prep_time: "medium", distance_range: "near", rating: "4.2" },
   { fuel_id: "out_5", user_id: "user_123", item_name: "Downtown Sushi Train", type: "out", budget_level: "$$", prep_time: "medium", distance_range: "mid", rating: "4.3" },
+  { fuel_id: "out_5_b", user_id: "user_123", item_name: "Thai Fusion Express", type: "out", budget_level: "$$", prep_time: "medium", distance_range: "mid", rating: "4.5" },
+  { fuel_id: "out_5_c", user_id: "user_123", item_name: "Hakata Ramen Tavern", type: "out", budget_level: "$$", prep_time: "medium", distance_range: "mid", rating: "4.2" },
   { fuel_id: "out_6", user_id: "user_123", item_name: "Authentic Pizzeria", type: "out", budget_level: "$$", prep_time: "medium", distance_range: "far", rating: "4.5" },
   
   { fuel_id: "out_7", user_id: "user_123", item_name: "City Center Steakhouse", type: "out", budget_level: "$$$", prep_time: "long", distance_range: "far", rating: "5.0" },

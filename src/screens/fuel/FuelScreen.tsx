@@ -52,6 +52,7 @@ export function FuelScreen() {
   const [budget, setBudget] = useState<"$" | "$$" | "$$$">("$$");
   const [prepTime, setPrepTime] = useState<"short" | "medium" | "long">("medium");
   const [distance, setDistance] = useState<"near" | "mid" | "far">("mid");
+  const [hasRerolled, setHasRerolled] = useState<boolean>(false);
 
   const [recommendation, setRecommendation] = useState<FoodOption | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
@@ -60,36 +61,43 @@ export function FuelScreen() {
   const primaryColor = MODULES.fuel.c700;
 
   const handleGetRecommendation = () => {
-    const result = getRecommendation({
+    const randomizedList = getRecommendation({
       type: mealType,
       budget: budget,
       prepTime: prepTime,
       distance: distance,
-    });
-    if (result) {
-      const mockList = [result];
-      setMatchList(mockList);
+    }) as unknown as FoodOption[];
+    if (randomizedList && randomizedList.length > 0) {
+      setMatchList(randomizedList);
       setCurrentIndex(0);
-      setRecommendation(result);
-    }else {
+      
+      const firstChoice = randomizedList[0];
+      if (firstChoice) {
+        setRecommendation(firstChoice);
+      }
+    } else {
       setMatchList([]);
       setRecommendation(null);
     }
+    setHasRerolled(false); //limit rerolling to only once per search
     setHasSearched(true);
   };
 
   const handleReroll = () => {
-    if (matchList && matchList.length > 1) {
-      const nextIndex = (currentIndex + 1) % matchList.length;
-      const nextItem = matchList[nextIndex];
-      
-      if (nextItem) {
-        setCurrentIndex(nextIndex);
-        setRecommendation(nextItem);
+    if (hasRerolled) {
+        console.log("Reroll limit reached! Only 1 reroll allowed per search.");
+        return;
       }
-    } else {
-      setRecommendation(null);
-    }
+
+    if (matchList && matchList.length > 1) {
+      const nextItem = matchList[1]; 
+    
+    if (nextItem) {
+      setCurrentIndex(1);
+      setRecommendation(nextItem);
+      setHasRerolled(true);
+      }
+    } 
   };
 
   // === VIEW 1: SHOW THE RESULT CARD MANUALLY IF MATCH IS FOUND ===
@@ -146,9 +154,9 @@ export function FuelScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={styles.rerollBtn} 
-              activeOpacity={0.7}
               onPress={handleReroll}
+              disabled={hasRerolled}
+              style={[styles.rerollBtn, { opacity: hasRerolled ? 0.5 : 1 }]}
             >
               <Text style={styles.rerollBtnText}>Reroll </Text>
             </TouchableOpacity>
