@@ -6,6 +6,7 @@ import { Card } from "@/components/Card";
 import { T } from "@/theme/tokens";
 import { MODULES } from "@/theme/modules";
 import { getRecommendation, FoodOption } from "@/services/recommendation/recommendationEngine";
+import { useNavigation } from "@react-navigation/native";
 
 type FilterGroupProps = {
   label: string;
@@ -59,6 +60,13 @@ export function FuelScreen() {
   const [matchList, setMatchList] = useState<FoodOption[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const primaryColor = MODULES.fuel.c700;
+  const navigation = useNavigation<any>();
+
+//Mock history function
+  const logDecisionToHistory = async (item: FoodOption) => {
+    console.log("Logging decision via history layer:", item);
+    return new Promise((resolve) => setTimeout(resolve, 500));
+  };
 
   const handleGetRecommendation = () => {
     const randomizedList = getRecommendation({
@@ -148,9 +156,20 @@ export function FuelScreen() {
             <TouchableOpacity 
               style={[styles.acceptBtn, { backgroundColor: primaryColor }]} 
               activeOpacity={0.8}
-              onPress={() => setRecommendation(null)} 
+              onPress={async () => {
+                if (recommendation) {
+                  //Log the choice via our mock history layer pipeline
+                  await logDecisionToHistory(recommendation);
+                  
+                  //Clear the active choice view states
+                  setRecommendation(null);
+                  
+                  //Navigate the user back to the Home dashboard
+                  navigation.navigate("MainTabs", { screen: "home" }); 
+                }
+              }}
             >
-              <Text style={styles.acceptBtnText}>Accept ✓</Text>
+              <Text style={styles.acceptBtnText}>Accept</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
