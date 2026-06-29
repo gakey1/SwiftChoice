@@ -55,6 +55,8 @@ export function FuelScreen() {
 
   const [recommendation, setRecommendation] = useState<FoodOption | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [matchList, setMatchList] = useState<FoodOption[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const primaryColor = MODULES.fuel.c700;
 
   const handleGetRecommendation = () => {
@@ -64,8 +66,30 @@ export function FuelScreen() {
       prepTime: prepTime,
       distance: distance,
     });
-    setRecommendation(result);
+    if (result) {
+      const mockList = [result];
+      setMatchList(mockList);
+      setCurrentIndex(0);
+      setRecommendation(result);
+    }else {
+      setMatchList([]);
+      setRecommendation(null);
+    }
     setHasSearched(true);
+  };
+
+  const handleReroll = () => {
+    if (matchList && matchList.length > 1) {
+      const nextIndex = (currentIndex + 1) % matchList.length;
+      const nextItem = matchList[nextIndex];
+      
+      if (nextItem) {
+        setCurrentIndex(nextIndex);
+        setRecommendation(nextItem);
+      }
+    } else {
+      setRecommendation(null);
+    }
   };
 
   // === VIEW 1: SHOW THE RESULT CARD MANUALLY IF MATCH IS FOUND ===
@@ -124,9 +148,9 @@ export function FuelScreen() {
             <TouchableOpacity 
               style={styles.rerollBtn} 
               activeOpacity={0.7}
-              onPress={() => setRecommendation(null)} 
+              onPress={handleReroll}
             >
-              <Text style={styles.rerollBtnText}>Reroll ↺</Text>
+              <Text style={styles.rerollBtnText}>Reroll </Text>
             </TouchableOpacity>
           </View>
         </View>

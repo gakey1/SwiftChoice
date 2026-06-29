@@ -49,10 +49,11 @@ export interface FilterCriteria {
 
 /*
  * Recommendation Algorithm
- * Filters the food pool by criteria, then selects exactly ONE random option.
+ * Filters the food pool by criteria, the entire matching pool
+ * sorted in a completely randomized, shuffled sequence
  */
-export function getRecommendation(criteria: FilterCriteria): FoodOption | null {
-  // Filter the pool down to matches
+export function getRecommendation(criteria: FilterCriteria): FoodOption[] | null {
+  //Filter the pool down to matches
   const matchingOptions = FOOD_POOL.filter((food) => {
     return (
       food.type === criteria.type &&
@@ -62,14 +63,17 @@ export function getRecommendation(criteria: FilterCriteria): FoodOption | null {
     );
   });
 
-  // If no items match the exact strict filters, return null
-  if (matchingOptions.length === 0) {
-    return null;
+  //Mixes the entire array list randomly
+  const shuffled = [...matchingOptions];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const temp = shuffled[i];
+    const itemJ = shuffled[j];
+    if (temp !== undefined && itemJ !== undefined) {
+      shuffled[i] = itemJ;
+      shuffled[j] = temp;
+    }
   }
 
-  // Select exactly ONE option randomly from the matching pool
-  const randomIndex = Math.floor(Math.random() * matchingOptions.length);
-  const selectedOption = matchingOptions[randomIndex];
-  
-  return selectedOption !== undefined ? selectedOption : null;
+  return shuffled;
 }
