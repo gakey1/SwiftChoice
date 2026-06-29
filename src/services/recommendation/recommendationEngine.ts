@@ -32,6 +32,8 @@ export const FOOD_POOL: FoodOption[] = [
   
   { fuel_id: "out_4", user_id: "user_123", item_name: "Cozy Neighborhood Cafe", type: "out", budget_level: "$$", prep_time: "medium", distance_range: "near", rating: "4.2" },
   { fuel_id: "out_5", user_id: "user_123", item_name: "Downtown Sushi Train", type: "out", budget_level: "$$", prep_time: "medium", distance_range: "mid", rating: "4.3" },
+  { fuel_id: "out_5_b", user_id: "user_123", item_name: "Thai Fusion Express", type: "out", budget_level: "$$", prep_time: "medium", distance_range: "mid", rating: "4.5" },
+  { fuel_id: "out_5_c", user_id: "user_123", item_name: "Hakata Ramen Tavern", type: "out", budget_level: "$$", prep_time: "medium", distance_range: "mid", rating: "4.2" },
   { fuel_id: "out_6", user_id: "user_123", item_name: "Authentic Pizzeria", type: "out", budget_level: "$$", prep_time: "medium", distance_range: "far", rating: "4.5" },
   
   { fuel_id: "out_7", user_id: "user_123", item_name: "City Center Steakhouse", type: "out", budget_level: "$$$", prep_time: "long", distance_range: "far", rating: "5.0" },
@@ -49,10 +51,11 @@ export interface FilterCriteria {
 
 /*
  * Recommendation Algorithm
- * Filters the food pool by criteria, then selects exactly ONE random option.
+ * Filters the food pool by criteria, the entire matching pool
+ * sorted in a completely randomized, shuffled sequence
  */
-export function getRecommendation(criteria: FilterCriteria): FoodOption | null {
-  // Filter the pool down to matches
+export function getRecommendation(criteria: FilterCriteria): FoodOption[] | null {
+  //Filter the pool down to matches
   const matchingOptions = FOOD_POOL.filter((food) => {
     return (
       food.type === criteria.type &&
@@ -62,14 +65,17 @@ export function getRecommendation(criteria: FilterCriteria): FoodOption | null {
     );
   });
 
-  // If no items match the exact strict filters, return null
-  if (matchingOptions.length === 0) {
-    return null;
+  //Mixes the entire array list randomly
+  const shuffled = [...matchingOptions];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const temp = shuffled[i];
+    const itemJ = shuffled[j];
+    if (temp !== undefined && itemJ !== undefined) {
+      shuffled[i] = itemJ;
+      shuffled[j] = temp;
+    }
   }
 
-  // Select exactly ONE option randomly from the matching pool
-  const randomIndex = Math.floor(Math.random() * matchingOptions.length);
-  const selectedOption = matchingOptions[randomIndex];
-  
-  return selectedOption !== undefined ? selectedOption : null;
+  return shuffled;
 }

@@ -7,6 +7,10 @@ import { T } from "@/theme/tokens";
 import { MODULES } from "@/theme/modules";
 import { getRecommendation } from "@/services/recommendation/recommendationEngine";
 import type { FoodOption } from "@/services/recommendation/recommendationEngine";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+
+import type { AppStackParamList } from "@/navigation/types";
 
 type FilterGroupProps = {
   label: string;
@@ -53,20 +57,59 @@ export function FuelScreen() {
   const [budget, setBudget] = useState<"$" | "$$" | "$$$">("$$");
   const [prepTime, setPrepTime] = useState<"short" | "medium" | "long">("medium");
   const [distance, setDistance] = useState<"near" | "mid" | "far">("mid");
+  const [hasRerolled, setHasRerolled] = useState<boolean>(false);
 
   const [recommendation, setRecommendation] = useState<FoodOption | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [matchList, setMatchList] = useState<FoodOption[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const primaryColor = MODULES.fuel.c700;
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+
+//Mock history function
+  const logDecisionToHistory = async (item: FoodOption) => {
+    console.log("Logging decision via history layer:", item);
+    return new Promise((resolve) => setTimeout(resolve, 500));
+  };
 
   const handleGetRecommendation = () => {
-    const result = getRecommendation({
+    const randomizedList = getRecommendation({
       type: mealType,
       budget: budget,
       prepTime: prepTime,
       distance: distance,
-    });
-    setRecommendation(result);
+    }) as unknown as FoodOption[];
+    if (randomizedList && randomizedList.length > 0) {
+      setMatchList(randomizedList);
+      setCurrentIndex(0);
+      
+      const firstChoice = randomizedList[0];
+      if (firstChoice) {
+        setRecommendation(firstChoice);
+      }
+    } else {
+      setMatchList([]);
+      setRecommendation(null);
+    }
+    setHasRerolled(false); //limit rerolling to only once per search
     setHasSearched(true);
+  };
+
+  const handleReroll = () => {
+    if (hasRerolled) {
+        console.log("Reroll limit reached! Only 1 reroll allowed per search.");
+        return;
+      }
+
+    if (matchList && matchList.length > 1) {
+      const nextItem = matchList[1]; 
+    
+    if (nextItem) {
+      setCurrentIndex(1);
+      setRecommendation(nextItem);
+      setHasRerolled(true);
+      }
+    } 
   };
 
   // === VIEW 1: SHOW THE RESULT CARD MANUALLY IF MATCH IS FOUND ===
@@ -117,17 +160,28 @@ export function FuelScreen() {
             <TouchableOpacity 
               style={[styles.acceptBtn, { backgroundColor: primaryColor }]} 
               activeOpacity={0.8}
-              onPress={() => setRecommendation(null)} 
+              onPress={async () => {
+                if (recommendation) {
+                  //Log the choice via our mock history layer pipeline
+                  await logDecisionToHistory(recommendation);
+                  
+                  //Clear the active choice view states
+                  setRecommendation(null);
+                  
+                  //Navigate the user back to the Home dashboard
+                  navigation.goBack(); 
+                }
+              }}
             >
-              <Text style={styles.acceptBtnText}>Accept ✓</Text>
+              <Text style={styles.acceptBtnText}>Accept</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={styles.rerollBtn} 
-              activeOpacity={0.7}
-              onPress={() => setRecommendation(null)} 
+              onPress={handleReroll}
+              disabled={hasRerolled}
+              style={[styles.rerollBtn, { opacity: hasRerolled ? 0.5 : 1 }]}
             >
-              <Text style={styles.rerollBtnText}>Reroll ↺</Text>
+              <Text style={styles.rerollBtnText}>Reroll </Text>
             </TouchableOpacity>
           </View>
         </View>
