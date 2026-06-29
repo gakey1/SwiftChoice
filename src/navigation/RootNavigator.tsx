@@ -7,15 +7,14 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import { useAuth } from "@/hooks/useAuth";
 import { AppTabs } from "@/navigation/AppTabs";
-import type { AuthStackParamList } from "@/navigation/types";
+import type { AppStackParamList, AuthStackParamList } from "@/navigation/types";
 import { LoginScreen } from "@/screens/auth/LoginScreen";
 import { RegisterScreen } from "@/screens/auth/RegisterScreen";
 import { FuelScreen } from "@/screens/fuel/FuelScreen";
-import { FuelResultScreen } from "@/screens/fuel/FuelResultScreen";
 import { T } from "@/theme/tokens";
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
-const AppStack = createNativeStackNavigator();
+const AppStack = createNativeStackNavigator<AppStackParamList>();
 
 export function RootNavigator() {
   const { user, initializing } = useAuth();

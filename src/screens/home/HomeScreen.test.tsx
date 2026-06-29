@@ -5,6 +5,11 @@ import { HomeScreen } from "@/screens/home/HomeScreen";
 // Stub the native icon set so this test does not pull in expo-font / expo-asset,
 // which are not resolvable under Jest. Metro resolves them fine for the app.
 jest.mock("@expo/vector-icons", () => ({ Feather: "Feather" }));
+// HomeScreen now calls useNavigation to open the Fuel screen; stub it so the
+// component renders without a real NavigationContainer.
+jest.mock("@react-navigation/native", () => ({
+  useNavigation: () => ({ navigate: jest.fn() }),
+}));
 
 describe("HomeScreen", () => {
   it("renders the greeting and the three module cards", () => {

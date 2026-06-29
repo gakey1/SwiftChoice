@@ -5,8 +5,12 @@ import { Icon } from "@/components/Icon";
 import { Card } from "@/components/Card";
 import { T } from "@/theme/tokens";
 import { MODULES } from "@/theme/modules";
-import { getRecommendation, FoodOption } from "@/services/recommendation/recommendationEngine";
+import { getRecommendation } from "@/services/recommendation/recommendationEngine";
+import type { FoodOption } from "@/services/recommendation/recommendationEngine";
 import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+
+import type { AppStackParamList } from "@/navigation/types";
 
 type FilterGroupProps = {
   label: string;
@@ -60,7 +64,7 @@ export function FuelScreen() {
   const [matchList, setMatchList] = useState<FoodOption[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const primaryColor = MODULES.fuel.c700;
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
 
 //Mock history function
   const logDecisionToHistory = async (item: FoodOption) => {
@@ -116,7 +120,7 @@ export function FuelScreen() {
           
           <View style={styles.headerContainer}>
             <Text style={styles.contextSubtitle}>Your Fuel recommendation</Text>
-            <Text style={styles.h1}>Here's what to eat</Text>
+            <Text style={styles.h1}>{"Here's what to eat"}</Text>
           </View>
 
           <Card style={styles.resultCardCustom}>
@@ -165,7 +169,7 @@ export function FuelScreen() {
                   setRecommendation(null);
                   
                   //Navigate the user back to the Home dashboard
-                  navigation.navigate("MainTabs", { screen: "home" }); 
+                  navigation.goBack(); 
                 }
               }}
             >
