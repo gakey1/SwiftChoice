@@ -74,7 +74,8 @@ export function HomeScreen() {
             subtitle="Find your ideal workspace"
             module={MODULES.focus}
             onPress={() => {
-              // TODO: navigate to the Focus input screen (Sprint 2).
+              navigation.navigate("Focus");
+          
             }}
           />
           <ModuleRowCard
