@@ -46,14 +46,14 @@ export interface FilterCriteria {
   type: "in" | "out";
   budget: "$" | "$$" | "$$$";
   prepTime: "short" | "medium" | "long";
-  distance: "near" | "mid" | "far";
+  distance?: "near" | "mid" | "far" | undefined;
 }
 
 /*
  * Recommendation Algorithm
  * Filters the food pool by criteria, the entire matching pool
  * sorted in a completely randomized, shuffled sequence
- */
+ */ 
 export function getRecommendation(criteria: FilterCriteria): FoodOption[] | null {
   //Filter the pool down to matches
   const matchingOptions = FOOD_POOL.filter((food) => {
@@ -61,7 +61,7 @@ export function getRecommendation(criteria: FilterCriteria): FoodOption[] | null
       food.type === criteria.type &&
       food.budget_level === criteria.budget &&
       food.prep_time === criteria.prepTime &&
-      food.distance_range === criteria.distance
+      (criteria.type === "in" || food.distance_range === criteria.distance)
     );
   });
 
