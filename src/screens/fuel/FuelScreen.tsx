@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from "react-native";
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon } from "@/components/Icon";
 import { Card } from "@/components/Card";
@@ -72,12 +72,14 @@ export function FuelScreen() {
     return new Promise((resolve) => setTimeout(resolve, 500));
   };
 
-  const handleGetRecommendation = () => {
-    const randomizedList = getRecommendation({
+  const handleGetRecommendation = async () => {
+    setHasSearched(false);
+
+    const randomizedList = await getRecommendation({
       type: mealType,
       budget: budget,
       prepTime: prepTime,
-      distance: distance,
+      distance: mealType === "in" ? undefined : distance,
     }) as unknown as FoodOption[];
     if (randomizedList && randomizedList.length > 0) {
       setMatchList(randomizedList);
@@ -95,7 +97,7 @@ export function FuelScreen() {
     setHasSearched(true);
   };
 
-  const handleReroll = () => {
+  const handleReroll = async () => {
     if (hasRerolled) {
         console.log("Reroll limit reached! Only 1 reroll allowed per search.");
         return;
@@ -109,7 +111,10 @@ export function FuelScreen() {
       setRecommendation(nextItem);
       setHasRerolled(true);
       }
-    } 
+    } else {
+      //If there are no other options, let the user look for something else
+      alert("No other matching options found in the pool. Try adjusting your filters!");
+    }
   };
 
   // === VIEW 1: SHOW THE RESULT CARD MANUALLY IF MATCH IS FOUND ===
@@ -139,13 +144,15 @@ export function FuelScreen() {
                 <Text style={styles.metricLabel}>Budget</Text>
               </View>
               
+              {recommendation.type === "out" && (
               <View style={styles.metricColumn}>
                 <Text style={styles.metricValue}>
                   {recommendation.distance_range === "near" ? "1.2 km" : recommendation.distance_range === "mid" ? "3.5 km" : "6.0 km"}
                 </Text>
                 <Text style={styles.metricLabel}>Distance</Text>
               </View>
-
+            )}
+            
               <View style={styles.metricColumn}>
                 <View style={styles.ratingContainer}>
                   <Text style={styles.metricValue}>{recommendation.rating}</Text>
@@ -179,9 +186,24 @@ export function FuelScreen() {
             <TouchableOpacity 
               onPress={handleReroll}
               disabled={hasRerolled}
-              style={[styles.rerollBtn, { opacity: hasRerolled ? 0.5 : 1 }]}
+              style={[styles.rerollBtn, { opacity: hasRerolled ? 0.5 : 1 },
+                //If no alternatives are found
+                matchList.length <= 1 && !hasRerolled && { 
+                  borderWidth: 0, 
+                  backgroundColor: "transparent",
+                  elevation: 0,
+                  shadowOpacity: 0 
+                }
+              ]}
             >
-              <Text style={styles.rerollBtnText}>Reroll </Text>
+              <Text style={[
+                styles.rerollBtnText,
+                // If there are no alternatives, slightly fade the text color
+                  matchList.length <= 1 && !hasRerolled && { color: T.fg2 } 
+              ]}
+                >
+                  {matchList.length <= 1 && !hasRerolled ? "No Alternative" : "Reroll"}
+               </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -241,15 +263,18 @@ export function FuelScreen() {
           onSelect={(val) => setPrepTime(val as "short" | "medium" | "long")}
           activeColor={primaryColor}
         />
-        <FilterOptionGroup
-          label="Distance"
-          options={["near", "mid", "far"]}
-          displayValues={["< 1 km", "1-5 km", "5+ km"]}
-          selectedValue={distance}
-          onSelect={(val) => setDistance(val as "near" | "mid" | "far")}
-          activeColor={primaryColor}
-        />
-
+        {/* ONLY render Distance if eating out */}
+        {mealType === "out" && (
+          <FilterOptionGroup
+            label="Distance"
+            options={["near", "mid", "far"]}
+            displayValues={["< 1 km", "1-5 km", "5+ km"]}
+            selectedValue={distance}
+            onSelect={(val) => setDistance(val as "near" | "mid" | "far")}
+            activeColor={primaryColor}
+          />
+        )}
+        
         <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: primaryColor }]}
           onPress={handleGetRecommendation}
