@@ -75,7 +75,6 @@ export function HomeScreen() {
             module={MODULES.focus}
             onPress={() => {
               navigation.navigate("Focus");
-          
             }}
           />
           <ModuleRowCard
