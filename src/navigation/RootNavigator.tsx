@@ -11,10 +11,12 @@ import type { AppStackParamList, AuthStackParamList } from "@/navigation/types";
 import { LoginScreen } from "@/screens/auth/LoginScreen";
 import { RegisterScreen } from "@/screens/auth/RegisterScreen";
 import { FuelScreen } from "@/screens/fuel/FuelScreen";
+import { FocusScreen } from "@/screens/focus/FocusScreen";
 import { T } from "@/theme/tokens";
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const AppStack = createNativeStackNavigator<AppStackParamList>();
+
 
 export function RootNavigator() {
   const { user, initializing } = useAuth();
@@ -34,6 +36,13 @@ export function RootNavigator() {
         <AppStack.Screen 
           name="Fuel" 
           component={FuelScreen} 
+          options={{ 
+            animation: "slide_from_bottom" 
+          }} 
+        />
+        <AppStack.Screen 
+          name="Focus" 
+          component={FocusScreen} 
           options={{ 
             animation: "slide_from_bottom" 
           }} 
