@@ -17,7 +17,6 @@ import { T } from "@/theme/tokens";
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const AppStack = createNativeStackNavigator<AppStackParamList>();
 
-
 export function RootNavigator() {
   const { user, initializing } = useAuth();
 
