@@ -1,10 +1,23 @@
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "firebase/auth";
+import {
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  signInWithEmailAndPassword,
+  signOut,
+} from "firebase/auth";
 
-import { loginWithEmail, logout, registerWithEmail } from "@/services/auth";
+import { auth } from "@/services/firebase";
+import {
+  loginWithEmail,
+  logout,
+  registerWithEmail,
+  reloadAndCheckVerified,
+  resendVerificationEmail,
+} from "@/services/auth";
 import { createUserDocument } from "@/services/firestore/users";
 
 jest.mock("firebase/auth", () => ({
   createUserWithEmailAndPassword: jest.fn(),
+  sendEmailVerification: jest.fn(),
   signInWithEmailAndPassword: jest.fn(),
   signOut: jest.fn(),
 }));
@@ -14,9 +27,14 @@ jest.mock("@/services/firestore/users", () => ({
 }));
 
 const mockCreate = createUserWithEmailAndPassword as jest.Mock;
+const mockSendVerification = sendEmailVerification as jest.Mock;
 const mockSignIn = signInWithEmailAndPassword as jest.Mock;
 const mockSignOut = signOut as jest.Mock;
 const mockCreateDoc = createUserDocument as jest.Mock;
+
+// auth.currentUser is not part of the {} mock, so tests that need it set it
+// directly through this typed handle.
+const mutableAuth = auth as unknown as { currentUser: unknown };
 
 describe("registerWithEmail", () => {
   beforeEach(() => {
@@ -31,6 +49,7 @@ describe("registerWithEmail", () => {
 
     expect(mockCreate).toHaveBeenCalledWith({}, "Test@Email.com", "password123");
     expect(mockCreateDoc).toHaveBeenCalledWith("uid-123", "Test@Email.com");
+    expect(mockSendVerification).toHaveBeenCalledWith({ uid: "uid-123" });
     expect(uid).toBe("uid-123");
   });
 
@@ -78,5 +97,47 @@ describe("logout", () => {
     await logout();
 
     expect(mockSignOut).toHaveBeenCalledWith({});
+  });
+});
+
+describe("resendVerificationEmail", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mutableAuth.currentUser = null;
+  });
+
+  it("throws when no one is signed in", async () => {
+    await expect(resendVerificationEmail()).rejects.toThrow(
+      "No signed-in user to verify."
+    );
+    expect(mockSendVerification).not.toHaveBeenCalled();
+  });
+
+  it("sends the link to the current user", async () => {
+    const currentUser = { uid: "uid-7" };
+    mutableAuth.currentUser = currentUser;
+
+    await resendVerificationEmail();
+
+    expect(mockSendVerification).toHaveBeenCalledWith(currentUser);
+  });
+});
+
+describe("reloadAndCheckVerified", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mutableAuth.currentUser = null;
+  });
+
+  it("returns false when no one is signed in", async () => {
+    await expect(reloadAndCheckVerified()).resolves.toBe(false);
+  });
+
+  it("reloads the user and returns the fresh emailVerified value", async () => {
+    const reload = jest.fn().mockResolvedValue(undefined);
+    mutableAuth.currentUser = { reload, emailVerified: true };
+
+    await expect(reloadAndCheckVerified()).resolves.toBe(true);
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 });

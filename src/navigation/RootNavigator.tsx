@@ -10,6 +10,7 @@ import { AppTabs } from "@/navigation/AppTabs";
 import type { AppStackParamList, AuthStackParamList } from "@/navigation/types";
 import { LoginScreen } from "@/screens/auth/LoginScreen";
 import { RegisterScreen } from "@/screens/auth/RegisterScreen";
+import { VerifyEmailScreen } from "@/screens/auth/VerifyEmailScreen";
 import { FuelScreen } from "@/screens/fuel/FuelScreen";
 import { FocusScreen } from "@/screens/focus/FocusScreen";
 import { T } from "@/theme/tokens";
@@ -18,7 +19,7 @@ const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const AppStack = createNativeStackNavigator<AppStackParamList>();
 
 export function RootNavigator() {
-  const { user, initializing } = useAuth();
+  const { user, initializing, emailVerified } = useAuth();
 
   if (initializing) {
     return (
@@ -26,6 +27,13 @@ export function RootNavigator() {
         <ActivityIndicator color={T.teal} />
       </View>
     );
+  }
+
+  // Signed in but the inbox is not confirmed yet: hold them on the verify
+  // screen. The app screens below are never mounted until emailVerified flips,
+  // the same structural gate D-007 uses for signed-out users.
+  if (user && !emailVerified) {
+    return <VerifyEmailScreen />;
   }
 
   if (user) {
