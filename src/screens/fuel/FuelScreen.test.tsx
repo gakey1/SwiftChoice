@@ -37,16 +37,21 @@ describe("FuelScreen", () => {
     expect(eatInButton).toBeTruthy();
   });
 
-  it("triggers the recommendation engine when clicking the main action button", () => {
-    const { getByText } = render(<FuelScreen />);
-    
+  it("triggers the recommendation engine when clicking the main action button", async () => {
+    const { getByText, findByText } = render(<FuelScreen />);
+
     const actionButton = getByText("Decide for Me");
 
     //Simulate user tapping the button to trigger the choice engine
     fireEvent.press(actionButton);
 
-    //Confirms it either found a match from our pool or displays the empty message
-    const hasResult = getByText(/Your Fuel recommendation|No exact match found/i);
+    //The engine is async now (Eat Out routes through the mock Google Places
+    //call), so wait for either the result card or the empty message.
+    const hasResult = await findByText(
+      /Your Fuel recommendation|No exact match found/i,
+      {},
+      { timeout: 3000 }
+    );
     expect(hasResult).toBeTruthy();
   });
 });

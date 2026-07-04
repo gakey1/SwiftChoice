@@ -1,3 +1,5 @@
+import { fetchMockGooglePlaces, type GooglePlaceResult } from "./googlePlacesMock";
+
 // Define what a Food Option choice looks like.
 export interface FoodOption {
   fuel_id: string;
@@ -10,7 +12,7 @@ export interface FoodOption {
   rating: string;
 }
 
-// The mock Fuel pool used by the Fuel recommendation flow.
+// The mock Fuel pool used by the Eat In recommendation flow.
 export const FOOD_POOL: FoodOption[] = [
   { fuel_id: "in_1", user_id: "user_123", item_name: "Home-cooked Instant Noodles", type: "in", budget_level: "$", prep_time: "short", distance_range: "near", rating: "4.0" },
   { fuel_id: "in_2", user_id: "user_123", item_name: "Microwave Fried Rice", type: "in", budget_level: "$", prep_time: "short", distance_range: "mid", rating: "3.8" },
@@ -39,21 +41,73 @@ export interface FilterCriteria {
   type: "in" | "out";
   budget: "$" | "$$" | "$$$";
   prepTime: "short" | "medium" | "long";
-  distance: "near" | "mid" | "far";
+  // Distance only applies to Eat Out, so it is optional. The explicit
+  // `| undefined` is required because the project runs exactOptionalPropertyTypes,
+  // and FuelScreen passes distance: undefined for the Eat In path.
+  distance?: "near" | "mid" | "far" | undefined;
+  // Placeholders for live GPS data (Eat Out, future Expo location streaming).
+  userLatitude?: number;
+  userLongitude?: number;
 }
 
-// Filters the Fuel pool by user criteria and returns shuffled matches.
-export function getRecommendation(criteria: FilterCriteria): FoodOption[] {
-  const matchingOptions = FOOD_POOL.filter((food) => {
-    return (
-      food.type === criteria.type &&
-      food.budget_level === criteria.budget &&
-      food.prep_time === criteria.prepTime &&
-      food.distance_range === criteria.distance
-    );
-  });
+/*
+ * Recommendation algorithm.
+ * Eat In filters the local pool; Eat Out routes through the external Google
+ * Places API structure (mocked for now). Both paths return the matching set in
+ * a randomly shuffled order.
+ */
+export async function getRecommendation(
+  criteria: FilterCriteria
+): Promise<FoodOption[] | null> {
+  // Pathway A: Eat In. Filter the local pool by budget and prep time.
+  if (criteria.type === "in") {
+    const matchingOptions = FOOD_POOL.filter((food) => {
+      return (
+        food.type === "in" &&
+        food.budget_level === criteria.budget &&
+        food.prep_time === criteria.prepTime
+      );
+    });
 
-  return shuffleOptions(matchingOptions);
+    return shuffleOptions(matchingOptions);
+  }
+
+  // Pathway B: Eat Out. Bypass the local pool and use the external Google
+  // Places API structure.
+  try {
+    // Use the device location if provided, otherwise default to Melbourne CBD.
+    const lat = criteria.userLatitude ?? -37.8136;
+    const lng = criteria.userLongitude ?? 144.9631;
+
+    console.warn(`[GPS Gateway] User location at Lat: ${lat}, Lng: ${lng}`);
+    console.warn(
+      `[API Gateway] Routing to Google Places for radius: ${criteria.distance ?? "near"}, budget: ${criteria.budget}`
+    );
+
+    const apiResults: GooglePlaceResult[] = await fetchMockGooglePlaces(
+      criteria.budget
+    );
+
+    // Transform the raw Google API payload into the app's FoodOption schema.
+    const transformedOptions: FoodOption[] = apiResults.map((place, index) => {
+      return {
+        fuel_id: `google_${index}_${Date.now()}`,
+        user_id: "user_123",
+        item_name: place.displayName.text,
+        type: "out",
+        budget_level: criteria.budget,
+        prep_time: criteria.prepTime,
+        distance_range: criteria.distance ?? "near",
+        rating: place.rating.toFixed(1),
+      };
+    });
+
+    return shuffleOptions(transformedOptions);
+  } catch (error) {
+    console.error("External API gateway tier failure:", error);
+
+    return null;
+  }
 }
 
 // Define what a Focus option looks like.
@@ -98,7 +152,7 @@ export function getFocusRecommendation(criteria: FocusCriteria): FocusOption[] {
   return shuffleOptions(matchingOptions);
 }
 
-// Small shared shuffle helper used by Fuel and Focus recommendations.
+// Small shared shuffle helper used by the Fuel and Focus recommendations.
 function shuffleOptions<T>(options: T[]): T[] {
   const shuffled = [...options];
 
