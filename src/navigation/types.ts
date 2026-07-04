@@ -18,4 +18,5 @@ export type AppTabsParamList = {
 export type AppStackParamList = {
   MainTabs: undefined;
   Fuel: undefined;
+  Focus: undefined;
 };

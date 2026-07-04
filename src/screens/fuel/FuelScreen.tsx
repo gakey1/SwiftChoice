@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon } from "@/components/Icon";
 import { Card } from "@/components/Card";
@@ -113,7 +113,7 @@ export function FuelScreen() {
       }
     } else {
       //If there are no other options, let the user look for something else
-      alert("No other matching options found in the pool. Try adjusting your filters!");
+      Alert.alert("No other matching options found in the pool. Try adjusting your filters!");
     }
   };
 

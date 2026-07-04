@@ -28,6 +28,18 @@ async function initialiseDatabase(): Promise<SQLite.SQLiteDatabase> {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS decisions (
+      history_id TEXT PRIMARY KEY NOT NULL,
+      module_type TEXT NOT NULL,
+      fuel_id TEXT,
+      focus_id TEXT,
+      task_id TEXT,
+      item_snapshot TEXT NOT NULL,
+      applied_filters TEXT NOT NULL,
+      rerolled INTEGER NOT NULL,
+      decided_at TEXT NOT NULL
+    );
   `);
 
   return db;
