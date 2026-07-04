@@ -1,6 +1,12 @@
 // Auth service: the Firebase-calling layer for the auth slice.
 // Screens call these functions; the raw SDK calls live here so they can be
 // mocked in tests and swapped without touching UI.
+//
+// Error-handling contract: these functions never swallow errors. A failed
+// Firebase call throws, and the throw is left to propagate to the calling
+// screen, which turns the error code into user-facing copy via
+// features/auth/errorMessages. Centralising that mapping (instead of scattering
+// try/catch here) is what keeps this layer thin and the messaging consistent.
 
 import {
   createUserWithEmailAndPassword,
