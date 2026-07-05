@@ -42,7 +42,9 @@ export function VerifyEmailScreen() {
     setResending(true);
     try {
       await resendVerificationEmail();
-      setStatus(`New link sent to ${email}.`);
+      setStatus(
+        `New link sent to ${email}. If you do not see it, check your spam or junk folder.`
+      );
     } catch {
       setStatus("Could not resend right now. Please try again.");
     } finally {
@@ -63,7 +65,8 @@ export function VerifyEmailScreen() {
         <Text style={styles.title}>Confirm your email</Text>
         <Text style={styles.subtitle}>
           We sent a verification link to {email}. Open it to confirm this is a
-          real inbox, then come back and continue.
+          real inbox, then come back and continue. If it is not in your inbox,
+          check your spam or junk folder.
         </Text>
 
         {status ? (
