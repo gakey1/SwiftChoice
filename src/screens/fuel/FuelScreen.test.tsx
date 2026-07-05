@@ -13,6 +13,12 @@ jest.mock("@react-navigation/native", () => ({
   }),
 }));
 
+// Mock the history layer so this test does not pull in the SQLite chain
+// (historyStorage -> db.ts -> expo-sqlite), which is not resolvable under Jest.
+jest.mock("@/features/history/historyStorage", () => ({
+  logDecision: jest.fn(),
+}));
+
 describe("FuelScreen", () => {
   it("renders the header and filter components correctly", () => {
     const { getByText } = render(<FuelScreen />);
