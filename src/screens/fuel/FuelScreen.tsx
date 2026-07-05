@@ -67,12 +67,6 @@ export function FuelScreen() {
   const primaryColor = MODULES.fuel.c700;
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
 
-//Mock history function
-  const logDecisionToHistory = async (item: FoodOption) => {
-    console.log("Logging decision via history layer:", item);
-    return new Promise((resolve) => setTimeout(resolve, 500));
-  };
-
   const handleGetRecommendation = async () => {
     setHasSearched(false);
 
