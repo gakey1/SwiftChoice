@@ -1,4 +1,4 @@
-// Demo screen — used during F4 verification to confirm every ported
+// Demo screen - used during F4 verification to confirm every ported
 // primitive renders correctly on both platforms. Not part of any
 // real navigation flow; wired temporarily into App.tsx and removed
 // once Sprint 1's real screens land.

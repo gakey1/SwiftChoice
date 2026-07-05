@@ -12,7 +12,7 @@ export type CardProps = {
   children: ReactNode;
   onPress?: () => void;
   pad?: number;
-  // Deeper shadow variant — used on the centrepiece recommendation card.
+  // Deeper shadow variant - used on the centrepiece recommendation card.
   rest?: boolean;
   style?: StyleProp<ViewStyle>;
 };
