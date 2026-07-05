@@ -11,6 +11,7 @@ import {
   getFocusRecommendation,
   type FocusOption,
 } from "@/services/recommendation/recommendationEngine";
+import { logDecision } from "@/features/history/historyStorage";
 import { MODULES } from "@/theme/modules";
 import { T } from "@/theme/tokens";
 
@@ -85,12 +86,6 @@ export function FocusScreen() {
 
   const primaryColor = MODULES.focus.c700;
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
-
-  // Temporary history stub. Full history logging is planned for Sprint 3.
-  const logDecisionToHistory = async (item: FocusOption) => {
-    console.warn("Logging Focus decision via history layer:", item);
-    return new Promise((resolve) => setTimeout(resolve, 500));
-  };
 
   function handleGetRecommendation() {
     const randomizedList = getFocusRecommendation({
@@ -179,7 +174,22 @@ export function FocusScreen() {
               style={[styles.acceptBtn, { backgroundColor: primaryColor }]}
               activeOpacity={0.8}
               onPress={async () => {
-                await logDecisionToHistory(recommendation);
+                // Record the accepted decision via the shared history API
+                // (US20). Same shape as the Fuel Accept, with the focus fields.
+                await logDecision({
+                  moduleType: "focus",
+                  focusId: recommendation.focus_id,
+                  itemSnapshot: {
+                    name: recommendation.spot_name,
+                    details: {
+                      energyLevel: recommendation.energy_level,
+                      vibe: recommendation.vibe,
+                      rating: recommendation.rating,
+                    },
+                  },
+                  appliedFilters: { energyLevel, vibe },
+                  rerolled: hasRerolled,
+                });
                 setRecommendation(null);
                 navigation.goBack();
               }}

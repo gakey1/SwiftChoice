@@ -4,6 +4,21 @@ This is a short guide for swapping the temporary console logging in the Fuel and
 Focus Accept buttons for the shared history-write function. The function is ready
 on main. You do not need to know how it stores anything; you just call it.
 
+## Status (2026-07-05): both Accept buttons are now wired
+
+This guide is now a reference rather than a to-do:
+
+- Fuel Accept (US16): wired by Tracy in PR #29.
+- Focus Accept (US20): wired by me (Yvonne) to help clear it while we are short
+  on time, since it was the same one-line swap as Fuel using the focus fields
+  (`moduleType: "focus"`, `focusId`, `spot_name`, energy and vibe). I also added
+  the history-layer mock to `FocusScreen.test.tsx` so the test suite still loads.
+  Nothing about the screen's behaviour changed. Shout if you want to adjust how
+  the fields map.
+
+The rest of this file explains the shape, kept as a reference and for the next
+module (Priority, in Sprint 3).
+
 ## What changed
 
 There is now one function that records an accepted decision:
