@@ -11,6 +11,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import type { AppStackParamList } from "@/navigation/types";
+import { logDecision } from "@/features/history/historyStorage";
 
 type FilterGroupProps = {
   label: string;
@@ -169,8 +170,26 @@ export function FuelScreen() {
               activeOpacity={0.8}
               onPress={async () => {
                 if (recommendation) {
-                  //Log the choice via our mock history layer pipeline
-                  await logDecisionToHistory(recommendation);
+                  //Log the choice using production history API
+                  await logDecision({
+                    moduleType: "fuel",
+                    fuelId: recommendation.fuel_id,
+                    itemSnapshot: {
+                      name: recommendation.item_name,
+                      details: {
+                        type: recommendation.type,
+                        budget: recommendation.budget_level,
+                        rating: recommendation.rating,
+                      },
+                    },
+                    appliedFilters: {
+                      mode: recommendation.type,       
+                      budget: recommendation.budget_level, 
+                      prepTime: recommendation.prep_time,         
+                      distance: recommendation.distance_range,         
+                    },
+                    rerolled: hasRerolled,
+                  });
                   
                   //Clear the active choice view states
                   setRecommendation(null);
