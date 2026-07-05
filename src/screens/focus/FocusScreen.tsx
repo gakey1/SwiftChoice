@@ -86,7 +86,6 @@ export function FocusScreen() {
   const primaryColor = MODULES.focus.c700;
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
 
-  // Temporary history stub. Full history logging is planned for Sprint 3.
   const logDecisionToHistory = async (item: FocusOption) => {
     console.warn("Logging Focus decision via history layer:", item);
     return new Promise((resolve) => setTimeout(resolve, 500));
@@ -134,6 +133,17 @@ export function FocusScreen() {
   if (recommendation) {
     return (
       <SafeAreaView style={styles.frame} edges={["top", "left", "right"]}>
+        <View style={styles.backRow}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+            activeOpacity={0.7}
+          >
+            <Icon name="arrow-left" size={22} color={primaryColor} />
+            <Text style={[styles.backText, { color: primaryColor }]}>Back</Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={[styles.content, { justifyContent: "center" }]}>
           <View style={styles.headerContainer}>
             <Text style={styles.contextSubtitle}>Your Focus recommendation</Text>
@@ -205,6 +215,17 @@ export function FocusScreen() {
 
   return (
     <SafeAreaView style={styles.frame} edges={["top", "left", "right"]}>
+      <View style={styles.backRow}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+          activeOpacity={0.7}
+        >
+          <Icon name="arrow-left" size={22} color={primaryColor} />
+          <Text style={[styles.backText, { color: primaryColor }]}>Back</Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -283,6 +304,20 @@ const styles = StyleSheet.create({
     maxWidth: 600,
     width: "100%",
     alignSelf: "center",
+  },
+  backRow: {
+    paddingHorizontal: T.spacing.pageX,
+    paddingTop: T.spacing[3],
+  },
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-start",
+  },
+  backText: {
+    fontFamily: T.font.medium,
+    fontSize: T.fontSize.body,
   },
   titleContainer: {
     flexDirection: "row",

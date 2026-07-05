@@ -7,7 +7,7 @@
 // teal surface, so module-colour scoping does not apply.
 
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
@@ -54,7 +54,16 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <View style={styles.brand}>
+
+         <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+      >
+         <Text style={styles.backText}>← Back</Text>
+         </TouchableOpacity>
+
+  <View style={styles.brand}>
             <View style={styles.logo}>
               <Text style={styles.logoLetter}>S</Text>
             </View>
@@ -173,4 +182,15 @@ const styles = StyleSheet.create({
   footer: { flexDirection: "row", justifyContent: "center", marginTop: T.spacing[5] },
   footerText: { fontFamily: T.font.regular, fontSize: T.fontSize.body, color: T.fg2 },
   footerLink: { fontFamily: T.font.semibold, fontSize: T.fontSize.body, color: T.teal },
+
+  backButton: {
+    alignSelf: "flex-start",
+    marginBottom: T.spacing[4],
+  },
+
+  backText: {
+    fontFamily: T.font.semibold,
+    fontSize: T.fontSize.body,
+    color: T.teal,
+  },
 });
