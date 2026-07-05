@@ -14,13 +14,13 @@ export const colors = {
   fg2: "#6B7280", // secondary, gray
   fg3: "#9CA3AF", // tertiary, disabled
 
-  // Universal accent — allowed everywhere
+  // Universal accent - allowed everywhere
   teal: "#2A9D8F",
   teal700: "#228377",
   tealTint: "rgba(42, 157, 143, 0.12)",
   tealOn: "#FFFFFF", // text on teal
 
-  // Module accents — scoped to their own screens only
+  // Module accents - scoped to their own screens only
   fuel: "#E8913A",
   fuel700: "#D17E29",
   fuelTint: "rgba(232, 145, 58, 0.12)",
@@ -72,7 +72,7 @@ export const spacing = {
   pageX: 24, // horizontal page padding
 } as const;
 
-// Elevation — subtle, single system. iOS uses shadow props, Android uses elevation.
+// Elevation - subtle, single system. iOS uses shadow props, Android uses elevation.
 // Pair them on a View for consistent results across platforms.
 export const elevation = {
   card: {
@@ -98,13 +98,13 @@ export const elevation = {
   },
 } as const;
 
-// Motion — durations are RN-friendly; ease is for Animated easing curves.
+// Motion - durations are RN-friendly; ease is for Animated easing curves.
 export const motion = {
   dur: 200, // ms
   ease: [0.4, 0, 0.2, 1], // cubic-bezier (use with Easing.bezier(...))
 } as const;
 
-// Font family keys — match the keys passed to useFonts() in App.tsx.
+// Font family keys - match the keys passed to useFonts() in App.tsx.
 // Use these in StyleSheet `fontFamily` properties.
 export const font = {
   regular: "DMSans_400Regular",

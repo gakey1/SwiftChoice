@@ -1,7 +1,7 @@
 // Three-tab bottom navigation bar.
 // Tabs: Home, History, Settings.
 // Active tab uses the universal teal accent and a slightly heavier icon stroke.
-// Module-colour scoping does NOT apply here — bottom nav is cross-screen
+// Module-colour scoping does NOT apply here - bottom nav is cross-screen
 // and always uses teal.
 
 import { Pressable, StyleSheet, Text, View } from "react-native";
