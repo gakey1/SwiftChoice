@@ -1,12 +1,12 @@
 import {
-  addFocusItem,
-  clearFocusPool,
-  deleteFocusItem,
-  getFocusPool,
-  getFocusRecommendationPool,
-  isFocusPoolEmpty,
-  updateFocusItem,
-} from "@/features/focus/focusPoolStorage";
+  addFuelItem,
+  clearFuelPool,
+  deleteFuelItem,
+  getFuelPool,
+  getFuelRecommendationPool,
+  isFuelPoolEmpty,
+  updateFuelItem,
+} from "@/features/fuel/fuelPoolStorage";
 import { getDb } from "@/services/localdb/db";
 
 jest.mock("@/services/localdb/db", () => ({
@@ -15,7 +15,7 @@ jest.mock("@/services/localdb/db", () => ({
 
 const mockGetDb = getDb as jest.Mock;
 
-let rows: { id: number; name: string }[] = [];
+let rows: { id: number; name: string; budget: string; prepTime: string; distance: string }[] = [];
 let nextId = 1;
 
 const mockDb = {
@@ -24,34 +24,44 @@ const mockDb = {
   ),
 
   runAsync: jest.fn(async (sql: string, params?: unknown[]) => {
-    if (sql.startsWith("INSERT INTO focus_pool")) {
-      rows.push({ id: nextId, name: params?.[0] as string });
+    if (sql.startsWith("INSERT INTO fuel_pool")) {
+      rows.push({
+        id: nextId,
+        name: params?.[0] as string,
+        budget: params?.[1] as string,
+        prepTime: params?.[2] as string,
+        distance: params?.[3] as string,
+      });
       nextId += 1;
       return;
     }
 
-    if (sql.startsWith("UPDATE focus_pool")) {
+    if (sql.startsWith("UPDATE fuel_pool")) {
       const name = params?.[0] as string;
-      const id = params?.[1] as number;
+      const budget = params?.[1] as string;
+      const prepTime = params?.[2] as string;
+      const distance = params?.[3] as string;
+      const id = params?.[4] as number;
 
-      rows = rows.map((row) => (row.id === id ? { ...row, name } : row));
+      rows = rows.map((row) =>
+        row.id === id ? { ...row, name, budget, prepTime, distance } : row
+      );
       return;
     }
 
-    if (sql.startsWith("DELETE FROM focus_pool WHERE id")) {
+    if (sql.startsWith("DELETE FROM fuel_pool WHERE id")) {
       const id = params?.[0] as number;
-
       rows = rows.filter((row) => row.id !== id);
       return;
     }
 
-    if (sql.startsWith("DELETE FROM focus_pool")) {
+    if (sql.startsWith("DELETE FROM fuel_pool")) {
       rows = [];
     }
   }),
 };
 
-describe("focusPoolStorage", () => {
+describe("fuelPoolStorage", () => {
   beforeEach(() => {
     rows = [];
     nextId = 1;
@@ -59,75 +69,89 @@ describe("focusPoolStorage", () => {
     mockGetDb.mockResolvedValue(mockDb);
   });
 
-  it("adds and returns Focus pool items", async () => {
-    await addFocusItem("Library");
-    await addFocusItem("Cafe");
+  it("adds and returns Fuel pool items", async () => {
+    await addFuelItem("Momo", "$", "short", "near");
+    await addFuelItem("Pasta", "$$", "medium", "mid");
 
-    await expect(getFocusPool()).resolves.toEqual([
-      { id: 2, name: "Cafe" },
-      { id: 1, name: "Library" },
+    await expect(getFuelPool()).resolves.toEqual([
+      { id: 1, name: "Momo", budget: "$", prepTime: "short", distance: "near" },
+      { id: 2, name: "Pasta", budget: "$$", prepTime: "medium", distance: "mid" },
     ]);
   });
 
-  it("returns Focus items for the recommendation logic", async () => {
-    await addFocusItem("Library");
+  it("uses default Fuel filter values when only a name is provided", async () => {
+    await addFuelItem("Momo");
 
-    await expect(getFocusRecommendationPool()).resolves.toEqual([
-      { id: 1, name: "Library" },
+    await expect(getFuelPool()).resolves.toEqual([
+      { id: 1, name: "Momo", budget: "$$", prepTime: "medium", distance: "mid" },
     ]);
   });
 
-  it("checks whether the Focus pool is empty", async () => {
-    await expect(isFocusPoolEmpty()).resolves.toBe(true);
+  it("returns Fuel items for the recommendation engine", async () => {
+    await addFuelItem("Momo", "$", "short", "near");
 
-    await addFocusItem("Library");
-
-    await expect(isFocusPoolEmpty()).resolves.toBe(false);
-  });
-
-  it("trims Focus pool item names before saving", async () => {
-    await addFocusItem("  Library  ");
-
-    await expect(getFocusPool()).resolves.toEqual([
-      { id: 1, name: "Library" },
+    await expect(getFuelRecommendationPool()).resolves.toEqual([
+      { id: 1, name: "Momo", budget: "$", prepTime: "short", distance: "near" },
     ]);
   });
 
-  it("does not add an empty Focus pool item", async () => {
-    await expect(addFocusItem("   ")).rejects.toThrow(
-      "Focus item name cannot be empty."
+  it("checks whether the Fuel pool is empty", async () => {
+    await expect(isFuelPoolEmpty()).resolves.toBe(true);
+
+    await addFuelItem("Momo");
+
+    await expect(isFuelPoolEmpty()).resolves.toBe(false);
+  });
+
+  it("trims Fuel pool item names before saving", async () => {
+    await addFuelItem("  Momo  ", "$", "short", "near");
+
+    await expect(getFuelPool()).resolves.toEqual([
+      { id: 1, name: "Momo", budget: "$", prepTime: "short", distance: "near" },
+    ]);
+  });
+
+  it("does not add an empty Fuel pool item", async () => {
+    await expect(addFuelItem("   ")).rejects.toThrow(
+      "Fuel item name cannot be empty."
     );
 
     expect(rows).toEqual([]);
   });
 
-  it("updates a Focus pool item", async () => {
-    await addFocusItem("Library");
+  it("updates a Fuel pool item", async () => {
+    await addFuelItem("Pizza");
 
-    await updateFocusItem(1, "University Library");
+    await updateFuelItem(1, "Pepperoni Pizza", "$$$", "long", "far");
 
-    await expect(getFocusPool()).resolves.toEqual([
-      { id: 1, name: "University Library" },
+    await expect(getFuelPool()).resolves.toEqual([
+      {
+        id: 1,
+        name: "Pepperoni Pizza",
+        budget: "$$$",
+        prepTime: "long",
+        distance: "far",
+      },
     ]);
   });
 
-  it("deletes a single Focus pool item", async () => {
-    await addFocusItem("Library");
-    await addFocusItem("Cafe");
+  it("deletes a single Fuel pool item", async () => {
+    await addFuelItem("Pizza");
+    await addFuelItem("Burger");
 
-    await deleteFocusItem(1);
+    await deleteFuelItem(1);
 
-    await expect(getFocusPool()).resolves.toEqual([
-      { id: 2, name: "Cafe" },
+    await expect(getFuelPool()).resolves.toEqual([
+      { id: 2, name: "Burger", budget: "$$", prepTime: "medium", distance: "mid" },
     ]);
   });
 
-  it("clears all Focus pool items", async () => {
-    await addFocusItem("Library");
-    await addFocusItem("Cafe");
+  it("clears all Fuel pool items", async () => {
+    await addFuelItem("Pizza");
+    await addFuelItem("Burger");
 
-    await clearFocusPool();
+    await clearFuelPool();
 
-    await expect(getFocusPool()).resolves.toEqual([]);
+    await expect(getFuelPool()).resolves.toEqual([]);
   });
 });
