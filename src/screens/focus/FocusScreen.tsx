@@ -32,6 +32,8 @@ type FilterGroupProps = {
   activeColor: string;
 };
 
+// One filter group: a label, the value currently chosen shown in the module
+// colour, and a row of options to pick from. The chosen option is outlined.
 function FilterOptionGroup({
   label,
   options,
@@ -92,6 +94,8 @@ export function FocusScreen() {
   const primaryColor = MODULES.focus.c700;
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
 
+  // Runs when "Find My Spot" is pressed. Asks the engine for matching spots,
+  // keeps the whole list so a reroll can show the next one, and shows the first.
   function handleGetRecommendation() {
     const randomizedList = getFocusRecommendation({
       energyLevel,
@@ -115,6 +119,8 @@ export function FocusScreen() {
     setHasSearched(true);
   }
 
+  // Runs when Reroll is pressed. Shows the next spot from the list, but only
+  // once per search.
   function handleReroll() {
     if (hasRerolled) {
       console.warn("Reroll limit reached. Only one reroll is allowed per search.");
@@ -273,6 +279,7 @@ export function FocusScreen() {
   );
 }
 
+// Turns the stored energy value into a word to show on screen.
 function energyLabel(value: EnergyLevel) {
   if (value === "low") return "Low";
   if (value === "high") return "High";
@@ -280,6 +287,7 @@ function energyLabel(value: EnergyLevel) {
   return "Medium";
 }
 
+// Turns the stored vibe value into a word to show on screen.
 function vibeLabel(value: FocusVibe) {
   if (value === "silent") return "Silent";
   if (value === "collaborative") return "Collaborative";

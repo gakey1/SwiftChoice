@@ -1,9 +1,9 @@
-// Home dashboard. Follows the navigation and colour rules: lives under
-// screens/home, named export, teal on this universal surface (green stays on
-// Focus screens), typed module prop.
+// The home dashboard. It is the first screen after login and lists the three
+// modules (Fuel, Focus, Priority) as cards to tap into, with a weekly snapshot
+// underneath. It uses teal, the colour allowed on every shared screen.
 //
-// The weekly snapshot shows an empty-state until there is decision history to
-// summarise. The live figures land with the dashboard story later on.
+// The snapshot shows an empty state until there is some decision history to
+// summarise. The real weekly figures come later with the dashboard work.
 
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -23,6 +23,8 @@ type ModuleRowCardProps = {
   onPress: () => void;
 };
 
+// One tappable module card: the module icon, its title and subtitle, and a
+// chevron on the right. Tapping it opens that module's screen.
 function ModuleRowCard({ title, subtitle, module, onPress }: ModuleRowCardProps) {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={styles.cardClickable}>
