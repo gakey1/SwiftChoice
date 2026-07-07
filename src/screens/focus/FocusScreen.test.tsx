@@ -1,3 +1,7 @@
+// Tests for the focus screen. The icon set, navigation, and history layer are
+// stubbed so it renders under Jest. These check that the header and both filter
+// groups show, and that tapping Find My Spot lands on a result or empty state.
+
 import React from "react";
 import { render, fireEvent } from "@testing-library/react-native";
 import { FocusScreen } from "./FocusScreen";
