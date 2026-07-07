@@ -1,7 +1,7 @@
-// Verify-email gate (auth hardening, week-6 demo feedback). Shown by
-// RootNavigator when a user is signed in but has not confirmed a real inbox.
-// Blocks fake-email sign ups: the app screens are not mounted until the user
-// clicks the link we emailed and the reload() confirms emailVerified.
+// The screen that asks the user to confirm their email. RootNavigator shows this
+// when someone is signed in but has not confirmed their inbox yet. It blocks fake
+// sign ups: the main app is not loaded until the user clicks the emailed link
+// and Firebase confirms the email is now verified.
 
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -20,13 +20,15 @@ export function VerifyEmailScreen() {
 
   const email = user?.email ?? "your email";
 
+  // Runs when "I have verified" is pressed. Asks Firebase again. If the email is
+  // now verified the app opens on its own; if not, the user is asked to try again.
   async function handleCheckVerified() {
     setStatus(null);
     setChecking(true);
     try {
       const verified = await refreshEmailVerified();
-      // If verified, RootNavigator re-renders and falls through to the app;
-      // this screen simply unmounts. If not, tell them to try again.
+      // If it is verified, RootNavigator shows the app and this screen goes away.
+      // If not, tell them to click the link and try again.
       if (!verified) {
         setStatus("Not verified yet. Click the link in your inbox, then try again.");
       }
@@ -37,6 +39,8 @@ export function VerifyEmailScreen() {
     }
   }
 
+  // Runs when "Resend link" is pressed. Sends the email again and tells them
+  // where to look for it.
   async function handleResend() {
     setStatus(null);
     setResending(true);

@@ -1,3 +1,7 @@
+// Tests for the verify-email screen. The auth hook and service are mocked, so
+// these check the screen's behaviour: it shows the pending message with the
+// user's email, re-checks when asked, resends the link, and logs out.
+
 import React from "react";
 import { render, fireEvent, waitFor } from "@testing-library/react-native";
 
@@ -7,6 +11,8 @@ const mockRefresh = jest.fn();
 const mockResend = jest.fn();
 const mockLogout = jest.fn();
 
+// Fake the signed-in user and the auth actions, so the screen can be checked
+// without real Firebase.
 jest.mock("@/hooks/useAuth", () => ({
   useAuth: () => ({
     user: { email: "test@swiftchoice.com" },

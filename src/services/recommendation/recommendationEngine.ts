@@ -1,3 +1,8 @@
+// The recommendation engine for the Fuel and Focus modules. It holds the mock
+// data pools and the functions that filter them by the user's choices and
+// return the matches in a shuffled order. Eat Out is routed through a mock of
+// the Google Places API so the real one can be swapped in later.
+
 import { fetchMockGooglePlaces, type GooglePlaceResult } from "./googlePlacesMock";
 
 // Define what a Food Option choice looks like.

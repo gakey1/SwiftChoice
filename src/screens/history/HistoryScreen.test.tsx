@@ -1,3 +1,7 @@
+// Tests for the history screen. Navigation and the history layer are mocked, so
+// these check the screen's own behaviour: it shows the empty state when there is
+// nothing, and lists a decision with its module and name when there is one.
+
 import React from "react";
 import { render } from "@testing-library/react-native";
 

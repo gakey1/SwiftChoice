@@ -1,3 +1,7 @@
+// Tests for the Fuel pool storage. The on-device database is replaced with a
+// small in-memory fake, so these check that items are added, listed in order,
+// trimmed, updated, deleted, and cleared, and that an empty name is rejected.
+
 import {
   addFuelItem,
   clearFuelPool,
@@ -18,6 +22,8 @@ const mockGetDb = getDb as jest.Mock;
 let rows: { id: number; name: string }[] = [];
 let nextId = 1;
 
+// A stand-in for the real database: it keeps the pool items in an array and
+// answers the same read, insert, update, and delete calls the code makes.
 const mockDb = {
   getAllAsync: jest.fn(async () =>
     [...rows].sort((a, b) => a.name.localeCompare(b.name))

@@ -1,6 +1,6 @@
-// White card with a hairline border, soft shadow, and configurable padding.
-// The most-repeated object in the design system; used for home module cards,
-// result-screen recommendation cards, settings rows, history entries.
+// A plain white card with a light border and a soft shadow. It is used all over
+// the app: the module cards on the home screen, the recommendation card, the
+// settings rows, and the history list. The amount of padding can be set.
 
 import { Pressable, StyleSheet, View } from "react-native";
 import type { ReactNode } from "react";
@@ -12,11 +12,12 @@ export type CardProps = {
   children: ReactNode;
   onPress?: () => void;
   pad?: number;
-  // Deeper shadow variant - used on the centrepiece recommendation card.
+  // When true, uses a slightly stronger shadow, for the main recommendation card.
   rest?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
+// If an onPress is given the card can be tapped, otherwise it is just a plain box.
 export function Card({ children, onPress, pad = T.spacing[4], rest = false, style }: CardProps) {
   const elevation = rest ? T.elevation.rest : T.elevation.card;
   const baseStyle = [styles.card, { padding: pad }, elevation, style];

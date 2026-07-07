@@ -1,3 +1,7 @@
+// A stand-in for the Google Places API used while building. It waits a moment to
+// act like a real network call, then returns a small fixed list of Melbourne
+// places filtered by the chosen budget. The real API can replace this later.
+
 export type GooglePlaceResult = {
   displayName: { text: string; languageCode: string };
   formattedAddress: string;

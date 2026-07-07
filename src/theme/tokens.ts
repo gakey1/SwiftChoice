@@ -1,6 +1,6 @@
-// SwiftChoice design tokens.
-// Source of truth ported from docs/design-system/colors_and_type.css.
-// Edit values here. Other modules MUST NOT use raw hex strings or magic numbers.
+// All of the app's colours, sizes, spacing and fonts in one place. The rest of
+// the app uses these names instead of writing raw colour codes or plain numbers,
+// so everything stays consistent and can be changed from here in one spot.
 
 export const colors = {
   // Surfaces
@@ -60,7 +60,7 @@ export const radii = {
   logo: 11,
 } as const;
 
-// 8px base spacing scale
+// Spacing sizes, based on multiples of 8 pixels, so gaps and padding line up.
 export const spacing = {
   1: 4,
   2: 8,
@@ -72,8 +72,9 @@ export const spacing = {
   pageX: 24, // horizontal page padding
 } as const;
 
-// Elevation - subtle, single system. iOS uses shadow props, Android uses elevation.
-// Pair them on a View for consistent results across platforms.
+// Shadow settings for lifting cards off the background. iOS and Android handle
+// shadows differently, so each one sets both, which keeps them looking the same
+// on both platforms.
 export const elevation = {
   card: {
     shadowColor: "#000",
@@ -98,14 +99,15 @@ export const elevation = {
   },
 } as const;
 
-// Motion - durations are RN-friendly; ease is for Animated easing curves.
+// Animation settings: how long an animation runs, and its easing curve for a
+// smooth start and stop.
 export const motion = {
   dur: 200, // ms
   ease: [0.4, 0, 0.2, 1], // cubic-bezier (use with Easing.bezier(...))
 } as const;
 
-// Font family keys - match the keys passed to useFonts() in App.tsx.
-// Use these in StyleSheet `fontFamily` properties.
+// The names of the fonts the app loads. These match the fonts set up in App.tsx
+// and are what goes in a style's fontFamily.
 export const font = {
   regular: "DMSans_400Regular",
   medium: "DMSans_500Medium",
@@ -129,8 +131,8 @@ export const lineHeight = {
   body: 1.5,
 } as const;
 
-// Top-level convenience object. Components can import `T` for the most-used tokens
-// or import named exports individually for clarity.
+// A handy bundle of everything above. Most files just import T and use, for
+// example, T.teal or T.spacing[4], instead of importing each group on its own.
 export const T = {
   ...colors,
   font,

@@ -1,8 +1,6 @@
-// Three-tab bottom navigation bar.
-// Tabs: Home, History, Settings.
-// Active tab uses the universal teal accent and a slightly heavier icon stroke.
-// Module-colour scoping does NOT apply here - bottom nav is cross-screen
-// and always uses teal.
+// The bar of three tabs at the bottom of the app: Home, History and Settings.
+// The tab you are on is shown in teal. This bar shows on every main screen, so
+// it always uses teal rather than one module's colour.
 
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
@@ -18,6 +16,7 @@ type Item = {
   icon: IconName;
 };
 
+// The three tabs, in the order they appear, each with its label and icon.
 const ITEMS: readonly Item[] = [
   { key: "home", label: "Home", icon: "home" },
   { key: "history", label: "History", icon: "clock" },
@@ -29,6 +28,7 @@ export type BottomNavProps = {
   onNavigate: (key: BottomNavKey) => void;
 };
 
+// Draws the three tabs and highlights whichever one is active in teal.
 export function BottomNav({ active, onNavigate }: BottomNavProps) {
   return (
     <View style={styles.bar}>
