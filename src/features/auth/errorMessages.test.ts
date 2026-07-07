@@ -6,7 +6,7 @@ import { loginErrorMessage, registerErrorMessage } from "@/features/auth/errorMe
 
 // Sign up messages: each Firebase code maps to its own message, with a fallback.
 describe("registerErrorMessage", () => {
-  it("keeps the existing-account case specific (US04, unlike US05 login)", () => {
+  it("keeps the existing-account case specific, unlike login", () => {
     expect(registerErrorMessage({ code: "auth/email-already-in-use" })).toMatch(/already exists/i);
   });
 
@@ -30,7 +30,7 @@ describe("registerErrorMessage", () => {
 // Login messages: the credential codes all collapse to one message, and it
 // never says which field was wrong.
 describe("loginErrorMessage", () => {
-  it("collapses all four credential codes to one generic message (US05)", () => {
+  it("collapses all four credential codes to one generic message", () => {
     const codes = [
       "auth/invalid-email",
       "auth/user-not-found",
