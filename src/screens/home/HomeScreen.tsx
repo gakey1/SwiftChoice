@@ -1,9 +1,9 @@
-// Home dashboard (US02). Based on Tracy's work in PR #5, reconciled with the
-// navigation and colour rules: lives under screens/home, named export, teal on
-// this universal surface (green stays on Focus screens), typed module prop.
+// Home dashboard. Follows the navigation and colour rules: lives under
+// screens/home, named export, teal on this universal surface (green stays on
+// Focus screens), typed module prop.
 //
 // The weekly snapshot shows an empty-state until there is decision history to
-// summarise. The live figures land with the dashboard story (US27) in Sprint 4.
+// summarise. The live figures land with the dashboard story later on.
 
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -82,7 +82,7 @@ export function HomeScreen() {
             subtitle="Know what to tackle first"
             module={MODULES.priority}
             onPress={() => {
-              // TODO: navigate to the Priority input screen (Sprint 2).
+              // TODO: navigate to the Priority input screen.
             }}
           />
         </View>

@@ -1,3 +1,8 @@
+// Focus module screen. It shows the workspace filters (energy level and vibe),
+// asks the recommendation engine for matching spots, then shows one result card
+// at a time with Accept and a single Reroll. Accept saves the choice to history
+// and goes back home. Focus uses the green module colour.
+
 import React, { useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -174,8 +179,8 @@ export function FocusScreen() {
               style={[styles.acceptBtn, { backgroundColor: primaryColor }]}
               activeOpacity={0.8}
               onPress={async () => {
-                // Record the accepted decision via the shared history API
-                // (US20). Same shape as the Fuel Accept, with the focus fields.
+                // Record the accepted decision via the shared history API.
+                // Same shape as the Fuel Accept, with the focus fields.
                 await logDecision({
                   moduleType: "focus",
                   focusId: recommendation.focus_id,

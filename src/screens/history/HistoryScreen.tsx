@@ -1,4 +1,4 @@
-// Read-only decision history (US26). Lists the decisions saved by the shared
+// Read-only decision history. Lists the decisions saved by the shared
 // history API (logDecision) whenever the user accepts a recommendation. It
 // reloads each time the tab gains focus, so a decision just accepted on the
 // Fuel or Focus screen appears the moment the user lands here.

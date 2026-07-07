@@ -1,3 +1,8 @@
+// Fuel module screen. It shows the meal filters (eat in or out, budget, prep
+// time, and distance), asks the recommendation engine for matches, then shows
+// one result card at a time with Accept and a single Reroll. Accept saves the
+// choice to history and goes back home. Fuel uses the amber module colour.
+
 import React, { useState } from "react";
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";

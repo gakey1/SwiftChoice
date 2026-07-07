@@ -1,10 +1,10 @@
-// Registration screen (US04). Validates input client-side, creates the
-// account, and lets the auth state listener handle routing to Home.
+// The sign up screen. It checks what the user typed, creates the account, and
+// then lets the auth listener move them into the app.
 //
-// The design system is a logged-in-only prototype with no auth screen, so
-// this is built in the same visual language: warm canvas, the logo lockup,
-// DM Sans, the shared TextField, and the Button atom. Auth is a universal
-// teal surface, so module-colour scoping does not apply.
+// The design system only covers the logged-in screens, so this screen is built
+// in the same style: the warm background, the logo, DM Sans, the shared
+// TextField, and the Button. Sign up uses the teal look that is allowed
+// everywhere, so the module colours do not apply here.
 
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -29,6 +29,8 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Runs when Create account is pressed. Checks the form first and stops if
+  // anything is wrong. Otherwise creates the account and shows a message if it fails.
   async function handleRegister() {
     const nextErrors = validateRegisterForm({ email, password, confirmPassword });
     setErrors(nextErrors);
@@ -38,8 +40,8 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
     setSubmitting(true);
     try {
       await registerWithEmail(email, password);
-      // No manual navigation. registerWithEmail establishes the session,
-      // the auth listener fires, and RootNavigator swaps to Home.
+      // No screen change here. Creating the account starts the session, the auth
+      // listener fires, and RootNavigator swaps to the main app.
     } catch (err) {
       setFormError(registerErrorMessage(err));
     } finally {

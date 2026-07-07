@@ -2,7 +2,7 @@
 //  - Preferences (dietary restrictions, default budget, work hours) persist
 //    locally via preferencesStorage. Tapping a row cycles to the next option
 //    and saves all three.
-//  - Account hosts the Log Out action (US06). Logout flips the auth listener,
+//  - Account hosts the Log Out action. Logout flips the auth listener,
 //    which returns RootNavigator to the Login screen; no manual navigation.
 // Settings is a universal screen, so only the teal accent is used here.
 
