@@ -1,10 +1,10 @@
-// Maps Firebase Auth error codes to user-facing copy for registration.
+// Turns Firebase's error codes into plain messages the user can read.
 //
-// Registration messages CAN be specific. A signup form has to tell the user
-// their email is already registered, or they are stuck with no way forward.
-// This is the deliberate difference from login (US05), where every error
-// collapses to one generic line to avoid account enumeration.
+// Sign up messages can be specific. If someone's email is already taken we have
+// to say so, or they are stuck. Login is different (see below): every error
+// becomes the same message, so no one can work out which emails are registered.
 
+// Checks that an unknown error is really a Firebase error that has a code.
 export function isFirebaseError(err: unknown): err is { code: string } {
   return (
     typeof err === "object" &&
@@ -14,6 +14,7 @@ export function isFirebaseError(err: unknown): err is { code: string } {
   );
 }
 
+// Picks the message to show on the sign up form for a given Firebase error.
 export function registerErrorMessage(err: unknown): string {
   if (!isFirebaseError(err)) return "Something went wrong. Please try again.";
   switch (err.code) {
@@ -32,9 +33,9 @@ export function registerErrorMessage(err: unknown): string {
   }
 }
 
-// Login errors collapse to one message regardless of cause (US05 acceptance
-// criterion). Distinguishing "wrong password" from "no such account" would let
-// an attacker enumerate which emails are registered.
+// Login always shows the same message no matter what went wrong. Telling apart
+// "wrong password" from "no such account" would let someone probe which emails
+// are registered, so we deliberately avoid that.
 export function loginErrorMessage(err: unknown): string {
   if (!isFirebaseError(err)) return "Something went wrong. Please try again.";
   switch (err.code) {

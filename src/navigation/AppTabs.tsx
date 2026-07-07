@@ -1,6 +1,6 @@
-// Signed-in app shell: a bottom-tab navigator that renders the shared
-// design-system BottomNav as its tab bar. Nested inside the signed-in branch
-// of RootNavigator, so the tabs only appear once a user is logged in.
+// The main app shell once someone is signed in: a bottom-tab navigator that uses
+// our shared BottomNav component as the tab bar. It sits inside the signed-in
+// part of RootNavigator, so the tabs only show up after login.
 
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
@@ -14,8 +14,9 @@ import { SettingsScreen } from "@/screens/settings/SettingsScreen";
 
 const Tab = createBottomTabNavigator<AppTabsParamList>();
 
-// Render the design-system BottomNav as the tab bar: map the active route to
-// its key, and a tab press back to navigation. Route names are the nav keys.
+// Draws our BottomNav as the tab bar. It works out which tab is active from the
+// current route, and when a tab is tapped it tells the navigator to switch. The
+// route names match the nav keys, so they line up.
 function AppTabBar({ state, navigation }: BottomTabBarProps) {
   const current = state.routes[state.index];
   const active = (current?.name ?? "home") as BottomNavKey;

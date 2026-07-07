@@ -1,5 +1,6 @@
-// Pure client-side validation for the registration form (US04 4.2).
-// No React, no Firebase: easy to unit test, reusable on the login screen.
+// Checks the sign up form on the device before we send anything to Firebase.
+// It uses no React and no Firebase, which makes it easy to test on its own and
+// to reuse on the login form too.
 
 export type RegisterFields = {
   email: string;
@@ -13,14 +14,15 @@ export type RegisterErrors = {
   confirmPassword?: string;
 };
 
-// Deliberately simple. Firebase is the real authority on email validity;
-// this only catches obvious mistakes before a network round trip.
+// A simple check for the shape of an email. Firebase does the real check later;
+// this just catches obvious typos before we send a request over the network.
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// At least Firebase's minimum of 6. We hold a slightly stricter line so the
-// form never accepts input the API would then reject.
+// Firebase needs at least 6 characters. We ask for 8 so the form never accepts a
+// password that Firebase would then turn away.
 export const MIN_PASSWORD_LENGTH = 8;
 
+// Returns an error message if the email is empty or clearly not an email.
 export function validateEmail(email: string): string | undefined {
   const trimmed = email.trim();
   if (!trimmed) return "Enter your email address.";
@@ -28,6 +30,7 @@ export function validateEmail(email: string): string | undefined {
   return undefined;
 }
 
+// Returns an error message if the password is missing or too short.
 export function validatePassword(password: string): string | undefined {
   if (!password) return "Enter a password.";
   if (password.length < MIN_PASSWORD_LENGTH) {
@@ -36,6 +39,7 @@ export function validatePassword(password: string): string | undefined {
   return undefined;
 }
 
+// Returns an error message if the second password is empty or does not match.
 export function validateConfirmPassword(
   password: string,
   confirmPassword: string,
@@ -45,6 +49,7 @@ export function validateConfirmPassword(
   return undefined;
 }
 
+// Runs all three sign up checks and gathers any error messages into one object.
 export function validateRegisterForm(fields: RegisterFields): RegisterErrors {
   const errors: RegisterErrors = {};
   const email = validateEmail(fields.email);
@@ -56,11 +61,12 @@ export function validateRegisterForm(fields: RegisterFields): RegisterErrors {
   return errors;
 }
 
+// True if any field in the errors object has a message.
 export function hasErrors(errors: Record<string, string | undefined>): boolean {
   return Object.values(errors).some((message) => message !== undefined);
 }
 
-// --- Login (US05) ---
+// Login form checks
 
 export type LoginFields = {
   email: string;
@@ -72,13 +78,13 @@ export type LoginErrors = {
   password?: string;
 };
 
+// Checks the login form. Login only needs a password to be typed in. The length
+// rule is for sign up only, since an older account might have been made before
+// that rule existed, so we do not re-apply it here.
 export function validateLoginForm(fields: LoginFields): LoginErrors {
   const errors: LoginErrors = {};
   const email = validateEmail(fields.email);
   if (email) errors.email = email;
-  // Login only requires a non-empty password. The length policy applies at
-  // registration; an existing account may predate any policy change, so we do
-  // not re-impose it here.
   if (!fields.password) errors.password = "Enter your password.";
   return errors;
 }

@@ -1,7 +1,7 @@
-// Auth session context. One onAuthStateChanged listener is the single
-// source of truth for "who is signed in". Registration (US04), login
-// (US05), and logout (US06) all change Firebase's state; this listener is
-// what the navigator reads to swap between the auth and app stacks.
+// Keeps track of who is signed in, in one shared place the whole app can read.
+// A single Firebase listener watches for sign up, login and logout and updates
+// this state. The navigator reads it to decide whether to show the login screens
+// or the main app.
 
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
@@ -13,17 +13,17 @@ import { reloadAndCheckVerified } from "@/services/auth";
 
 type AuthState = {
   user: User | null;
-  // True until the first auth event arrives. AsyncStorage persistence means
-  // a returning user is restored asynchronously on cold start, so we hold
-  // the UI on a neutral state until we know whether someone is signed in.
+  // True until we hear back from Firebase the first time. Because the session is
+  // saved on the device, a returning user is loaded a moment after start up, so
+  // we wait on a neutral state until we know whether anyone is signed in.
   initializing: boolean;
-  // Whether the signed-in user has confirmed a real inbox. Tracked as its own
-  // state because it only changes after an explicit reload() (see below), not
-  // through onAuthStateChanged.
+  // Whether the signed-in user has confirmed a real inbox. We track it on its
+  // own because it only changes when we ask Firebase again (see below), not
+  // through the normal login listener.
   emailVerified: boolean;
-  // Pulls fresh state from Firebase and updates emailVerified. Called by
-  // VerifyEmailScreen's "I have verified" button after the user clicks the
-  // link (which happens outside the app, so the cached user is stale).
+  // Asks Firebase again and updates emailVerified. The verify screen's
+  // "I have verified" button calls this after the user clicks the link in their
+  // email, since that happens outside the app.
   refreshEmailVerified: () => Promise<boolean>;
 };
 
@@ -39,6 +39,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [initializing, setInitializing] = useState(true);
   const [emailVerified, setEmailVerified] = useState(false);
 
+  // Start the one listener that watches Firebase for login changes, and stop it
+  // again when this provider is removed.
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (next) => {
       setUser(next);
