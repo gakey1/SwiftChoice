@@ -1,10 +1,7 @@
-// Module-scoped option picker: a label, the currently-selected value, and a
-// row of equal-width selectable cards. Used for Fuel constraints (Budget,
-// Prep Time, Distance) and any similar pick-one input.
-//
-// Module-colour scoping: the selected state's tint and border come from the
-// supplied `module`. Passing the wrong module's colour mid-render is
-// prevented at compile time by the Module type.
+// A pick-one input: a label, the value currently chosen, and a row of
+// equal-width buttons to choose from. Used for the Fuel choices (budget, prep
+// time, distance) and any similar pick-one input. The chosen button is tinted in
+// the module's colour, and the type makes sure the right module is used.
 
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
@@ -19,6 +16,7 @@ export type OptionGroupProps<TValue extends string> = {
   module: Module;
 };
 
+// Draws the label and the row of options, highlighting the one that is chosen.
 export function OptionGroup<TValue extends string>({
   label,
   options,

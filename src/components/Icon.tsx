@@ -1,6 +1,6 @@
-// Single-icon component. Wraps @expo/vector-icons' Feather family so the
-// rest of the codebase consumes a stable API regardless of which native
-// icon font ships underneath.
+// A simple icon component. It wraps the Feather icon set so the rest of the app
+// just uses <Icon name="..." /> and does not need to know which icon library is
+// underneath.
 
 import { Feather } from "@expo/vector-icons";
 import type { ComponentProps } from "react";
@@ -15,6 +15,7 @@ export type IconProps = {
   color?: string;
 };
 
+// Shows a Feather icon at the given size and colour.
 export function Icon({ name, size = 22, color = colors.fg1 }: IconProps) {
   return <Feather name={name} size={size} color={color} />;
 }

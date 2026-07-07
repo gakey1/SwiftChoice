@@ -1,5 +1,5 @@
-// Small bold heading used inside cards and forms to label a section.
-// E.g. "This Week" on the Home screen above the stats panel.
+// A small bold heading used inside cards and forms to name a section, like
+// "This Week" above the stats on the home screen.
 
 import { StyleSheet, Text } from "react-native";
 import type { ReactNode } from "react";
@@ -12,6 +12,7 @@ export type SectionLabelProps = {
   style?: StyleProp<TextStyle>;
 };
 
+// Shows the heading text using the shared section-heading styling.
 export function SectionLabel({ children, style }: SectionLabelProps) {
   return <Text style={[styles.label, style]}>{children}</Text>;
 }
