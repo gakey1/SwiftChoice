@@ -1,5 +1,10 @@
+// Tests for the friendly error messages shown on the auth forms. Sign up can be
+// specific about what went wrong, while login always returns the same message so
+// no one can tell which emails are registered.
+
 import { loginErrorMessage, registerErrorMessage } from "@/features/auth/errorMessages";
 
+// Sign up messages: each Firebase code maps to its own message, with a fallback.
 describe("registerErrorMessage", () => {
   it("keeps the existing-account case specific (US04, unlike US05 login)", () => {
     expect(registerErrorMessage({ code: "auth/email-already-in-use" })).toMatch(/already exists/i);
@@ -22,6 +27,8 @@ describe("registerErrorMessage", () => {
   });
 });
 
+// Login messages: the credential codes all collapse to one message, and it
+// never says which field was wrong.
 describe("loginErrorMessage", () => {
   it("collapses all four credential codes to one generic message (US05)", () => {
     const codes = [
