@@ -1,7 +1,7 @@
 // Turns Firebase's error codes into plain messages the user can read.
 //
-// Sign up messages can be specific. If someone's email is already taken we have
-// to say so, or they are stuck. Login is different (see below): every error
+// Sign up messages can be specific. If someone's email is already taken the form
+// has to say so, or they are stuck. Login is different (see below): every error
 // becomes the same message, so no one can work out which emails are registered.
 
 // Checks that an unknown error is really a Firebase error that has a code.
@@ -35,7 +35,7 @@ export function registerErrorMessage(err: unknown): string {
 
 // Login always shows the same message no matter what went wrong. Telling apart
 // "wrong password" from "no such account" would let someone probe which emails
-// are registered, so we deliberately avoid that.
+// are registered, so that difference is hidden on purpose.
 export function loginErrorMessage(err: unknown): string {
   if (!isFirebaseError(err)) return "Something went wrong. Please try again.";
   switch (err.code) {

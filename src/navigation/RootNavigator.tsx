@@ -22,7 +22,7 @@ const AppStack = createNativeStackNavigator<AppStackParamList>();
 export function RootNavigator() {
   const { user, initializing, emailVerified } = useAuth();
 
-  // While we are still checking who is signed in, show a loading spinner.
+  // While the app is still checking who is signed in, show a loading spinner.
   if (initializing) {
     return (
       <View style={styles.center}>

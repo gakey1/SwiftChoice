@@ -3,7 +3,7 @@
 
 import { getDb } from "@/services/localdb/db";
 
-// The shape of the settings we store for a user.
+// The shape of the settings stored for a user.
 export type UserPreferences = {
   dietaryRestrictions: string;
   defaultBudget: string;

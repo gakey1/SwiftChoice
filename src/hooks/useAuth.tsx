@@ -13,12 +13,12 @@ import { reloadAndCheckVerified } from "@/services/auth";
 
 type AuthState = {
   user: User | null;
-  // True until we hear back from Firebase the first time. Because the session is
-  // saved on the device, a returning user is loaded a moment after start up, so
-  // we wait on a neutral state until we know whether anyone is signed in.
+  // True until Firebase replies the first time. Because the session is saved on
+  // the device, a returning user is loaded a moment after start up, so a neutral
+  // state is held until it is clear whether anyone is signed in.
   initializing: boolean;
-  // Whether the signed-in user has confirmed a real inbox. We track it on its
-  // own because it only changes when we ask Firebase again (see below), not
+  // Whether the signed-in user has confirmed a real inbox. It is tracked on its
+  // own because it only changes when Firebase is asked again (see below), not
   // through the normal login listener.
   emailVerified: boolean;
   // Asks Firebase again and updates emailVerified. The verify screen's

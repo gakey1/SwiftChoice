@@ -17,12 +17,12 @@ import {
 import { auth } from "@/services/firebase";
 import { createUserDocument } from "@/services/firestore/users";
 
-// Creates a new account and also saves a matching user record in our database.
+// Creates a new account and also saves a matching user record in the database.
 // Once the account is made, Firebase signs the user in automatically, so the
-// listener in useAuth notices and moves them into the app (we do not navigate
-// here ourselves). We send the verification email straight away. The account
-// exists, but the user is held on the verify screen until they confirm a real
-// inbox, which is what stops people signing up with fake emails.
+// listener in useAuth notices and moves them into the app (no navigation happens
+// here). The verification email is sent straight away. The account exists, but
+// the user is held on the verify screen until they confirm a real inbox, which
+// is what stops people signing up with fake emails.
 export async function registerWithEmail(email: string, password: string): Promise<string> {
   const trimmedEmail = email.trim();
   const credential = await createUserWithEmailAndPassword(auth, trimmedEmail, password);
@@ -41,9 +41,9 @@ export async function resendVerificationEmail(): Promise<void> {
   await sendEmailVerification(auth.currentUser);
 }
 
-// Checks with Firebase again to see if the email has been verified yet. We need
-// this because the user clicks the link in their email app, not in our app, so
-// our copy of the user stays out of date until we ask Firebase for a fresh one.
+// Checks with Firebase again to see if the email has been verified yet. This is
+// needed because the user clicks the link in their email app, not in the app, so
+// the local copy of the user stays out of date until Firebase is asked for a fresh one.
 export async function reloadAndCheckVerified(): Promise<boolean> {
   if (!auth.currentUser) {
     return false;

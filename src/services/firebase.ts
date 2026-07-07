@@ -1,5 +1,5 @@
 // Sets up Firebase for the whole app in one place. Anything that needs Firebase
-// (login and the cloud database) imports it from here, so we only start it up
+// (login and the cloud database) imports it from here, so it only starts up
 // once and the rest of the app never touches Firebase directly.
 
 import { initializeApp, getApps, getApp } from "firebase/app";
@@ -38,8 +38,8 @@ const app: FirebaseApp =
   getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 // Set up login and keep the user signed in between app restarts by saving the
-// session on the device. This can only run once, so if it has already run we
-// just grab the setup that already exists instead of making a new one.
+// session on the device. This can only run once, so if it has already run the
+// existing setup is grabbed instead of making a new one.
 let auth: Auth;
 try {
   auth = initializeAuth(app, {

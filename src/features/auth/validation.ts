@@ -1,4 +1,4 @@
-// Checks the sign up form on the device before we send anything to Firebase.
+// Checks the sign up form on the device before anything is sent to Firebase.
 // It uses no React and no Firebase, which makes it easy to test on its own and
 // to reuse on the login form too.
 
@@ -15,10 +15,10 @@ export type RegisterErrors = {
 };
 
 // A simple check for the shape of an email. Firebase does the real check later;
-// this just catches obvious typos before we send a request over the network.
+// this just catches obvious typos before a request goes over the network.
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Firebase needs at least 6 characters. We ask for 8 so the form never accepts a
+// Firebase needs at least 6 characters. The form asks for 8 so it never accepts a
 // password that Firebase would then turn away.
 export const MIN_PASSWORD_LENGTH = 8;
 
@@ -80,7 +80,7 @@ export type LoginErrors = {
 
 // Checks the login form. Login only needs a password to be typed in. The length
 // rule is for sign up only, since an older account might have been made before
-// that rule existed, so we do not re-apply it here.
+// that rule existed, so it is not re-applied here.
 export function validateLoginForm(fields: LoginFields): LoginErrors {
   const errors: LoginErrors = {};
   const email = validateEmail(fields.email);

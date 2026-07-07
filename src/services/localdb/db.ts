@@ -4,7 +4,7 @@
 
 import * as SQLite from "expo-sqlite";
 
-// Holds the one database connection once it is opened, so we never open it twice.
+// Holds the one database connection once it is opened, so it is never opened twice.
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
 // Returns the database. The first call opens and sets it up; every call after

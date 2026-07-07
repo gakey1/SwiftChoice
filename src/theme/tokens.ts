@@ -106,8 +106,8 @@ export const motion = {
   ease: [0.4, 0, 0.2, 1], // cubic-bezier (use with Easing.bezier(...))
 } as const;
 
-// The names of the fonts we load. These match the fonts set up in App.tsx and
-// are what we put in a style's fontFamily.
+// The names of the fonts the app loads. These match the fonts set up in App.tsx
+// and are what goes in a style's fontFamily.
 export const font = {
   regular: "DMSans_400Regular",
   medium: "DMSans_500Medium",

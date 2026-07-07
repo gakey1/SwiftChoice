@@ -1,6 +1,6 @@
 // A small wrapper around the device's secure storage (the keychain). The rest of
-// the app uses these functions instead of the library directly, so if we ever
-// change how sensitive values are stored, we only change it here. Everything is
+// the app uses these functions instead of the library directly, so if the way
+// sensitive values are stored ever changes, it only changes here. Everything is
 // saved as plain text, so whatever calls these turns objects into strings first.
 
 import * as SecureStore from "expo-secure-store";
