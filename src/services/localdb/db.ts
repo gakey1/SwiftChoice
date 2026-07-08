@@ -2,6 +2,10 @@ import * as SQLite from "expo-sqlite";
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
+type TableColumn = {
+  name: string;
+};
+
 export function getDb(): Promise<SQLite.SQLiteDatabase> {
   if (!dbPromise) {
     dbPromise = initialiseDatabase();
@@ -21,12 +25,17 @@ async function initialiseDatabase(): Promise<SQLite.SQLiteDatabase> {
 
     CREATE TABLE IF NOT EXISTS fuel_pool (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL
+      name TEXT NOT NULL,
+      budget TEXT NOT NULL DEFAULT '$$',
+      prep_time TEXT NOT NULL DEFAULT 'medium',
+      distance TEXT NOT NULL DEFAULT 'mid'
     );
 
     CREATE TABLE IF NOT EXISTS focus_pool (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL
+      name TEXT NOT NULL,
+      energy TEXT NOT NULL DEFAULT 'medium',
+      vibe TEXT NOT NULL DEFAULT 'background'
     );
 
     CREATE TABLE IF NOT EXISTS decisions (
@@ -42,5 +51,30 @@ async function initialiseDatabase(): Promise<SQLite.SQLiteDatabase> {
     );
   `);
 
+  await ensureColumn(db, "fuel_pool", "budget", "TEXT NOT NULL DEFAULT '$$'");
+  await ensureColumn(db, "fuel_pool", "prep_time", "TEXT NOT NULL DEFAULT 'medium'");
+  await ensureColumn(db, "fuel_pool", "distance", "TEXT NOT NULL DEFAULT 'mid'");
+
+  await ensureColumn(db, "focus_pool", "energy", "TEXT NOT NULL DEFAULT 'medium'");
+  await ensureColumn(db, "focus_pool", "vibe", "TEXT NOT NULL DEFAULT 'background'");
+
   return db;
+}
+
+// Existing local databases may already have the old tables.
+// This adds the new filter columns without deleting saved data.
+async function ensureColumn(
+  db: SQLite.SQLiteDatabase,
+  tableName: string,
+  columnName: string,
+  columnDefinition: string
+): Promise<void> {
+  const columns = await db.getAllAsync<TableColumn>(`PRAGMA table_info(${tableName})`);
+  const alreadyExists = columns.some((column) => column.name === columnName);
+
+  if (!alreadyExists) {
+    await db.execAsync(
+      `ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDefinition}`
+    );
+  }
 }
