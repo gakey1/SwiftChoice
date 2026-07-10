@@ -14,6 +14,7 @@ import { RegisterScreen } from "@/screens/auth/RegisterScreen";
 import { VerifyEmailScreen } from "@/screens/auth/VerifyEmailScreen";
 import { FuelScreen } from "@/screens/fuel/FuelScreen";
 import { FocusScreen } from "@/screens/focus/FocusScreen";
+import { PriorityScreen } from "@/screens/priority/PriorityScreen";
 import { T } from "@/theme/tokens";
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -54,6 +55,13 @@ export function RootNavigator() {
         <AppStack.Screen 
           name="Focus" 
           component={FocusScreen} 
+          options={{ 
+            animation: "slide_from_bottom" 
+          }} 
+        />
+        <AppStack.Screen 
+          name="Priority" 
+          component={PriorityScreen} 
           options={{ 
             animation: "slide_from_bottom" 
           }} 

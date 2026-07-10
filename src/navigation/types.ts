@@ -15,9 +15,9 @@ export type AppTabsParamList = {
 };
 
 // The signed-in area. It holds the tabs as a single entry, plus the module
-// screens (Fuel and Focus), which open on top of the tab bar.
 export type AppStackParamList = {
   MainTabs: undefined;
   Fuel: undefined;
   Focus: undefined;
+  Priority: undefined;
 };

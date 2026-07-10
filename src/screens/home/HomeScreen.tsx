@@ -84,7 +84,7 @@ export function HomeScreen() {
             subtitle="Know what to tackle first"
             module={MODULES.priority}
             onPress={() => {
-              // TODO: navigate to the Priority input screen.
+              navigation.navigate("Priority");
             }}
           />
         </View>
