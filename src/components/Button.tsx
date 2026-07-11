@@ -2,7 +2,7 @@
 //  - accept:  filled teal. The main "Accept" button on a result screen.
 //  - module:  filled with a module's own colour, for the main button on a module
 //             screen (like "Decide for Me" on Fuel).
-//  - reroll:  plain grey. The secondary button that sits next to Accept.
+//  - reroll:  plain grey. The secondary button that is next to Accept.
 //  - outline: see-through with a coloured border, for less important actions.
 
 import { Pressable, StyleSheet, Text, View } from "react-native";
