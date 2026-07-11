@@ -3,9 +3,14 @@
 
 import { getDb } from "@/services/localdb/db";
 
+export type FocusEnergy = "low" | "medium" | "high";
+export type FocusVibe = "silent" | "background" | "collaborative";
+
 export interface FocusPoolItem {
   id: number;
   name: string;
+  energy: FocusEnergy;
+  vibe: FocusVibe;
 }
 
 // Returns all saved Focus pool items ordered alphabetically.
@@ -13,12 +18,22 @@ export async function getFocusPool(): Promise<FocusPoolItem[]> {
   const db = await getDb();
 
   return await db.getAllAsync<FocusPoolItem>(
-    "SELECT * FROM focus_pool ORDER BY name"
+    `SELECT
+      id,
+      name,
+      energy,
+      vibe
+    FROM focus_pool
+    ORDER BY name`
   );
 }
 
 // Adds a new study/work location to the Focus pool.
-export async function addFocusItem(name: string): Promise<void> {
+export async function addFocusItem(
+  name: string,
+  energy: FocusEnergy = "medium",
+  vibe: FocusVibe = "background"
+): Promise<void> {
   const trimmedName = name.trim();
 
   if (!trimmedName) {
@@ -27,19 +42,30 @@ export async function addFocusItem(name: string): Promise<void> {
 
   const db = await getDb();
 
-  await db.runAsync("INSERT INTO focus_pool (name) VALUES (?)", [trimmedName]);
+  await db.runAsync(
+    "INSERT INTO focus_pool (name, energy, vibe) VALUES (?, ?, ?)",
+    [trimmedName, energy, vibe]
+  );
 }
 
 // Updates an existing Focus pool item.
 export async function updateFocusItem(
   id: number,
-  name: string
+  name: string,
+  energy: FocusEnergy = "medium",
+  vibe: FocusVibe = "background"
 ): Promise<void> {
+  const trimmedName = name.trim();
+
+  if (!trimmedName) {
+    throw new Error("Focus item name cannot be empty.");
+  }
+
   const db = await getDb();
 
   await db.runAsync(
-    "UPDATE focus_pool SET name = ? WHERE id = ?",
-    [name, id]
+    "UPDATE focus_pool SET name = ?, energy = ?, vibe = ? WHERE id = ?",
+    [trimmedName, energy, vibe, id]
   );
 }
 
@@ -47,19 +73,14 @@ export async function updateFocusItem(
 export async function deleteFocusItem(id: number): Promise<void> {
   const db = await getDb();
 
-  await db.runAsync(
-    "DELETE FROM focus_pool WHERE id = ?",
-    [id]
-  );
+  await db.runAsync("DELETE FROM focus_pool WHERE id = ?", [id]);
 }
 
 // Removes all locations from the Focus pool.
 export async function clearFocusPool(): Promise<void> {
   const db = await getDb();
 
-  await db.runAsync(
-    "DELETE FROM focus_pool"
-  );
+  await db.runAsync("DELETE FROM focus_pool");
 }
 
 // Returns Focus items in the format needed by the Focus recommendation logic.

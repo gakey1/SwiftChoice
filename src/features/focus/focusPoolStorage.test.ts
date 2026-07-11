@@ -19,7 +19,7 @@ jest.mock("@/services/localdb/db", () => ({
 
 const mockGetDb = getDb as jest.Mock;
 
-let rows: { id: number; name: string }[] = [];
+let rows: { id: number; name: string; energy: string; vibe: string }[] = [];
 let nextId = 1;
 
 // A stand-in for the real database: it keeps the pool items in an array and
@@ -31,22 +31,30 @@ const mockDb = {
 
   runAsync: jest.fn(async (sql: string, params?: unknown[]) => {
     if (sql.startsWith("INSERT INTO focus_pool")) {
-      rows.push({ id: nextId, name: params?.[0] as string });
+      rows.push({
+        id: nextId,
+        name: params?.[0] as string,
+        energy: params?.[1] as string,
+        vibe: params?.[2] as string,
+      });
       nextId += 1;
       return;
     }
 
     if (sql.startsWith("UPDATE focus_pool")) {
       const name = params?.[0] as string;
-      const id = params?.[1] as number;
+      const energy = params?.[1] as string;
+      const vibe = params?.[2] as string;
+      const id = params?.[3] as number;
 
-      rows = rows.map((row) => (row.id === id ? { ...row, name } : row));
+      rows = rows.map((row) =>
+        row.id === id ? { ...row, name, energy, vibe } : row
+      );
       return;
     }
 
     if (sql.startsWith("DELETE FROM focus_pool WHERE id")) {
       const id = params?.[0] as number;
-
       rows = rows.filter((row) => row.id !== id);
       return;
     }
@@ -66,20 +74,28 @@ describe("focusPoolStorage", () => {
   });
 
   it("adds and returns Focus pool items", async () => {
-    await addFocusItem("Library");
-    await addFocusItem("Cafe");
+    await addFocusItem("Library", "low", "silent");
+    await addFocusItem("Cafe", "medium", "background");
 
     await expect(getFocusPool()).resolves.toEqual([
-      { id: 2, name: "Cafe" },
-      { id: 1, name: "Library" },
+      { id: 2, name: "Cafe", energy: "medium", vibe: "background" },
+      { id: 1, name: "Library", energy: "low", vibe: "silent" },
     ]);
   });
 
-  it("returns Focus items for the recommendation logic", async () => {
+  it("uses default Focus filter values when only a name is provided", async () => {
     await addFocusItem("Library");
 
+    await expect(getFocusPool()).resolves.toEqual([
+      { id: 1, name: "Library", energy: "medium", vibe: "background" },
+    ]);
+  });
+
+  it("returns Focus items for the recommendation engine", async () => {
+    await addFocusItem("Library", "low", "silent");
+
     await expect(getFocusRecommendationPool()).resolves.toEqual([
-      { id: 1, name: "Library" },
+      { id: 1, name: "Library", energy: "low", vibe: "silent" },
     ]);
   });
 
@@ -92,10 +108,10 @@ describe("focusPoolStorage", () => {
   });
 
   it("trims Focus pool item names before saving", async () => {
-    await addFocusItem("  Library  ");
+    await addFocusItem("  Library  ", "low", "silent");
 
     await expect(getFocusPool()).resolves.toEqual([
-      { id: 1, name: "Library" },
+      { id: 1, name: "Library", energy: "low", vibe: "silent" },
     ]);
   });
 
@@ -110,10 +126,15 @@ describe("focusPoolStorage", () => {
   it("updates a Focus pool item", async () => {
     await addFocusItem("Library");
 
-    await updateFocusItem(1, "University Library");
+    await updateFocusItem(1, "Quiet Library", "high", "collaborative");
 
     await expect(getFocusPool()).resolves.toEqual([
-      { id: 1, name: "University Library" },
+      {
+        id: 1,
+        name: "Quiet Library",
+        energy: "high",
+        vibe: "collaborative",
+      },
     ]);
   });
 
@@ -124,7 +145,7 @@ describe("focusPoolStorage", () => {
     await deleteFocusItem(1);
 
     await expect(getFocusPool()).resolves.toEqual([
-      { id: 2, name: "Cafe" },
+      { id: 2, name: "Cafe", energy: "medium", vibe: "background" },
     ]);
   });
 
