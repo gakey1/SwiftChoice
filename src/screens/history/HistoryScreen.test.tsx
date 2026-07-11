@@ -3,9 +3,35 @@
 // nothing, and lists a decision with its module and name when there is one.
 
 import React from "react";
-import { render } from "@testing-library/react-native";
+import { fireEvent, render } from "@testing-library/react-native";
 
 import { HistoryScreen } from "./HistoryScreen";
+
+// Reusable decision fixtures. Item names are unique so a query by name targets a
+// list row, not the module label in the meta line or a filter chip.
+const fuelDecision = {
+  historyId: "dh_fuel",
+  moduleType: "fuel" as const,
+  fuelId: "in_4",
+  focusId: null,
+  taskId: null,
+  itemSnapshot: { name: "Gourmet Homemade Pasta", details: {} },
+  appliedFilters: {},
+  rerolled: false,
+  decidedAt: "2026-07-05T02:15:00.000Z",
+};
+
+const focusDecision = {
+  historyId: "dh_focus",
+  moduleType: "focus" as const,
+  fuelId: null,
+  focusId: "focus_5",
+  taskId: null,
+  itemSnapshot: { name: "Cafe With Soft Music", details: {} },
+  appliedFilters: {},
+  rerolled: false,
+  decidedAt: "2026-07-05T03:00:00.000Z",
+};
 
 // Run the focus-effect callback once on mount, like a plain effect, so the
 // screen loads its data under test.
@@ -58,6 +84,53 @@ describe("HistoryScreen", () => {
     expect(
       await findByText("Gourmet Homemade Pasta", {}, { timeout: 3000 })
     ).toBeTruthy();
-    expect(await findByText(/Fuel/)).toBeTruthy();
+    // Match the meta line ("Fuel · 5 Jul, ...") specifically, not the new "Fuel"
+    // filter chip, which also carries that word.
+    expect(await findByText(/Fuel ·/)).toBeTruthy();
+  });
+
+  it("filters the list by module", async () => {
+    mockGetDecisions.mockResolvedValue([fuelDecision, focusDecision]);
+
+    const { findByText, getByRole, queryByText } = render(<HistoryScreen />);
+
+    // Both are shown under the default "All" filter.
+    await findByText("Gourmet Homemade Pasta", {}, { timeout: 3000 });
+    expect(queryByText("Cafe With Soft Music")).toBeTruthy();
+
+    // Tapping the Focus module chip leaves only the focus decision.
+    fireEvent.press(getByRole("radio", { name: "Focus" }));
+
+    expect(queryByText("Gourmet Homemade Pasta")).toBeNull();
+    expect(queryByText("Cafe With Soft Music")).toBeTruthy();
+  });
+
+  it("shows a filtered-empty message when nothing matches", async () => {
+    mockGetDecisions.mockResolvedValue([fuelDecision]);
+
+    const { findByText, getByRole } = render(<HistoryScreen />);
+
+    await findByText("Gourmet Homemade Pasta", {}, { timeout: 3000 });
+
+    // Filter to a module with no decisions.
+    fireEvent.press(getByRole("radio", { name: "Priority" }));
+
+    expect(await findByText("No decisions match these filters.")).toBeTruthy();
+  });
+
+  it("filters by time (an old decision is hidden by Today)", async () => {
+    // Dated in 2020, so it is never today and never within the last week,
+    // whenever the test runs.
+    mockGetDecisions.mockResolvedValue([
+      { ...fuelDecision, decidedAt: "2020-01-01T00:00:00.000Z" },
+    ]);
+
+    const { findByText, getByRole } = render(<HistoryScreen />);
+
+    await findByText("Gourmet Homemade Pasta", {}, { timeout: 3000 });
+
+    fireEvent.press(getByRole("radio", { name: "Today" }));
+
+    expect(await findByText("No decisions match these filters.")).toBeTruthy();
   });
 });
