@@ -1,6 +1,7 @@
-// Route param lists. The signed-out side is a stack (auth screens); the
-// signed-in side is a bottom-tab navigator. Tab route names match the
-// BottomNav keys so the shared tab bar maps straight onto them.
+// These list the screens the app can move to, and what information each one
+// expects (undefined means it needs nothing passed to it). Signed-out users get
+// the auth screens, and signed-in users get the bottom tabs. The tab names here
+// match the keys in the bottom nav, so the tab bar lines up with them.
 
 export type AuthStackParamList = {
   Register: undefined;
@@ -13,8 +14,8 @@ export type AppTabsParamList = {
   settings: undefined;
 };
 
-// Signed-in stack that wraps the tabs, so module screens (Fuel, later Focus
-// and Priority) push over the tab bar. The tabs themselves are one route.
+// The signed-in area. It holds the tabs as a single entry, plus the module
+// screens (Fuel and Focus), which open on top of the tab bar.
 export type AppStackParamList = {
   MainTabs: undefined;
   Fuel: undefined;

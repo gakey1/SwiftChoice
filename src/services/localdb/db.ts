@@ -1,7 +1,18 @@
+// Sets up the small database that lives on the phone itself (SQLite). Anything
+// that needs the on-device database asks for it through getDb, which opens and
+// prepares it once and then reuses the same one.
+
 import * as SQLite from "expo-sqlite";
 
+// Holds the one database connection once it is opened, so it is never opened twice.
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
+type TableColumn = {
+  name: string;
+};
+
+// Returns the database. The first call opens and sets it up; every call after
+// that gets back the same one.
 export function getDb(): Promise<SQLite.SQLiteDatabase> {
   if (!dbPromise) {
     dbPromise = initialiseDatabase();
@@ -10,9 +21,17 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
   return dbPromise;
 }
 
+// Opens the database file and makes sure all the tables exist. "IF NOT EXISTS"
+// means it is safe to run every time, since it only creates a table that is
+// missing and leaves the rest alone.
 async function initialiseDatabase(): Promise<SQLite.SQLiteDatabase> {
   const db = await SQLite.openDatabaseAsync("swiftchoice.db");
 
+  // The tables the app uses:
+  //  preferences - the user's saved settings, stored as key and value pairs.
+  //  fuel_pool   - the user's saved meal options.
+  //  focus_pool  - the user's saved study or work spots.
+  //  decisions   - a record of every recommendation the user has accepted.
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS preferences (
       key TEXT PRIMARY KEY NOT NULL,
@@ -21,12 +40,17 @@ async function initialiseDatabase(): Promise<SQLite.SQLiteDatabase> {
 
     CREATE TABLE IF NOT EXISTS fuel_pool (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL
+      name TEXT NOT NULL,
+      budget TEXT NOT NULL DEFAULT '$$',
+      prep_time TEXT NOT NULL DEFAULT 'medium',
+      distance TEXT NOT NULL DEFAULT 'mid'
     );
 
     CREATE TABLE IF NOT EXISTS focus_pool (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL
+      name TEXT NOT NULL,
+      energy TEXT NOT NULL DEFAULT 'medium',
+      vibe TEXT NOT NULL DEFAULT 'background'
     );
 
     CREATE TABLE IF NOT EXISTS decisions (
@@ -42,5 +66,30 @@ async function initialiseDatabase(): Promise<SQLite.SQLiteDatabase> {
     );
   `);
 
+  await ensureColumn(db, "fuel_pool", "budget", "TEXT NOT NULL DEFAULT '$$'");
+  await ensureColumn(db, "fuel_pool", "prep_time", "TEXT NOT NULL DEFAULT 'medium'");
+  await ensureColumn(db, "fuel_pool", "distance", "TEXT NOT NULL DEFAULT 'mid'");
+
+  await ensureColumn(db, "focus_pool", "energy", "TEXT NOT NULL DEFAULT 'medium'");
+  await ensureColumn(db, "focus_pool", "vibe", "TEXT NOT NULL DEFAULT 'background'");
+
   return db;
+}
+
+// Existing local databases may already have the old tables.
+// This adds the new filter columns without deleting saved data.
+async function ensureColumn(
+  db: SQLite.SQLiteDatabase,
+  tableName: string,
+  columnName: string,
+  columnDefinition: string
+): Promise<void> {
+  const columns = await db.getAllAsync<TableColumn>(`PRAGMA table_info(${tableName})`);
+  const alreadyExists = columns.some((column) => column.name === columnName);
+
+  if (!alreadyExists) {
+    await db.execAsync(
+      `ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDefinition}`
+    );
+  }
 }

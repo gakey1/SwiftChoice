@@ -1,3 +1,8 @@
+// Fuel module screen. It shows the meal filters (eat in or out, budget, prep
+// time, and distance), asks the recommendation engine for matches, then shows
+// one result card at a time with Accept and a single Reroll. Accept saves the
+// choice to history and goes back home. Fuel uses the amber module colour.
+
 import React, { useState } from "react";
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -11,6 +16,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import type { AppStackParamList } from "@/navigation/types";
+import { logDecision } from "@/features/history/historyStorage";
 
 type FilterGroupProps = {
   label: string;
@@ -21,6 +27,8 @@ type FilterGroupProps = {
   activeColor: string;
 };
 
+// One filter group: a label, the value currently chosen shown in the module
+// colour, and a row of options to pick from. The chosen option is outlined.
 function FilterOptionGroup({ label, options, displayValues, selectedValue, onSelect, activeColor }: FilterGroupProps) {
   return (
     <View style={styles.groupContainer}>
@@ -66,12 +74,8 @@ export function FuelScreen() {
   const primaryColor = MODULES.fuel.c700;
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
 
-//Mock history function
-  const logDecisionToHistory = async (item: FoodOption) => {
-    console.log("Logging decision via history layer:", item);
-    return new Promise((resolve) => setTimeout(resolve, 500));
-  };
-
+  // Runs when "Decide for Me" is pressed. Asks the engine for matches, keeps the
+  // whole list so a reroll can show the next one, and shows the first result.
   const handleGetRecommendation = async () => {
     setHasSearched(false);
 
@@ -97,6 +101,8 @@ export function FuelScreen() {
     setHasSearched(true);
   };
 
+  // Runs when Reroll is pressed. Shows the next match from the list, but only
+  // once per search. If there is nothing else, asks the user to change filters.
   const handleReroll = async () => {
     if (hasRerolled) {
       console.log("Reroll limit reached! Only 1 reroll allowed per search.");
@@ -167,8 +173,26 @@ export function FuelScreen() {
               activeOpacity={0.8}
               onPress={async () => {
                 if (recommendation) {
-                  //Log the choice via our mock history layer pipeline
-                  await logDecisionToHistory(recommendation);
+                  //Log the choice using production history API
+                  await logDecision({
+                    moduleType: "fuel",
+                    fuelId: recommendation.fuel_id,
+                    itemSnapshot: {
+                      name: recommendation.item_name,
+                      details: {
+                        type: recommendation.type,
+                        budget: recommendation.budget_level,
+                        rating: recommendation.rating,
+                      },
+                    },
+                    appliedFilters: {
+                      mode: recommendation.type,       
+                      budget: recommendation.budget_level, 
+                      prepTime: recommendation.prep_time,         
+                      distance: recommendation.distance_range,         
+                    },
+                    rerolled: hasRerolled,
+                  });
                   
                   //Clear the active choice view states
                   setRecommendation(null);

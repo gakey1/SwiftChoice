@@ -1,3 +1,7 @@
+// Tests for the on-device preferences storage. The database is replaced with a
+// small in-memory fake, so these check that all three settings are written, read
+// back, fall back to defaults when missing, and clear correctly.
+
 import {
   clearPreferences,
   DEFAULT_PREFERENCES,
@@ -10,6 +14,8 @@ import { getDb } from "@/services/localdb/db";
 
 const rows = new Map<string, string>();
 
+// A stand-in for the real database: it keeps the saved settings in a map and
+// answers the same transaction, insert, read, and delete calls the code makes.
 const mockDb = {
   withTransactionAsync: jest.fn(async (callback: () => Promise<void>) => {
     await callback();

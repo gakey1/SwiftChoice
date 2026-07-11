@@ -1,3 +1,8 @@
+// Tests for the auth service functions. Firebase is mocked so nothing real is
+// called: the tests just check that each function trims the email, writes the
+// user record when it should, passes errors through, and handles the cases
+// where no one is signed in.
+
 import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
@@ -15,6 +20,8 @@ import {
 } from "@/services/auth";
 import { createUserDocument } from "@/services/firestore/users";
 
+// Replace the real Firebase and Firestore calls with fakes, so the tests can
+// check what was called without touching the network.
 jest.mock("firebase/auth", () => ({
   createUserWithEmailAndPassword: jest.fn(),
   sendEmailVerification: jest.fn(),
@@ -36,6 +43,8 @@ const mockCreateDoc = createUserDocument as jest.Mock;
 // directly through this typed handle.
 const mutableAuth = auth as unknown as { currentUser: unknown };
 
+// Sign up: creates the account with a trimmed email and saves the user record,
+// and does not save a record if Firebase fails.
 describe("registerWithEmail", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -63,6 +72,7 @@ describe("registerWithEmail", () => {
   });
 });
 
+// Login: signs in with a trimmed email, and passes Firebase errors through.
 describe("loginWithEmail", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -86,6 +96,7 @@ describe("loginWithEmail", () => {
   });
 });
 
+// Logout: calls Firebase sign out.
 describe("logout", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -100,6 +111,7 @@ describe("logout", () => {
   });
 });
 
+// Resend link: throws if no one is signed in, otherwise emails the current user.
 describe("resendVerificationEmail", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -123,6 +135,8 @@ describe("resendVerificationEmail", () => {
   });
 });
 
+// Verify check: false when no one is signed in, otherwise reloads the user and
+// returns the fresh verified value.
 describe("reloadAndCheckVerified", () => {
   beforeEach(() => {
     jest.clearAllMocks();

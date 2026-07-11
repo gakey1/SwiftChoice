@@ -1,3 +1,8 @@
+// Tests for the decision history layer. The on-device database is replaced with
+// a small in-memory fake, so these check that a decision is saved and read back,
+// that it gets a history id and timestamp, that unused ids default to null, and
+// that bad input is rejected.
+
 import {
   clearDecisions,
   getDecisions,
@@ -26,6 +31,8 @@ interface DecisionRow {
 
 let rows: DecisionRow[] = [];
 
+// A stand-in for the real database: it keeps rows in a plain array and answers
+// the same read, insert, and delete calls the code makes.
 const mockDb = {
   getAllAsync: jest.fn(async () =>
     [...rows].sort((a, b) => b.decided_at.localeCompare(a.decided_at))
@@ -55,6 +62,7 @@ const mockDb = {
   }),
 };
 
+// A sample fuel decision reused across the tests.
 const fuelDecision: DecisionInput = {
   moduleType: "fuel",
   fuelId: "in_4",

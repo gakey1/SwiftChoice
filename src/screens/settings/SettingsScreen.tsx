@@ -2,7 +2,7 @@
 //  - Preferences (dietary restrictions, default budget, work hours) persist
 //    locally via preferencesStorage. Tapping a row cycles to the next option
 //    and saves all three.
-//  - Account hosts the Log Out action (US06). Logout flips the auth listener,
+//  - Account hosts the Log Out action. Logout flips the auth listener,
 //    which returns RootNavigator to the Login screen; no manual navigation.
 // Settings is a universal screen, so only the teal accent is used here.
 
@@ -34,6 +34,8 @@ export function SettingsScreen() {
   const [budget, setBudget] = useState(BUDGET_OPTIONS[1]);
   const [hours, setHours] = useState(HOURS_OPTIONS[0]);
 
+  // Load the saved settings when the screen opens. The active flag stops a late
+  // load from updating state after the screen has already gone away.
   useEffect(() => {
     let active = true;
     void loadPreferences().then((stored) => {
@@ -47,6 +49,8 @@ export function SettingsScreen() {
     };
   }, []);
 
+  // Moves one setting to its next option, wrapping back to the start after the
+  // last one, then saves all three settings together.
   async function cycleOption(
     current: string,
     options: string[],
@@ -69,6 +73,7 @@ export function SettingsScreen() {
     await savePreferences(next);
   }
 
+  // Signs the user out. The auth listener notices and returns them to login.
   async function handleLogout(): Promise<void> {
     setSigningOut(true);
     try {
@@ -128,6 +133,8 @@ type SettingRowProps = {
   isLast?: boolean;
 };
 
+// One row in the settings list: a label on the left, the current value and a
+// chevron on the right. Tapping anywhere on the row runs onPress.
 function SettingRow({ label, value, onPress, isLast }: SettingRowProps) {
   return (
     <Pressable

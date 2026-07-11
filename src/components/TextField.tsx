@@ -1,5 +1,6 @@
-// Labelled text input with an inline error slot. Shared by the auth screens
-// (register, login). Neutral teal-surface styling; no module-colour scoping.
+// A text box with a label above it and space for an error message below. Used on
+// the login and register forms. It uses the neutral app styling rather than any
+// module colour.
 
 import { StyleSheet, Text, TextInput, View } from "react-native";
 import type { TextInputProps } from "react-native";
@@ -20,6 +21,7 @@ export type TextFieldProps = {
   testID?: string;
 };
 
+// Shows the label, the input box, and an error message underneath if there is one.
 export function TextField({
   label,
   value,

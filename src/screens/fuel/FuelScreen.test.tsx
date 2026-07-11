@@ -1,3 +1,8 @@
+// Tests for the fuel screen. The icon set, navigation, and history layer are
+// stubbed so it renders under Jest. These check that the header and filters
+// show, that the Eat In toggle responds, and that Decide for Me lands on a
+// result or empty state.
+
 import React from "react";
 import { render, fireEvent } from "@testing-library/react-native";
 import { FuelScreen } from "./FuelScreen";
@@ -11,6 +16,12 @@ jest.mock("@react-navigation/native", () => ({
   useNavigation: () => ({
     goBack: jest.fn(),
   }),
+}));
+
+// Mock the history layer so this test does not pull in the SQLite chain
+// (historyStorage -> db.ts -> expo-sqlite), which is not resolvable under Jest.
+jest.mock("@/features/history/historyStorage", () => ({
+  logDecision: jest.fn(),
 }));
 
 describe("FuelScreen", () => {

@@ -1,9 +1,9 @@
-// Four-variant button per the design system.
-// - accept:  filled with the universal teal accent. The primary Accept action on result screens.
-// - module:  filled with a module's colour. Use for module-screen primary actions
-//            (e.g. "Find my meal" on Fuel input).
-// - reroll:  neutral gray fill. Secondary action sibling to Accept on result screens.
-// - outline: transparent fill with coloured border. Tertiary affordance ("Add task" etc.).
+// A reusable button with four looks, so buttons across the app stay consistent.
+//  - accept:  filled teal. The main "Accept" button on a result screen.
+//  - module:  filled with a module's own colour, for the main button on a module
+//             screen (like "Decide for Me" on Fuel).
+//  - reroll:  plain grey. The secondary button that sits next to Accept.
+//  - outline: see-through with a coloured border, for less important actions.
 
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { ReactNode } from "react";
@@ -14,14 +14,15 @@ type Variant = "accept" | "module" | "reroll" | "outline";
 
 export type ButtonProps = {
   variant?: Variant;
-  // Required for module/outline variants where the colour comes from a module.
-  // For accept/reroll the colour is the universal teal or neutral and is ignored.
+  // Needed for the module and outline looks, where the colour comes from a
+  // module. For accept and reroll the colour is always teal or grey, so it is
+  // ignored.
   color?: string;
   c700?: string;
   onPress?: () => void;
   children: ReactNode;
-  // Optional sub-label rendered to the right of the main label.
-  // Pattern used by "Reroll (1 remaining)".
+  // An optional smaller label shown to the right of the main one, like the count
+  // in "Reroll (1 remaining)".
   sub?: string;
   disabled?: boolean;
 };
@@ -54,6 +55,7 @@ export function Button({
   );
 }
 
+// Works out the background (or border) colour for each button look.
 function styleFor(variant: Variant, color: string, c700: string, pressed: boolean) {
   switch (variant) {
     case "accept":
@@ -70,6 +72,7 @@ function styleFor(variant: Variant, color: string, c700: string, pressed: boolea
   }
 }
 
+// Works out the text colour for each button look.
 function labelStyleFor(variant: Variant, color: string) {
   switch (variant) {
     case "accept":
@@ -82,6 +85,7 @@ function labelStyleFor(variant: Variant, color: string) {
   }
 }
 
+// Works out the colour of the smaller side label.
 function subStyleFor(variant: Variant) {
   if (variant === "reroll") return { color: T.fg3 };
   if (variant === "outline") return { color: T.fg2 };

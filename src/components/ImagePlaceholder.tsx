@@ -1,6 +1,6 @@
-// Rounded-rectangle image placeholder with a warm or cool gradient and a
-// centered image glyph. Used on recommendation cards before real photo
-// content lands (Fuel meal photos, Focus location photos).
+// A rounded box with a soft gradient and a small picture icon in the middle. It
+// stands in for a real photo on the recommendation cards until actual photos are
+// added later.
 
 import { StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -9,6 +9,7 @@ import { Icon } from "@/components/Icon";
 
 type Tone = "warm" | "cool";
 
+// The two colour pairs the gradient can use: a warm one and a cool one.
 const TONES: Record<Tone, [string, string]> = {
   warm: ["#EFE7DB", "#E7DCCB"],
   cool: ["#E2EAE8", "#D6E3DF"],
@@ -20,6 +21,7 @@ export type ImagePlaceholderProps = {
   radius?: number;
 };
 
+// Draws the gradient box with the picture icon in the centre.
 export function ImagePlaceholder({
   tone = "warm",
   height = 150,
