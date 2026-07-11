@@ -10,7 +10,10 @@
 // just an optional link back to the original item, and reading the history never
 // relies on them.
 
+import { doc, setDoc } from "firebase/firestore";
+
 import { getDb } from "@/services/localdb/db";
+import { db as firestore, auth } from "@/services/firebase";
 
 export type DecisionModuleType = "fuel" | "focus" | "priority";
 
@@ -106,7 +109,32 @@ export async function logDecision(input: DecisionInput): Promise<DecisionRecord>
     ]
   );
 
+  // Mirror the saved decision to the cloud for a durable copy. Fire-and-forget
+  // and non-blocking: the local write above is the source of truth, so a cloud
+  // failure (for example no signal) must never fail the Accept.
+  void mirrorToCloud(record);
+
   return record;
+}
+
+// Writes a durable copy of a just-saved decision to Firestore, under the signed-in
+// user at users/{uid}/decisions/{historyId}. Using historyId as the document id
+// makes a retry idempotent (the same decision can never create two cloud copies).
+// Non-blocking by contract: any failure is logged and swallowed, never thrown,
+// because the on-device write is the source of truth and Accept must not fail for
+// lack of signal. Firestore's offline queue caches the write with no connection and
+// flushes it automatically once back online.
+async function mirrorToCloud(record: DecisionRecord): Promise<void> {
+  const uid = auth.currentUser?.uid;
+  if (!uid) {
+    return;
+  }
+
+  try {
+    await setDoc(doc(firestore, "users", uid, "decisions", record.historyId), record);
+  } catch (error) {
+    console.warn("Decision cloud mirror failed; kept on device, not blocking.", error);
+  }
 }
 
 // Returns every saved decision, newest first. This is what the History screen
