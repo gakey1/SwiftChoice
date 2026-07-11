@@ -1,15 +1,11 @@
-// SwiftChoice module registry.
-// Source of truth for module-colour scoping and module-specific copy.
-// Module-colour scoping is a brand law: amber only on Fuel screens,
-// green only on Focus, purple only on Priority. Teal is the only
-// universal accent.
+// The list of the three modules (Fuel, Focus, Priority) with their colours and
+// wording, all kept in one place. Each module has its own colour: amber for
+// Fuel, green for Focus, and purple for Priority. Teal is the one colour used on
+// screens shared across all modules.
 //
-// Components that legitimately render across all modules accept NO
-// `module` prop and use T.teal exclusively.
-//
-// Components scoped to one module accept `module: Module` and use its
-// colours only. The discriminated-union type below makes invalid
-// modules fail to compile.
+// Screens that belong to a single module take a module and use only that
+// module's colour, and the types below make a wrong module fail to build.
+// Screens shared across all modules take no module and use teal.
 
 import { colors } from "@/theme/tokens";
 
@@ -18,15 +14,15 @@ export type ModuleKey = "fuel" | "focus" | "priority";
 export type Module = {
   key: ModuleKey;
   name: "Fuel" | "Focus" | "Priority";
-  // Glyph: the three module-glyph emoji. The only emoji that ever appear
-  // in the product (per the design system brand law). Used as visual
-  // shorthand inside ModuleIcon and elsewhere.
+  // The small picture for each module (the plate, the pin, the tick). These are
+  // the only picture characters used anywhere in the app. Shown inside ModuleIcon
+  // and a few other places as a quick visual label.
   glyph: string;
-  color: string; // base hex
-  c700: string; // pressed / darker variant
-  tint: string; // ~12% alpha background
-  sub: string; // home-card subtitle
-  prompt: string; // module-screen prompt
+  color: string; // the main colour, as a hex code
+  c700: string; // a darker shade, used when a button is pressed
+  tint: string; // a very faint version of the colour, for backgrounds
+  sub: string; // the small line under the module's card on the home screen
+  prompt: string; // the question shown at the top of the module's screen
 };
 
 export const MODULES: Record<ModuleKey, Module> = {
@@ -62,7 +58,7 @@ export const MODULES: Record<ModuleKey, Module> = {
   },
 };
 
-// Helper to look up a module by its key with type safety.
+// Looks up a module by its key. The type makes sure the key is a real module.
 export function getModule(key: ModuleKey): Module {
   return MODULES[key];
 }

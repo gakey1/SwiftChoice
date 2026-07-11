@@ -1,8 +1,14 @@
+// Tests for the settings screen. The auth hook, logout, icons, and preferences
+// storage are all mocked, so this checks the screen's own behaviour: pressing
+// Log out calls the logout service.
+
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 
 import { SettingsScreen } from "@/screens/settings/SettingsScreen";
 import { logout } from "@/services/auth";
 
+// Fake the auth state and the things the screen depends on, so it renders and
+// behaves under Jest without real Firebase or a database.
 jest.mock("@/services/auth", () => ({ logout: jest.fn() }));
 jest.mock("@/hooks/useAuth", () => ({
   useAuth: () => ({ user: { email: "a@b.com" }, initializing: false }),

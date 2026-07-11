@@ -1,3 +1,7 @@
+// Tests for the sign up screen. The auth service is mocked, so these check the
+// screen's own behaviour: it validates the form, calls the service only with
+// good input, shows a form error when sign up fails, and links to login.
+
 import type { ComponentProps } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 
@@ -8,6 +12,7 @@ jest.mock("@/services/auth", () => ({ registerWithEmail: jest.fn() }));
 
 const mockRegister = registerWithEmail as jest.Mock;
 
+// Renders the screen with a fake navigation object so the footer link can be checked.
 function renderScreen() {
   const navigate = jest.fn();
   const props = { navigation: { navigate } } as unknown as ComponentProps<typeof RegisterScreen>;
@@ -15,6 +20,7 @@ function renderScreen() {
   return { navigate };
 }
 
+// Types a valid email and matching passwords into the three fields.
 function fillValidForm() {
   fireEvent.changeText(screen.getByTestId("register-email"), "a@b.com");
   fireEvent.changeText(screen.getByTestId("register-password"), "password123");

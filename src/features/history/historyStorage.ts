@@ -1,18 +1,14 @@
-// History write API (Sprint 2 stub).
+// This is where a saved decision gets written. When a user accepts a
+// recommendation on the Fuel or Focus screen, that screen calls logDecision
+// here and this file saves it. The screens do not need to know how or where it
+// is stored, they just call this one function. Right now it is saved in the
+// on-device database.
 //
-// One typed entry point that Fuel, Focus, and Priority call when a user accepts
-// a recommendation (US16 / US20) or completes a task. It is a seam: callers
-// depend on this stable signature now, and the implementation behind it grows
-// later without changing any call site. Today it writes to an on-device SQLite
-// `decisions` table; Sprint 3 (US25) mirrors each write to Firestore at
-// users/{uid}/decisions/{historyId} with a server timestamp, and US26 adds the
-// read-only history view.
-//
-// A decision row is write-once. `itemSnapshot` freezes the chosen item's name
-// and details at the moment of acceptance, so the history stays accurate even
-// if the underlying pool item is later edited or deleted. The soft foreign key
-// (fuelId / focusId / taskId) exists only for an optional link back to the
-// source item; reads never depend on it resolving.
+// Each saved decision keeps a frozen copy of the chosen item (its name and some
+// details) in itemSnapshot. That way the history stays correct even if the
+// original item is later changed or deleted. The fuelId, focusId and taskId are
+// just an optional link back to the original item, and reading the history never
+// relies on them.
 
 import { getDb } from "@/services/localdb/db";
 
@@ -47,8 +43,8 @@ export interface DecisionRecord {
   itemSnapshot: ItemSnapshot;
   appliedFilters: Record<string, unknown>;
   rerolled: boolean;
-  // ISO 8601 string for now. Sprint 3 uses a Firestore server Timestamp; the
-  // on-device copy keeps an ISO string so the offline mirror stays sortable.
+  // The moment the decision was accepted, saved as a standard date string so the
+  // list can be sorted by time.
   decidedAt: string;
 }
 
@@ -113,8 +109,8 @@ export async function logDecision(input: DecisionInput): Promise<DecisionRecord>
   return record;
 }
 
-// Returns all recorded decisions, most recent first. This is the seam the
-// Sprint 3 History screen (US26) reads from once it is built.
+// Returns every saved decision, newest first. This is what the History screen
+// reads to show the list.
 export async function getDecisions(): Promise<DecisionRecord[]> {
   const db = await getDb();
 
@@ -132,6 +128,8 @@ export async function clearDecisions(): Promise<void> {
   await db.runAsync("DELETE FROM decisions");
 }
 
+// Turns a raw database row back into the nicer DecisionRecord shape, including
+// turning the saved text back into real objects.
 function rowToRecord(row: DecisionRow): DecisionRecord {
   return {
     historyId: row.history_id,
@@ -146,8 +144,8 @@ function rowToRecord(row: DecisionRow): DecisionRecord {
   };
 }
 
-// Client-side id for the interim on-device store. Sprint 3 uses the Firestore
-// document id as the canonical historyId; this keeps rows unique until then.
+// Makes a unique id for a saved decision, built from the current time plus a bit
+// of randomness, so two decisions never end up with the same id.
 function generateHistoryId(): string {
   const random = Math.random().toString(36).slice(2, 10);
 

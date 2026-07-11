@@ -1,9 +1,10 @@
-// Login screen (US05). Validates input, signs in, and lets the auth state
-// listener route to Home. Built in the same language as RegisterScreen.
+// The login screen. It checks what the user typed, signs them in, and then lets
+// the auth listener move them into the app. Built the same way as the register
+// screen.
 //
-// Every auth error collapses to one generic message (US05 acceptance
-// criterion): the screen never reveals whether the email or the password was
-// wrong, which would let an attacker enumerate registered accounts.
+// Every sign-in error shows the same general message on purpose. Telling the
+// user whether the email or the password was wrong would let someone work out
+// which emails are registered, so the message stays generic.
 
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -27,6 +28,8 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Runs when Log in is pressed. Check the form first, and stop if anything is
+  // wrong. Otherwise try to sign in and show a message if it fails.
   async function handleLogin() {
     const nextErrors = validateLoginForm({ email, password });
     setErrors(nextErrors);
@@ -36,7 +39,8 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
     setSubmitting(true);
     try {
       await loginWithEmail(email, password);
-      // No manual navigation; the auth listener swaps to Home on success.
+      // No screen change happens here; the auth listener moves them into the app
+      // once sign in works.
     } catch (err) {
       setFormError(loginErrorMessage(err));
     } finally {

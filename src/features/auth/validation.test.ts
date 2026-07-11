@@ -1,3 +1,7 @@
+// Tests for the sign up and login form checks. These run without React or
+// Firebase, so they are quick and only check the plain rules: a valid email, a
+// long enough password, matching passwords, and the login behaviour.
+
 import {
   hasErrors,
   MIN_PASSWORD_LENGTH,
@@ -8,6 +12,7 @@ import {
   validateRegisterForm,
 } from "@/features/auth/validation";
 
+// Email check: empty and malformed values fail, a proper address passes.
 describe("validateEmail", () => {
   it("rejects an empty value", () => {
     expect(validateEmail("")).toBeDefined();
@@ -23,6 +28,7 @@ describe("validateEmail", () => {
   });
 });
 
+// Password check: empty or too short fails, the minimum length passes.
 describe("validatePassword", () => {
   it("rejects an empty value", () => {
     expect(validatePassword("")).toBeDefined();
@@ -35,6 +41,7 @@ describe("validatePassword", () => {
   });
 });
 
+// Confirm-password check: it has to match the first password.
 describe("validateConfirmPassword", () => {
   it("rejects a mismatch", () => {
     expect(validateConfirmPassword("password123", "password124")).toBeDefined();
@@ -44,6 +51,7 @@ describe("validateConfirmPassword", () => {
   });
 });
 
+// The whole sign up form: valid input passes, and every bad field is flagged.
 describe("validateRegisterForm", () => {
   it("returns no errors for valid input", () => {
     const errors = validateRegisterForm({
@@ -66,6 +74,7 @@ describe("validateRegisterForm", () => {
   });
 });
 
+// The login form: it needs a valid email and a password, but not a long one.
 describe("validateLoginForm", () => {
   it("returns no errors for valid input", () => {
     const errors = validateLoginForm({ email: "a@b.com", password: "anything" });

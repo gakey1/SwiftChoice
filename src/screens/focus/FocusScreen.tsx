@@ -1,3 +1,8 @@
+// Focus module screen. It shows the workspace filters (energy level and vibe),
+// asks the recommendation engine for matching spots, then shows one result card
+// at a time with Accept and a single Reroll. Accept saves the choice to history
+// and goes back home. Focus uses the green module colour.
+
 import React, { useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -11,6 +16,7 @@ import {
   getFocusRecommendation,
   type FocusOption,
 } from "@/services/recommendation/recommendationEngine";
+import { logDecision } from "@/features/history/historyStorage";
 import { MODULES } from "@/theme/modules";
 import { T } from "@/theme/tokens";
 
@@ -26,6 +32,8 @@ type FilterGroupProps = {
   activeColor: string;
 };
 
+// One filter group: a label, the value currently chosen shown in the module
+// colour, and a row of options to pick from. The chosen option is outlined.
 function FilterOptionGroup({
   label,
   options,
@@ -86,12 +94,8 @@ export function FocusScreen() {
   const primaryColor = MODULES.focus.c700;
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
 
-  // Temporary history stub. Full history logging is planned for Sprint 3.
-  const logDecisionToHistory = async (item: FocusOption) => {
-    console.warn("Logging Focus decision via history layer:", item);
-    return new Promise((resolve) => setTimeout(resolve, 500));
-  };
-
+  // Runs when "Find My Spot" is pressed. Asks the engine for matching spots,
+  // keeps the whole list so a reroll can show the next one, and shows the first.
   function handleGetRecommendation() {
     const randomizedList = getFocusRecommendation({
       energyLevel,
@@ -115,6 +119,8 @@ export function FocusScreen() {
     setHasSearched(true);
   }
 
+  // Runs when Reroll is pressed. Shows the next spot from the list, but only
+  // once per search.
   function handleReroll() {
     if (hasRerolled) {
       console.warn("Reroll limit reached. Only one reroll is allowed per search.");
@@ -179,7 +185,22 @@ export function FocusScreen() {
               style={[styles.acceptBtn, { backgroundColor: primaryColor }]}
               activeOpacity={0.8}
               onPress={async () => {
-                await logDecisionToHistory(recommendation);
+                // Record the accepted decision via the shared history API.
+                // Same shape as the Fuel Accept, with the focus fields.
+                await logDecision({
+                  moduleType: "focus",
+                  focusId: recommendation.focus_id,
+                  itemSnapshot: {
+                    name: recommendation.spot_name,
+                    details: {
+                      energyLevel: recommendation.energy_level,
+                      vibe: recommendation.vibe,
+                      rating: recommendation.rating,
+                    },
+                  },
+                  appliedFilters: { energyLevel, vibe },
+                  rerolled: hasRerolled,
+                });
                 setRecommendation(null);
                 navigation.goBack();
               }}
@@ -258,6 +279,7 @@ export function FocusScreen() {
   );
 }
 
+// Turns the stored energy value into a word to show on screen.
 function energyLabel(value: EnergyLevel) {
   if (value === "low") return "Low";
   if (value === "high") return "High";
@@ -265,6 +287,7 @@ function energyLabel(value: EnergyLevel) {
   return "Medium";
 }
 
+// Turns the stored vibe value into a word to show on screen.
 function vibeLabel(value: FocusVibe) {
   if (value === "silent") return "Silent";
   if (value === "collaborative") return "Collaborative";

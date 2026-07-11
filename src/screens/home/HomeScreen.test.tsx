@@ -1,3 +1,7 @@
+// Tests for the home screen. The icon set and navigation are stubbed so it
+// renders under Jest. These check that the greeting and the three module cards
+// show, and that the weekly snapshot shows its empty state.
+
 import { render, screen } from "@testing-library/react-native";
 
 import { HomeScreen } from "@/screens/home/HomeScreen";
