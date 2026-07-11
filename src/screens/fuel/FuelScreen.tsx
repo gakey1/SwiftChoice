@@ -21,7 +21,7 @@ import { logDecision } from "@/features/history/historyStorage";
 type FilterGroupProps = {
   label: string;
   options: string[];
-  displayValues?: string[]; 
+  displayValues?: string[];
   selectedValue: string;
   onSelect: (value: string) => void;
   activeColor: string;
@@ -88,7 +88,7 @@ export function FuelScreen() {
     if (randomizedList && randomizedList.length > 0) {
       setMatchList(randomizedList);
       setCurrentIndex(0);
-      
+
       const firstChoice = randomizedList[0];
       if (firstChoice) {
         setRecommendation(firstChoice);
@@ -105,17 +105,17 @@ export function FuelScreen() {
   // once per search. If there is nothing else, asks the user to change filters.
   const handleReroll = async () => {
     if (hasRerolled) {
-        console.log("Reroll limit reached! Only 1 reroll allowed per search.");
-        return;
-      }
+      console.log("Reroll limit reached! Only 1 reroll allowed per search.");
+      return;
+    }
 
     if (matchList && matchList.length > 1) {
-      const nextItem = matchList[1]; 
-    
-    if (nextItem) {
-      setCurrentIndex(1);
-      setRecommendation(nextItem);
-      setHasRerolled(true);
+      const nextItem = matchList[1];
+
+      if (nextItem) {
+        setCurrentIndex(1);
+        setRecommendation(nextItem);
+        setHasRerolled(true);
       }
     } else {
       //If there are no other options, let the user look for something else
@@ -127,7 +127,7 @@ export function FuelScreen() {
   if (recommendation) {
     return (
       <SafeAreaView style={styles.frame} edges={["top", "left", "right"]}>
-        <View style={[styles.content, { justifyContent: "center" }]}>
+                <View style={[styles.content, { justifyContent: "center" }]}>
           
           <View style={styles.headerContainer}>
             <Text style={styles.contextSubtitle}>Your Fuel recommendation</Text>
@@ -149,16 +149,14 @@ export function FuelScreen() {
                 <Text style={[styles.metricValue, { color: primaryColor }]}>{recommendation.budget_level}</Text>
                 <Text style={styles.metricLabel}>Budget</Text>
               </View>
-              
-              {recommendation.type === "out" && (
+
               <View style={styles.metricColumn}>
                 <Text style={styles.metricValue}>
                   {recommendation.distance_range === "near" ? "1.2 km" : recommendation.distance_range === "mid" ? "3.5 km" : "6.0 km"}
                 </Text>
                 <Text style={styles.metricLabel}>Distance</Text>
               </View>
-            )}
-            
+
               <View style={styles.metricColumn}>
                 <View style={styles.ratingContainer}>
                   <Text style={styles.metricValue}>{recommendation.rating}</Text>
@@ -170,8 +168,8 @@ export function FuelScreen() {
           </Card>
 
           <View style={styles.actionRow}>
-            <TouchableOpacity 
-              style={[styles.acceptBtn, { backgroundColor: primaryColor }]} 
+            <TouchableOpacity
+              style={[styles.acceptBtn, { backgroundColor: primaryColor }]}
               activeOpacity={0.8}
               onPress={async () => {
                 if (recommendation) {
@@ -200,14 +198,14 @@ export function FuelScreen() {
                   setRecommendation(null);
                   
                   //Navigate the user back to the Home dashboard
-                  navigation.goBack(); 
+                  navigation.goBack();
                 }
               }}
             >
               <Text style={styles.acceptBtnText}>Accept</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={handleReroll}
               disabled={hasRerolled}
               style={[styles.rerollBtn, { opacity: hasRerolled ? 0.5 : 1 },
@@ -238,6 +236,17 @@ export function FuelScreen() {
   // === VIEW 2: SHOW FILTERS MENU IF NO OPTION HAS BEEN SELECTED YET ===
   return (
     <SafeAreaView style={styles.frame} edges={["top", "left", "right"]}>
+      <View style={styles.backRow}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+          activeOpacity={0.7}
+        >
+          <Icon name="arrow-left" size={22} color={primaryColor} />
+          <Text style={[styles.backText, { color: primaryColor }]}>Back</Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         
         <View style={styles.titleContainer}>
@@ -251,8 +260,8 @@ export function FuelScreen() {
         </View>
 
         <Card style={styles.toggleRowCard}>
-          <TouchableOpacity 
-            style={[styles.toggleBtn, mealType === "in" && styles.toggleBtnActive]} 
+          <TouchableOpacity
+            style={[styles.toggleBtn, mealType === "in" && styles.toggleBtnActive]}
             onPress={() => setMealType("in")}
             activeOpacity={0.8}
           >
@@ -261,8 +270,8 @@ export function FuelScreen() {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={[styles.toggleBtn, mealType === "out" && styles.toggleBtnActive]} 
+          <TouchableOpacity
+            style={[styles.toggleBtn, mealType === "out" && styles.toggleBtnActive]}
             onPress={() => setMealType("out")}
             activeOpacity={0.8}
           >
@@ -279,6 +288,7 @@ export function FuelScreen() {
           onSelect={(val) => setBudget(val as "$" | "$$" | "$$$")}
           activeColor={primaryColor}
         />
+
         <FilterOptionGroup
           label="Prep Time"
           options={["short", "medium", "long"]}
@@ -287,18 +297,16 @@ export function FuelScreen() {
           onSelect={(val) => setPrepTime(val as "short" | "medium" | "long")}
           activeColor={primaryColor}
         />
-        {/* ONLY render Distance if eating out */}
-        {mealType === "out" && (
-          <FilterOptionGroup
-            label="Distance"
-            options={["near", "mid", "far"]}
-            displayValues={["< 1 km", "1-5 km", "5+ km"]}
-            selectedValue={distance}
-            onSelect={(val) => setDistance(val as "near" | "mid" | "far")}
-            activeColor={primaryColor}
-          />
-        )}
-        
+
+        <FilterOptionGroup
+          label="Distance"
+          options={["near", "mid", "far"]}
+          displayValues={["< 1 km", "1-5 km", "5+ km"]}
+          selectedValue={distance}
+          onSelect={(val) => setDistance(val as "near" | "mid" | "far")}
+          activeColor={primaryColor}
+        />
+
         <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: primaryColor }]}
           onPress={handleGetRecommendation}
@@ -306,7 +314,7 @@ export function FuelScreen() {
         >
           <Text style={styles.actionButtonText}>Decide for Me</Text>
         </TouchableOpacity>
-        
+
         {recommendation === null && hasSearched && (
           <View style={styles.noResultContainer}>
             <Text style={styles.noResultText}>
@@ -331,6 +339,20 @@ const styles = StyleSheet.create({
     width: "100%",
     alignSelf: "center",
   },
+  backRow: {
+    paddingHorizontal: T.spacing.pageX,
+    paddingTop: T.spacing[3],
+  },
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-start",
+  },
+  backText: {
+    fontFamily: T.font.medium,
+    fontSize: T.fontSize.body,
+  },
   titleContainer: { flexDirection: "row", alignItems: "center", gap: T.spacing[3], marginTop: T.spacing[2] },
   iconPlaceholder: { width: 48, height: 48, borderRadius: 12, justifyContent: "center", alignItems: "center" },
   h1: { fontFamily: T.font.bold, fontSize: T.fontSize.display, color: T.fg1 },
@@ -348,7 +370,7 @@ const styles = StyleSheet.create({
   optionText: { fontFamily: T.font.regular, fontSize: T.fontSize.body, color: T.fg2 },
   actionButton: { borderRadius: 14, paddingVertical: 16, alignItems: "center", justifyContent: "center", marginTop: T.spacing[3], shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 6, elevation: 3 },
   actionButtonText: { color: T.surface, fontFamily: T.font.bold, fontSize: T.fontSize.body },
-  
+
   headerContainer: { alignItems: "center", marginBottom: T.spacing[2] },
   contextSubtitle: { fontFamily: T.font.regular, fontSize: T.fontSize.body, color: T.fg2, marginBottom: 4 },
   resultCardCustom: { width: "100%", backgroundColor: T.surface, borderRadius: 24, paddingVertical: T.spacing[5], paddingHorizontal: T.spacing[4], alignItems: "center", borderWidth: 1, borderColor: T.border, marginBottom: T.spacing[3] },
