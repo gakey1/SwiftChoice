@@ -32,7 +32,19 @@ type ThemeContextValue = {
   toggleDark: () => void;
 };
 
-const ThemeContext = createContext<ThemeContextValue | null>(null);
+// The context defaults to the dark Arcade theme with no-op setters. This means a
+// component that reads useTheme() outside a ThemeProvider (in a unit test, say)
+// gets a sensible theme rather than crashing. In the real app, App.tsx always
+// mounts the provider at the root, so the live theme always wins.
+const DEFAULT_VALUE: ThemeContextValue = {
+  colors: themes[DEFAULT_THEME],
+  name: DEFAULT_THEME,
+  isDark: DEFAULT_THEME === "arcadeDark",
+  setThemeName: () => undefined,
+  toggleDark: () => undefined,
+};
+
+const ThemeContext = createContext<ThemeContextValue>(DEFAULT_VALUE);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [name, setName] = useState<ThemeName>(DEFAULT_THEME);
@@ -79,9 +91,5 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 // The hook screens use to read the active theme. Returns the whole context, so a
 // screen can also flip the theme (the Settings toggle uses toggleDark).
 export function useTheme(): ThemeContextValue {
-  const ctx = useContext(ThemeContext);
-  if (!ctx) {
-    throw new Error("useTheme must be used inside a ThemeProvider");
-  }
-  return ctx;
+  return useContext(ThemeContext);
 }
