@@ -18,10 +18,12 @@ import { hasErrors, validateRegisterForm, type RegisterErrors } from "@/features
 import type { AuthStackParamList } from "@/navigation/types";
 import { registerWithEmail } from "@/services/auth";
 import { T } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeProvider";
 
 type RegisterScreenProps = NativeStackScreenProps<AuthStackParamList, "Register">;
 
 export function RegisterScreen({ navigation }: RegisterScreenProps) {
+  const { colors } = useTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -50,7 +52,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -62,18 +64,18 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
             onPress={() => navigation.goBack()}
             activeOpacity={0.7}
       >
-         <Text style={styles.backText}>← Back</Text>
+         <Text style={[styles.backText, { color: colors.teal }]}>← Back</Text>
          </TouchableOpacity>
 
   <View style={styles.brand}>
-            <View style={styles.logo}>
+            <View style={[styles.logo, { backgroundColor: colors.teal }]}>
               <Text style={styles.logoLetter}>S</Text>
             </View>
-            <Text style={styles.wordmark}>SwiftChoice</Text>
+            <Text style={[styles.wordmark, { color: colors.ink }]}>SwiftChoice</Text>
           </View>
 
-          <Text style={styles.title}>Create your account</Text>
-          <Text style={styles.subtitle}>One clear choice at a time.</Text>
+          <Text style={[styles.title, { color: colors.ink }]}>Create your account</Text>
+          <Text style={[styles.subtitle, { color: colors.ink2 }]}>One clear choice at a time.</Text>
 
           <TextField
             label="Email"
@@ -123,9 +125,9 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
           </View>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Already have an account? </Text>
+            <Text style={[styles.footerText, { color: colors.ink2 }]}>Already have an account? </Text>
             <Text
-              style={styles.footerLink}
+              style={[styles.footerLink, { color: colors.teal }]}
               accessibilityRole="button"
               onPress={() => navigation.navigate("Login")}
             >
@@ -139,7 +141,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: T.canvas },
+  safe: { flex: 1 },
   flex: { flex: 1 },
   content: {
     paddingHorizontal: T.spacing.pageX,
@@ -156,22 +158,19 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: T.radii.logo,
-    backgroundColor: T.teal,
     alignItems: "center",
     justifyContent: "center",
   },
   logoLetter: { color: T.tealOn, fontFamily: T.font.bold, fontSize: T.fontSize.title },
-  wordmark: { fontFamily: T.font.bold, fontSize: T.fontSize.title, color: T.fg1 },
+  wordmark: { fontFamily: T.font.bold, fontSize: T.fontSize.title },
   title: {
     fontFamily: T.font.bold,
     fontSize: T.fontSize.display,
-    color: T.fg1,
     marginBottom: T.spacing[1],
   },
   subtitle: {
     fontFamily: T.font.regular,
     fontSize: T.fontSize.subtitle,
-    color: T.fg2,
     marginBottom: T.spacing[6],
   },
   formError: {
@@ -182,8 +181,8 @@ const styles = StyleSheet.create({
   },
   action: { marginTop: T.spacing[2] },
   footer: { flexDirection: "row", justifyContent: "center", marginTop: T.spacing[5] },
-  footerText: { fontFamily: T.font.regular, fontSize: T.fontSize.body, color: T.fg2 },
-  footerLink: { fontFamily: T.font.semibold, fontSize: T.fontSize.body, color: T.teal },
+  footerText: { fontFamily: T.font.regular, fontSize: T.fontSize.body },
+  footerLink: { fontFamily: T.font.semibold, fontSize: T.fontSize.body },
 
   backButton: {
     alignSelf: "flex-start",
@@ -193,6 +192,5 @@ const styles = StyleSheet.create({
   backText: {
     fontFamily: T.font.semibold,
     fontSize: T.fontSize.body,
-    color: T.teal,
   },
 });
