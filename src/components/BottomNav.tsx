@@ -7,6 +7,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Icon } from "@/components/Icon";
 import type { IconName } from "@/components/Icon";
 import { T } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeProvider";
 
 export type BottomNavKey = "home" | "history" | "settings";
 
@@ -30,11 +31,12 @@ export type BottomNavProps = {
 
 // Draws the three tabs and highlights whichever one is active in teal.
 export function BottomNav({ active, onNavigate }: BottomNavProps) {
+  const { colors } = useTheme();
   return (
-    <View style={styles.bar}>
+    <View style={[styles.bar, { backgroundColor: colors.card, borderTopColor: colors.cardLine }]}>
       {ITEMS.map((item) => {
         const on = item.key === active;
-        const tint = on ? T.teal : T.fg3;
+        const tint = on ? colors.teal : colors.ink3;
         return (
           <Pressable
             key={item.key}
@@ -56,9 +58,7 @@ export function BottomNav({ active, onNavigate }: BottomNavProps) {
 const styles = StyleSheet.create({
   bar: {
     flexDirection: "row",
-    backgroundColor: T.surface,
     borderTopWidth: 1,
-    borderTopColor: T.border,
     paddingTop: T.spacing[2],
     paddingBottom: 18,
   },

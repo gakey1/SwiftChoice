@@ -6,22 +6,25 @@ import type { ReactNode } from "react";
 import type { StyleProp, TextStyle } from "react-native";
 
 import { T } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeProvider";
 
 export type SectionLabelProps = {
   children: ReactNode;
   style?: StyleProp<TextStyle>;
 };
 
-// Shows the heading text using the shared section-heading styling.
+// Shows the heading text using the shared section-heading styling, in the mono
+// font for the coded Arcade look. Its colour comes from the active theme.
 export function SectionLabel({ children, style }: SectionLabelProps) {
-  return <Text style={[styles.label, style]}>{children}</Text>;
+  const { colors } = useTheme();
+  return <Text style={[styles.label, { color: colors.ink3 }, style]}>{children}</Text>;
 }
 
 const styles = StyleSheet.create({
   label: {
-    fontFamily: T.font.bold,
+    fontFamily: T.font.mono,
     fontSize: 13,
-    color: T.fg1,
+    letterSpacing: 0.5,
     marginBottom: T.spacing[3],
   },
 });
