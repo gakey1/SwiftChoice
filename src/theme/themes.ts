@@ -48,7 +48,7 @@ export const arcadeDark: ThemeColors = {
 
   ink: "#F4F1FF",
   ink2: "#B4ADD6",
-  ink3: "#7C74A6",
+  ink3: "#8B82B8", // section headers; brightened to clear WCAG AA (5.3:1 on bg)
 
   teal: "#22E0C4",
   fuel: "#FFB23E",
@@ -73,7 +73,7 @@ export const arcadeLight: ThemeColors = {
 
   ink: "#251C48",
   ink2: "#6A5E90",
-  ink3: "#9C93BE",
+  ink3: "#665E7B", // section headers; darkened to clear WCAG AA (5.3:1 on bg)
 
   teal: "#10BCA6",
   fuel: "#EE9614",
