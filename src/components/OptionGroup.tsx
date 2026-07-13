@@ -1,11 +1,14 @@
 // A pick-one input: a label, the value currently chosen, and a row of
 // equal-width buttons to choose from. Used for the Fuel choices (budget, prep
 // time, distance) and any similar pick-one input. The chosen button is tinted in
-// the module's colour, and the type makes sure the right module is used.
+// the module's colour (from the active theme), and the type makes sure the right
+// module is used.
 
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { Module } from "@/theme/modules";
+import { moduleAccent } from "@/theme/themes";
+import { useTheme } from "@/theme/ThemeProvider";
 import { T } from "@/theme/tokens";
 
 export type OptionGroupProps<TValue extends string> = {
@@ -24,28 +27,35 @@ export function OptionGroup<TValue extends string>({
   onChange,
   module,
 }: OptionGroupProps<TValue>) {
+  const { colors } = useTheme();
+  const accent = moduleAccent(colors, module.key);
   return (
     <View>
       <View style={styles.header}>
-        <Text style={styles.label}>{label}</Text>
-        <Text style={[styles.value, { color: module.color }]}>{value}</Text>
+        <Text style={[styles.label, { color: colors.ink }]}>{label}</Text>
+        <Text style={[styles.value, { color: accent.color }]}>{value}</Text>
       </View>
       <View style={styles.row}>
         {options.map((option) => {
           const selected = option === value;
-          const borderColor = selected ? module.color : T.border;
-          const backgroundColor = selected ? module.tint : T.surface;
-          const textColor = selected ? module.color : T.fg2;
           return (
             <Pressable
               key={option}
               onPress={() => onChange(option)}
-              style={[styles.option, { backgroundColor, borderColor }]}
+              style={[
+                styles.option,
+                {
+                  backgroundColor: selected ? accent.tint : colors.chip,
+                  borderColor: selected ? accent.color : colors.cardLine,
+                },
+              ]}
               accessibilityRole="radio"
               accessibilityState={{ selected }}
               accessibilityLabel={option}
             >
-              <Text style={[styles.optionLabel, { color: textColor }]}>{option}</Text>
+              <Text style={[styles.optionLabel, { color: selected ? accent.color : colors.ink2 }]}>
+                {option}
+              </Text>
             </Pressable>
           );
         })}
@@ -64,7 +74,6 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: T.font.bold,
     fontSize: 18,
-    color: T.fg1,
   },
   value: {
     fontFamily: T.font.bold,
