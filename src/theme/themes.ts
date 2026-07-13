@@ -93,6 +93,23 @@ export const themes: Record<ThemeName, ThemeColors> = {
   arcadeLight,
 };
 
+// Returns a module's accent colour and its faint tint from the active theme, so
+// module screens (Fuel amber, Focus green, Priority purple) use the theme's
+// brighter accents instead of the static ones in MODULES.
+export function moduleAccent(
+  colors: ThemeColors,
+  key: "fuel" | "focus" | "priority"
+): { color: string; tint: string } {
+  switch (key) {
+    case "fuel":
+      return { color: colors.fuel, tint: colors.fuelTint };
+    case "focus":
+      return { color: colors.focus, tint: colors.focusTint };
+    case "priority":
+      return { color: colors.priority, tint: colors.priorityTint };
+  }
+}
+
 // The app opens in the dark Arcade theme by default; the saved choice overrides
 // this once it has loaded.
 export const DEFAULT_THEME: ThemeName = "arcadeDark";

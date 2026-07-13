@@ -6,6 +6,8 @@
 import { StyleSheet, Text, View } from "react-native";
 
 import type { Module } from "@/theme/modules";
+import { moduleAccent } from "@/theme/themes";
+import { useTheme } from "@/theme/ThemeProvider";
 
 export type ModuleIconProps = {
   module: Module;
@@ -15,6 +17,8 @@ export type ModuleIconProps = {
 };
 
 export function ModuleIcon({ module, size = 44 }: ModuleIconProps) {
+  const { colors } = useTheme();
+  const accent = moduleAccent(colors, module.key);
   return (
     <View
       style={[
@@ -23,7 +27,7 @@ export function ModuleIcon({ module, size = 44 }: ModuleIconProps) {
           width: size,
           height: size,
           borderRadius: size * 0.27,
-          backgroundColor: module.tint,
+          backgroundColor: accent.tint,
         },
       ]}
     >
