@@ -113,6 +113,10 @@ export const font = {
   medium: "DMSans_500Medium",
   semibold: "DMSans_600SemiBold",
   bold: "DMSans_700Bold",
+  // Monospace, used only on the "coded" Arcade elements (stats, labels, section
+  // headers, badges), never on body text or titles. See the Arcade theme.
+  mono: "DMMono_400Regular",
+  monoMedium: "DMMono_500Medium",
 } as const;
 
 // Font sizes
