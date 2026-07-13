@@ -1,5 +1,7 @@
 module.exports = {
   preset: "jest-expo",
+  // Runs before each test file. Mocks AsyncStorage (null native module under Jest).
+  setupFiles: ["<rootDir>/jest.setup.js"],
   moduleNameMapper: {
     // Mirror the tsconfig "@/*" path alias. Metro resolves this natively,
     // but Jest needs it spelled out.
