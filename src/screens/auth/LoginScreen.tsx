@@ -18,10 +18,12 @@ import { hasErrors, validateLoginForm, type LoginErrors } from "@/features/auth/
 import type { AuthStackParamList } from "@/navigation/types";
 import { loginWithEmail } from "@/services/auth";
 import { T } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeProvider";
 
 type LoginScreenProps = NativeStackScreenProps<AuthStackParamList, "Login">;
 
 export function LoginScreen({ navigation }: LoginScreenProps) {
+  const { colors } = useTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<LoginErrors>({});
@@ -49,21 +51,23 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.brand}>
-            <View style={styles.logo}>
+            <View style={[styles.logo, { backgroundColor: colors.teal }]}>
               <Text style={styles.logoLetter}>S</Text>
             </View>
-            <Text style={styles.wordmark}>SwiftChoice</Text>
+            <Text style={[styles.wordmark, { color: colors.ink }]}>SwiftChoice</Text>
           </View>
 
-          <Text style={styles.title}>Welcome back</Text>
-          <Text style={styles.subtitle}>Log in to pick up where you left off.</Text>
+          <Text style={[styles.title, { color: colors.ink }]}>Welcome back</Text>
+          <Text style={[styles.subtitle, { color: colors.ink2 }]}>
+            Log in to pick up where you left off.
+          </Text>
 
           <TextField
             label="Email"
@@ -102,9 +106,9 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
           </View>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>New here? </Text>
+            <Text style={[styles.footerText, { color: colors.ink2 }]}>New here? </Text>
             <Text
-              style={styles.footerLink}
+              style={[styles.footerLink, { color: colors.teal }]}
               accessibilityRole="button"
               onPress={() => navigation.navigate("Register")}
             >
@@ -118,7 +122,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: T.canvas },
+  safe: { flex: 1 },
   flex: { flex: 1 },
   content: {
     paddingHorizontal: T.spacing.pageX,
@@ -135,22 +139,19 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: T.radii.logo,
-    backgroundColor: T.teal,
     alignItems: "center",
     justifyContent: "center",
   },
   logoLetter: { color: T.tealOn, fontFamily: T.font.bold, fontSize: T.fontSize.title },
-  wordmark: { fontFamily: T.font.bold, fontSize: T.fontSize.title, color: T.fg1 },
+  wordmark: { fontFamily: T.font.bold, fontSize: T.fontSize.title },
   title: {
     fontFamily: T.font.bold,
     fontSize: T.fontSize.display,
-    color: T.fg1,
     marginBottom: T.spacing[1],
   },
   subtitle: {
     fontFamily: T.font.regular,
     fontSize: T.fontSize.subtitle,
-    color: T.fg2,
     marginBottom: T.spacing[6],
   },
   formError: {
@@ -161,6 +162,6 @@ const styles = StyleSheet.create({
   },
   action: { marginTop: T.spacing[2] },
   footer: { flexDirection: "row", justifyContent: "center", marginTop: T.spacing[5] },
-  footerText: { fontFamily: T.font.regular, fontSize: T.fontSize.body, color: T.fg2 },
-  footerLink: { fontFamily: T.font.semibold, fontSize: T.fontSize.body, color: T.teal },
+  footerText: { fontFamily: T.font.regular, fontSize: T.fontSize.body },
+  footerLink: { fontFamily: T.font.semibold, fontSize: T.fontSize.body },
 });
