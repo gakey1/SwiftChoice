@@ -15,6 +15,7 @@ import {
   DMSans_600SemiBold,
   DMSans_700Bold,
 } from "@expo-google-fonts/dm-sans";
+import { DMMono_400Regular, DMMono_500Medium } from "@expo-google-fonts/dm-mono";
 
 // Import Firebase at app boot so init runs once. If env vars are missing
 // or config is malformed, the import throws here and the app fails fast
@@ -29,6 +30,9 @@ import { RootNavigator } from "@/navigation/RootNavigator";
 // A ref to the navigation container so code outside the React tree (services,
 // helpers) can trigger navigation if needed.
 import { globalNavigationRef } from "@/navigation/navigationRef";
+// ThemeProvider holds the active colour theme (dark or light Arcade) and hands it
+// to every screen via useTheme. It wraps the app so any screen can read the theme.
+import { ThemeProvider } from "@/theme/ThemeProvider";
 
 export default function App() {
   // Load the four DM Sans weights the design system uses. useFonts returns
@@ -38,6 +42,9 @@ export default function App() {
     DMSans_500Medium,
     DMSans_600SemiBold,
     DMSans_700Bold,
+    // DM Mono powers the coded Arcade elements (stats, labels, section headers).
+    DMMono_400Regular,
+    DMMono_500Medium,
   });
 
   // Render nothing until the font is loaded. This gates the whole app on the
@@ -56,14 +63,16 @@ export default function App() {
   //    signed-in halves of the app.
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <NavigationContainer ref={globalNavigationRef}>
-          <RootNavigator />
-        </NavigationContainer>
-      </AuthProvider>
-      {/* Controls the OS status bar tint; "auto" picks light or dark to suit
-          the screen behind it. Sits outside the navigator so it applies app-wide. */}
-      <StatusBar style="auto" />
+      <ThemeProvider>
+        <AuthProvider>
+          <NavigationContainer ref={globalNavigationRef}>
+            <RootNavigator />
+          </NavigationContainer>
+        </AuthProvider>
+        {/* Controls the OS status bar tint; "auto" picks light or dark to suit
+            the screen behind it. Sits outside the navigator so it applies app-wide. */}
+        <StatusBar style="auto" />
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }
