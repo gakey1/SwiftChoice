@@ -15,6 +15,7 @@ import { ModuleIcon } from "@/components/ModuleIcon";
 import type { AppStackParamList } from "@/navigation/types";
 import { MODULES, type Module } from "@/theme/modules";
 import { T } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeProvider";
 
 type ModuleRowCardProps = {
   title: string;
@@ -26,17 +27,18 @@ type ModuleRowCardProps = {
 // One tappable module card: the module icon, its title and subtitle, and a
 // chevron on the right. Tapping it opens that module's screen.
 function ModuleRowCard({ title, subtitle, module, onPress }: ModuleRowCardProps) {
+  const { colors } = useTheme();
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={styles.cardClickable}>
       <Card style={styles.cardRow}>
         <View style={styles.leftContent}>
           <ModuleIcon module={module} />
           <View style={styles.textContainer}>
-            <Text style={styles.cardTitle}>{title}</Text>
-            <Text style={styles.cardSubtitle}>{subtitle}</Text>
+            <Text style={[styles.cardTitle, { color: colors.ink }]}>{title}</Text>
+            <Text style={[styles.cardSubtitle, { color: colors.ink2 }]}>{subtitle}</Text>
           </View>
         </View>
-        <Icon name="chevron-right" />
+        <Icon name="chevron-right" color={colors.ink3} />
       </Card>
     </TouchableOpacity>
   );
@@ -44,21 +46,22 @@ function ModuleRowCard({ title, subtitle, module, onPress }: ModuleRowCardProps)
 
 export function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  const { colors } = useTheme();
   return (
-    <View style={styles.frame}>
+    <View style={[styles.frame, { backgroundColor: colors.bg }]}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.headerRow}>
-          <View style={styles.avatarContainer}>
+          <View style={[styles.avatarContainer, { backgroundColor: colors.teal }]}>
             <Text style={styles.avatarText}>S</Text>
           </View>
-          <Text style={styles.h1}>SwiftChoice</Text>
+          <Text style={[styles.h1, { color: colors.ink }]}>SwiftChoice</Text>
         </View>
 
-        <Text style={styles.greetingText}>
+        <Text style={[styles.greetingText, { color: colors.ink2 }]}>
           Good morning! What decision can I help with today?
         </Text>
 
@@ -90,10 +93,10 @@ export function HomeScreen() {
         </View>
 
         <Card style={styles.analyticsCard}>
-          <Text style={styles.analyticsHeader}>THIS WEEK</Text>
+          <Text style={[styles.analyticsHeader, { color: colors.ink3 }]}>THIS WEEK</Text>
           <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>No decisions yet this week</Text>
-            <Text style={styles.emptyBody}>
+            <Text style={[styles.emptyTitle, { color: colors.ink }]}>No decisions yet this week</Text>
+            <Text style={[styles.emptyBody, { color: colors.ink2 }]}>
               Your weekly snapshot appears here once you start making decisions.
             </Text>
           </View>
@@ -104,7 +107,7 @@ export function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  frame: { flex: 1, backgroundColor: T.canvas, width: "100%" },
+  frame: { flex: 1, width: "100%" },
   scroll: { flex: 1 },
   content: {
     paddingHorizontal: T.spacing.pageX,
@@ -122,17 +125,15 @@ const styles = StyleSheet.create({
   avatarContainer: {
     width: 42,
     height: 42,
-    backgroundColor: T.teal,
     borderRadius: T.radii.logo,
     justifyContent: "center",
     alignItems: "center",
   },
   avatarText: { fontFamily: T.font.bold, color: T.tealOn, fontSize: T.fontSize.title },
-  h1: { fontFamily: T.font.bold, fontSize: T.fontSize.display, color: T.fg1 },
+  h1: { fontFamily: T.font.bold, fontSize: T.fontSize.display },
   greetingText: {
     fontFamily: T.font.regular,
     fontSize: T.fontSize.subtitle,
-    color: T.fg2,
     lineHeight: 24,
   },
   modulesWrapper: { gap: T.spacing[3] },
@@ -145,18 +146,16 @@ const styles = StyleSheet.create({
   },
   leftContent: { flexDirection: "row", alignItems: "center", gap: T.spacing[3] },
   textContainer: { justifyContent: "center" },
-  cardTitle: { fontFamily: T.font.bold, fontSize: T.fontSize.title, color: T.fg1 },
+  cardTitle: { fontFamily: T.font.bold, fontSize: T.fontSize.title },
   cardSubtitle: {
     fontFamily: T.font.regular,
     fontSize: T.fontSize.body,
-    color: T.fg2,
     marginTop: 2,
   },
   analyticsCard: { padding: T.spacing[4], marginTop: T.spacing[2] },
   analyticsHeader: {
-    fontFamily: T.font.bold,
+    fontFamily: T.font.mono,
     fontSize: T.fontSize.caption,
-    color: T.fg2,
     letterSpacing: 1,
     marginBottom: T.spacing[3],
   },
@@ -164,13 +163,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontFamily: T.font.medium,
     fontSize: T.fontSize.body,
-    color: T.fg1,
     marginBottom: 4,
   },
   emptyBody: {
     fontFamily: T.font.regular,
     fontSize: T.fontSize.body,
-    color: T.fg2,
     lineHeight: 20,
   },
 });

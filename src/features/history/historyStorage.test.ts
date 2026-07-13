@@ -3,6 +3,8 @@
 // that it gets a history id and timestamp, that unused ids default to null, and
 // that bad input is rejected.
 
+import { doc, setDoc } from "firebase/firestore";
+
 import {
   clearDecisions,
   getDecisions,
@@ -10,12 +12,27 @@ import {
   type DecisionInput,
 } from "@/features/history/historyStorage";
 import { getDb } from "@/services/localdb/db";
+import { auth } from "@/services/firebase";
 
 jest.mock("@/services/localdb/db", () => ({
   getDb: jest.fn(),
 }));
 
+// Firestore and Firebase are mocked so the mirror never touches the network in
+// tests. doc() just records the path it was called with; setDoc() resolves.
+jest.mock("firebase/firestore", () => ({
+  doc: jest.fn((...args: unknown[]) => ({ path: args })),
+  setDoc: jest.fn(async () => undefined),
+}));
+
+jest.mock("@/services/firebase", () => ({
+  db: { fake: "firestore" },
+  auth: { currentUser: { uid: "user_1" } },
+}));
+
 const mockGetDb = getDb as jest.Mock;
+const mockDoc = doc as jest.Mock;
+const mockSetDoc = setDoc as jest.Mock;
 
 interface DecisionRow {
   history_id: string;
@@ -76,6 +93,8 @@ describe("historyStorage", () => {
     rows = [];
     jest.clearAllMocks();
     mockGetDb.mockResolvedValue(mockDb);
+    mockSetDoc.mockResolvedValue(undefined);
+    (auth as { currentUser: { uid: string } | null }).currentUser = { uid: "user_1" };
   });
 
   it("records a decision and reads it back", async () => {
@@ -156,5 +175,55 @@ describe("historyStorage", () => {
     await clearDecisions();
 
     await expect(getDecisions()).resolves.toEqual([]);
+  });
+
+  describe("cloud mirror", () => {
+    // Lets the fire-and-forget mirror promise settle before assertions run.
+    const flush = () => new Promise<void>((resolve) => setImmediate(() => resolve()));
+
+    it("mirrors the saved decision to the signed-in user's Firestore path", async () => {
+      const record = await logDecision(fuelDecision);
+      await flush();
+
+      expect(mockDoc).toHaveBeenCalledWith(
+        expect.anything(),
+        "users",
+        "user_1",
+        "decisions",
+        record.historyId
+      );
+      expect(mockSetDoc).toHaveBeenCalledTimes(1);
+      expect(mockSetDoc.mock.calls[0]?.[1]).toMatchObject({
+        historyId: record.historyId,
+        moduleType: "fuel",
+        fuelId: "in_4",
+      });
+    });
+
+    it("still saves locally when the cloud mirror fails (non-blocking)", async () => {
+      const warn = jest.spyOn(console, "warn").mockImplementation(() => undefined);
+      mockSetDoc.mockRejectedValueOnce(new Error("network down"));
+
+      const record = await logDecision(fuelDecision);
+      await flush();
+
+      // The Accept did not throw and the on-device write still happened.
+      expect(record.historyId).toMatch(/^dh_/);
+      await expect(getDecisions()).resolves.toHaveLength(1);
+      expect(warn).toHaveBeenCalled();
+
+      warn.mockRestore();
+    });
+
+    it("does not attempt a cloud write when no user is signed in", async () => {
+      (auth as { currentUser: { uid: string } | null }).currentUser = null;
+
+      await logDecision(fuelDecision);
+      await flush();
+
+      expect(mockSetDoc).not.toHaveBeenCalled();
+      // Local write is unaffected.
+      await expect(getDecisions()).resolves.toHaveLength(1);
+    });
   });
 });
