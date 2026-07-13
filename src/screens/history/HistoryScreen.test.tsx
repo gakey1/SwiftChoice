@@ -6,6 +6,7 @@ import React from "react";
 import { fireEvent, render } from "@testing-library/react-native";
 
 import { HistoryScreen } from "./HistoryScreen";
+import { ThemeProvider } from "@/theme/ThemeProvider";
 
 // Reusable decision fixtures. Item names are unique so a query by name targets a
 // list row, not the module label in the meta line or a filter chip.
@@ -49,6 +50,22 @@ jest.mock("@/features/history/historyStorage", () => ({
   getDecisions: () => mockGetDecisions(),
 }));
 
+// The screen reads the active theme via useTheme(), so it must render inside a
+// ThemeProvider. Mock the theme's storage so the provider hydrates deterministically
+// and never touches AsyncStorage under the test.
+jest.mock("@/services/localdb/themeStorage", () => ({
+  loadThemeName: jest.fn().mockResolvedValue("arcadeDark"),
+  saveThemeName: jest.fn(),
+}));
+
+// Renders the screen wrapped in the ThemeProvider it now depends on.
+const renderScreen = () =>
+  render(
+    <ThemeProvider>
+      <HistoryScreen />
+    </ThemeProvider>
+  );
+
 describe("HistoryScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -57,7 +74,7 @@ describe("HistoryScreen", () => {
   it("shows the empty state when there are no decisions", async () => {
     mockGetDecisions.mockResolvedValue([]);
 
-    const { findByText } = render(<HistoryScreen />);
+    const { findByText } = renderScreen();
 
     // Generous timeout: the load is async, and the default 1s can be tight under
     // parallel test runs.
@@ -79,7 +96,7 @@ describe("HistoryScreen", () => {
       },
     ]);
 
-    const { findByText } = render(<HistoryScreen />);
+    const { findByText } = renderScreen();
 
     expect(
       await findByText("Gourmet Homemade Pasta", {}, { timeout: 3000 })
@@ -92,7 +109,7 @@ describe("HistoryScreen", () => {
   it("filters the list by module", async () => {
     mockGetDecisions.mockResolvedValue([fuelDecision, focusDecision]);
 
-    const { findByText, getByRole, queryByText } = render(<HistoryScreen />);
+    const { findByText, getByRole, queryByText } = renderScreen();
 
     // Both are shown under the default "All" filter.
     await findByText("Gourmet Homemade Pasta", {}, { timeout: 3000 });
@@ -108,7 +125,7 @@ describe("HistoryScreen", () => {
   it("shows a filtered-empty message when nothing matches", async () => {
     mockGetDecisions.mockResolvedValue([fuelDecision]);
 
-    const { findByText, getByRole } = render(<HistoryScreen />);
+    const { findByText, getByRole } = renderScreen();
 
     await findByText("Gourmet Homemade Pasta", {}, { timeout: 3000 });
 
@@ -125,7 +142,7 @@ describe("HistoryScreen", () => {
       { ...fuelDecision, decidedAt: "2020-01-01T00:00:00.000Z" },
     ]);
 
-    const { findByText, getByRole } = render(<HistoryScreen />);
+    const { findByText, getByRole } = renderScreen();
 
     await findByText("Gourmet Homemade Pasta", {}, { timeout: 3000 });
 
