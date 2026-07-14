@@ -19,6 +19,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 
 import { Card } from "@/components/Card";
+import { HUD_CLEARANCE } from "@/components/XpHud";
 import { getDecisions, type DecisionRecord } from "@/features/history/historyStorage";
 import { T } from "@/theme/tokens";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -251,7 +252,8 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   header: {
     paddingHorizontal: T.spacing.pageX,
-    paddingTop: T.spacing[4],
+    // Clear the floating XP HUD at the top-right.
+    paddingTop: HUD_CLEARANCE,
     paddingBottom: T.spacing[3],
   },
   title: { fontFamily: T.font.bold, fontSize: T.fontSize.display },

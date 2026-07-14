@@ -10,17 +10,20 @@
 // come from the active theme via useTheme(); section labels use the mono font.
 
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Button } from "@/components/Button";
 import { Icon } from "@/components/Icon";
+import { HUD_CLEARANCE } from "@/components/XpHud";
+import { AVATARS } from "@/features/profile/avatars";
 import { useAuth } from "@/hooks/useAuth";
 import { logout } from "@/services/auth";
 import {
   loadPreferences,
   savePreferences,
 } from "@/services/localdb/preferencesStorage";
+import { loadAvatarIndex, saveAvatarIndex } from "@/services/localdb/profileStorage";
 import { T } from "@/theme/tokens";
 import { useTheme } from "@/theme/ThemeProvider";
 
@@ -38,6 +41,7 @@ export function SettingsScreen() {
   const [diet, setDiet] = useState(DIET_OPTIONS[0]);
   const [budget, setBudget] = useState(BUDGET_OPTIONS[1]);
   const [hours, setHours] = useState(HOURS_OPTIONS[0]);
+  const [avatarIndex, setAvatarIndex] = useState(0);
 
   // Load the saved settings when the screen opens. The active flag stops a late
   // load from updating state after the screen has already gone away.
@@ -49,10 +53,20 @@ export function SettingsScreen() {
       setBudget(stored.defaultBudget);
       setHours(stored.workHours);
     });
+    void loadAvatarIndex().then((i) => {
+      if (active) setAvatarIndex(i);
+    });
     return () => {
       active = false;
     };
   }, []);
+
+  // Selects and persists a profile avatar. The choice shows on the Home player
+  // card and here.
+  async function selectAvatar(index: number): Promise<void> {
+    setAvatarIndex(index);
+    await saveAvatarIndex(index);
+  }
 
   // Moves one setting to its next option, wrapping back to the start after the
   // last one, then saves all three settings together.
@@ -99,17 +113,44 @@ export function SettingsScreen() {
       >
         <Text style={[styles.title, { color: colors.ink }]}>Settings</Text>
 
+        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>PROFILE AVATAR</Text>
+        <View style={[styles.card, styles.avatarCard, cardStyle]}>
+          <View style={styles.avatarRow}>
+            {AVATARS.map((a, i) => {
+              const selected = i === avatarIndex;
+              return (
+                <Pressable
+                  key={a.name}
+                  onPress={() => selectAvatar(i)}
+                  style={[
+                    styles.avatarBtn,
+                    { borderColor: selected ? colors.teal : colors.cardLine },
+                    selected && styles.avatarBtnSelected,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  accessibilityLabel={`Avatar ${a.name}`}
+                >
+                  <Image source={a.source} style={styles.avatarImg} />
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
         <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>APPEARANCE</Text>
         <View style={[styles.card, cardStyle]}>
           <View style={[styles.row, styles.lastRow]}>
-            <Text style={[styles.rowLabel, { color: colors.ink }]}>Dark mode</Text>
-            <Switch
-              value={isDark}
-              onValueChange={toggleDark}
-              trackColor={{ true: colors.teal, false: colors.chip }}
-              thumbColor="#FFFFFF"
+            <Text style={[styles.rowLabel, styles.rowLabelFlex, { color: colors.ink }]}>Dark mode</Text>
+            <Pressable
+              onPress={toggleDark}
+              style={[styles.switchTrack, { backgroundColor: isDark ? colors.teal : colors.track }]}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: isDark }}
               accessibilityLabel="Dark mode"
-            />
+            >
+              <View style={[styles.switchKnob, { left: isDark ? 23 : 3 }]} />
+            </Pressable>
           </View>
         </View>
 
@@ -182,7 +223,8 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: {
     paddingHorizontal: T.spacing.pageX,
-    paddingTop: T.spacing[6],
+    // Clear the floating XP HUD at the top-right.
+    paddingTop: HUD_CLEARANCE,
     paddingBottom: T.spacing[6],
   },
   title: {
@@ -202,6 +244,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: "hidden",
   },
+  avatarCard: { padding: T.spacing[4] },
+  avatarRow: { flexDirection: "row", justifyContent: "space-between" },
+  avatarBtn: {
+    width: 60,
+    height: 60,
+    borderRadius: 999,
+    borderWidth: 2,
+    overflow: "hidden",
+  },
+  avatarBtnSelected: { borderWidth: 2.5 },
+  avatarImg: { width: "100%", height: "100%" },
   row: {
     minHeight: 52,
     paddingHorizontal: T.spacing[4],
@@ -214,6 +267,28 @@ const styles = StyleSheet.create({
   rowLabel: {
     fontFamily: T.font.medium,
     fontSize: T.fontSize.body,
+  },
+  rowLabelFlex: { flex: 1 },
+  // Custom pill toggle, matching the Arcade mockup. The knob is vertically
+  // centred (track 28 tall, knob 22, so top 3), and slides left/right on tap.
+  switchTrack: {
+    width: 48,
+    height: 28,
+    borderRadius: T.radii.pill,
+    justifyContent: "center",
+  },
+  switchKnob: {
+    position: "absolute",
+    top: 3,
+    width: 22,
+    height: 22,
+    borderRadius: T.radii.pill,
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 2,
   },
   rowRight: { flexDirection: "row", alignItems: "center" },
   rowValue: {

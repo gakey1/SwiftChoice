@@ -8,7 +8,10 @@ import { render, fireEvent } from "@testing-library/react-native";
 import { PriorityScreen } from "./PriorityScreen";
 
 // Stub the native icon set so this test does not pull in expo-font / expo-asset.
-jest.mock("@expo/vector-icons", () => ({ Feather: "Feather" }));
+jest.mock("@expo/vector-icons", () => ({
+  Feather: "Feather",
+  MaterialCommunityIcons: "MaterialCommunityIcons",
+}));
 
 // Mock the useNavigation hook from React Navigation.
 jest.mock("@react-navigation/native", () => ({

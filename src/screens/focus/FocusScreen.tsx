@@ -12,6 +12,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { Card } from "@/components/Card";
 import { Icon } from "@/components/Icon";
+import { HUD_CLEARANCE } from "@/components/XpHud";
 import type { AppStackParamList } from "@/navigation/types";
 import {
   getFocusRecommendation,
@@ -342,7 +343,7 @@ const styles = StyleSheet.create({
   },
   backRow: {
     paddingHorizontal: T.spacing.pageX,
-    paddingTop: T.spacing[3],
+    paddingTop: HUD_CLEARANCE,
   },
   backButton: {
     flexDirection: "row",

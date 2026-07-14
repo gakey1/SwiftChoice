@@ -9,6 +9,7 @@ import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert } from "rea
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon } from "@/components/Icon";
 import { Card } from "@/components/Card";
+import { HUD_CLEARANCE } from "@/components/XpHud";
 import { T } from "@/theme/tokens";
 import { moduleAccent } from "@/theme/themes";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -362,7 +363,7 @@ const styles = StyleSheet.create({
   },
   backRow: {
     paddingHorizontal: T.spacing.pageX,
-    paddingTop: T.spacing[3],
+    paddingTop: HUD_CLEARANCE,
   },
   backButton: {
     flexDirection: "row",

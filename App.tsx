@@ -33,6 +33,9 @@ import { globalNavigationRef } from "@/navigation/navigationRef";
 // ThemeProvider holds the active colour theme (dark or light Arcade) and hands it
 // to every screen via useTheme. It wraps the app so any screen can read the theme.
 import { ThemeProvider } from "@/theme/ThemeProvider";
+// ProgressProvider holds the shared XP / level progress, so Home, Priority and
+// the global XP HUD all read one in-sync source.
+import { ProgressProvider } from "@/features/progress/ProgressProvider";
 
 export default function App() {
   // Load the four DM Sans weights the design system uses. useFonts returns
@@ -65,9 +68,11 @@ export default function App() {
     <SafeAreaProvider>
       <ThemeProvider>
         <AuthProvider>
-          <NavigationContainer ref={globalNavigationRef}>
-            <RootNavigator />
-          </NavigationContainer>
+          <ProgressProvider>
+            <NavigationContainer ref={globalNavigationRef}>
+              <RootNavigator />
+            </NavigationContainer>
+          </ProgressProvider>
         </AuthProvider>
         {/* Controls the OS status bar tint; "auto" picks light or dark to suit
             the screen behind it. Sits outside the navigator so it applies app-wide. */}

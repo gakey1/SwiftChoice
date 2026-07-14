@@ -24,10 +24,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
+import { GameIcon } from "@/components/GameIcon";
 import { Icon } from "@/components/Icon";
-import type { IconName } from "@/components/Icon";
+import { HUD_CLEARANCE } from "@/components/XpHud";
 import type { AppStackParamList } from "@/navigation/types";
-import { loadProgress, saveProgress } from "@/services/localdb/progressStorage";
+import { coreAchievements, earnedFirst } from "@/features/progress/achievements";
+import { capFor, levelTitle, xpFraction } from "@/features/progress/progress";
+import { useProgress } from "@/features/progress/ProgressProvider";
 import { moduleAccent } from "@/theme/themes";
 import { useTheme } from "@/theme/ThemeProvider";
 import { T } from "@/theme/tokens";
@@ -59,22 +62,6 @@ const BADGE: Record<Level, { fg: string; tint: string }> = {
   Medium: { fg: T.badgeMed, tint: "rgba(217, 131, 36, 0.18)" },
   Low: { fg: T.badgeLow, tint: "rgba(62, 154, 106, 0.20)" },
 };
-
-// Level titles shown next to the level number as you climb.
-const LEVEL_TITLES = [
-  "Rookie",
-  "Starter",
-  "Planner",
-  "Decider",
-  "Strategist",
-  "Master",
-  "Legend",
-];
-
-// XP needed to clear a level. Grows a little each level.
-function capFor(level: number): number {
-  return 400 + (level - 1) * 120;
-}
 
 // Colours the confetti draws from (module + accent colours, no emoji).
 const CONFETTI_COLORS = ["priority", "teal", "fuel", "focus"] as const;
@@ -129,13 +116,10 @@ export function PriorityScreen() {
     setIsRanked(true);
   };
 
-  // ----- Gamification state (new, presentation only) -----
-  const [xp, setXp] = useState<number>(0);
-  const [level, setLevel] = useState<number>(1);
-  const [completedCount, setCompletedCount] = useState<number>(0);
+  // ----- Gamification: shared progress via context, feedback via local state -----
+  const { progress, awardXp, bumpCompleted, markRanked } = useProgress();
   const [mascotMsg, setMascotMsg] = useState<string>("Let's decide what's next.");
   const [confettiKey, setConfettiKey] = useState<number>(0);
-  const [hydrated, setHydrated] = useState<boolean>(false);
 
   // Animated values live in state (lazy init) so they are stable across renders
   // and safe to read during render, unlike a ref.
@@ -143,8 +127,8 @@ export function PriorityScreen() {
   const [toastAnim] = useState(() => new Animated.Value(0));
   const [toastText, setToastText] = useState<string>("");
 
-  const cap = capFor(level);
-  const levelTitle = LEVEL_TITLES[Math.min(level - 1, LEVEL_TITLES.length - 1)] ?? "Legend";
+  const cap = capFor(progress.level);
+  const title = levelTitle(progress.level);
 
   // Slides a short "+10 XP" style toast up and fades it out.
   const pushToast = useCallback(
@@ -175,42 +159,26 @@ export function PriorityScreen() {
     setConfettiKey((k) => k + 1);
   }, []);
 
-  // Adds XP, rolls the level over when the bar fills, and animates the bar.
-  // Purely visual; it does not touch the task list.
-  const awardXp = useCallback(
+  // Animate the XP bar to match the shared progress whenever it changes (from
+  // this screen or anywhere else that awards XP).
+  React.useEffect(() => {
+    Animated.timing(xpBar, {
+      toValue: xpFraction(progress.xp, progress.level),
+      duration: 550,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [progress.xp, progress.level, xpBar]);
+
+  // Shows the reward feedback for an action and adds the XP to the shared store.
+  // Purely presentation; it does not touch the task list.
+  const reward = useCallback(
     (amount: number, message: string) => {
       setMascotMsg(message);
       pushToast(`+${amount} XP`);
-      setXp((prevXp) => {
-        let nextXp = prevXp + amount;
-        let nextLevel = level;
-        let levelCap = capFor(nextLevel);
-        let leveledUp = false;
-        while (nextXp >= levelCap) {
-          nextXp -= levelCap;
-          nextLevel += 1;
-          levelCap = capFor(nextLevel);
-          leveledUp = true;
-        }
-        if (nextLevel !== level) setLevel(nextLevel);
-        const pct = Math.max(0, Math.min(1, nextXp / capFor(nextLevel)));
-        Animated.timing(xpBar, {
-          toValue: pct,
-          duration: 600,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: false,
-        }).start();
-        if (leveledUp) {
-          setMascotMsg(
-            `Level up. You're a ${
-              LEVEL_TITLES[Math.min(nextLevel - 1, LEVEL_TITLES.length - 1)] ?? "Legend"
-            }.`
-          );
-        }
-        return nextXp;
-      });
+      awardXp(amount);
     },
-    [level, pushToast, xpBar]
+    [awardXp, pushToast]
   );
 
   // Stop any in-flight XP / toast animations when the screen goes away, so no
@@ -223,41 +191,17 @@ export function PriorityScreen() {
     [xpBar, toastAnim]
   );
 
-  // Load saved progress once on mount and fill the XP bar to match. The
-  // `hydrated` guard below stops the initial default from being written back
-  // over the stored value before this load returns.
-  React.useEffect(() => {
-    let active = true;
-    void loadProgress().then((p) => {
-      if (!active) return;
-      setXp(p.xp);
-      setLevel(p.level);
-      setCompletedCount(p.completedCount);
-      xpBar.setValue(Math.max(0, Math.min(1, p.xp / capFor(p.level))));
-      setHydrated(true);
-    });
-    return () => {
-      active = false;
-    };
-  }, [xpBar]);
-
-  // Persist progress whenever it changes, once the initial load is done.
-  React.useEffect(() => {
-    if (!hydrated) return;
-    void saveProgress({ xp, level, completedCount });
-  }, [hydrated, xp, level, completedCount]);
-
   // ----- UI handlers: call Tracy's logic, then layer the rewards on top -----
   const onAdd = () => {
     if (taskName.trim() === "") return; // mirror Tracy's guard so we only reward real adds
     addTask();
-    awardXp(10, "Task added, nice.");
+    reward(10, "Task added, nice.");
   };
 
   const onComplete = (taskId: number) => {
     completeTask(taskId);
-    setCompletedCount((c) => c + 1);
-    awardXp(30, "Done. One less decision.");
+    bumpCompleted();
+    reward(30, "Done. One less decision.");
     celebrate();
   };
 
@@ -269,17 +213,14 @@ export function PriorityScreen() {
   const onRank = () => {
     if (taskList.length < 2) return;
     handleRankTasks();
-    awardXp(20, "Ranked. Start with #1.");
+    markRanked();
+    reward(20, "Ranked. Start with #1.");
     celebrate();
   };
 
-  // Badges unlock from real session activity (no invented data).
-  const badges: { name: string; icon: IconName; earned: boolean }[] = [
-    { name: "On a roll", icon: "zap", earned: completedCount >= 3 },
-    { name: "Finisher", icon: "check-circle", earned: completedCount >= 1 },
-    { name: "Ranked", icon: "target", earned: isRanked },
-    { name: "Lv 5", icon: "star", earned: level >= 5 },
-  ];
+  // The canonical achievements, unlocked ones first, shown the same way here and
+  // on Home.
+  const badges = earnedFirst(coreAchievements(progress));
 
   const canRank = taskList.length >= 2;
   const xpWidth = xpBar.interpolate({
@@ -328,15 +269,17 @@ export function PriorityScreen() {
               <View style={styles.gamiTopRow}>
                 <View style={styles.levelWrap}>
                   <View style={[styles.levelPill, { backgroundColor: primaryColor }]}>
-                    <Text style={styles.levelPillText}>LV {level}</Text>
+                    <Text style={styles.levelPillText}>LV {progress.level}</Text>
                   </View>
                   <Text style={[styles.levelTitle, { color: colors.ink }]} numberOfLines={1}>
-                    {levelTitle}
+                    {title}
                   </Text>
                 </View>
                 <View style={[styles.streakChip, { backgroundColor: colors.fuelTint }]}>
-                  <Icon name="zap" size={13} color={colors.fuel} />
-                  <Text style={[styles.streakText, { color: colors.fuel }]}>{completedCount}</Text>
+                  <GameIcon glyph="fire" size={13} color={colors.fuel} />
+                  <Text style={[styles.streakText, { color: colors.fuel }]}>
+                    {progress.completedCount}
+                  </Text>
                 </View>
               </View>
 
@@ -349,7 +292,7 @@ export function PriorityScreen() {
                   {mascotMsg}
                 </Text>
                 <Text style={[styles.xpText, { color: primaryColor }]}>
-                  {xp} / {cap} XP
+                  {progress.xp} / {cap} XP
                 </Text>
               </View>
             </View>
@@ -357,7 +300,7 @@ export function PriorityScreen() {
 
           <View style={[styles.badgeRow, { borderTopColor: colors.cardLine }]}>
             {badges.map((b) => (
-              <View key={b.name} style={styles.badge}>
+              <View key={b.id} style={styles.badge}>
                 <View
                   style={[
                     styles.badgeIcon,
@@ -366,8 +309,8 @@ export function PriorityScreen() {
                       : { backgroundColor: colors.chip, borderColor: colors.cardLine, opacity: 0.55 },
                   ]}
                 >
-                  <Icon
-                    name={b.earned ? b.icon : "lock"}
+                  <GameIcon
+                    glyph={b.earned ? b.glyph : "lock"}
                     size={16}
                     color={b.earned ? primaryColor : colors.ink3}
                   />
@@ -707,7 +650,7 @@ const styles = StyleSheet.create({
     width: "100%",
     alignSelf: "center",
   },
-  backRow: { paddingHorizontal: T.spacing.pageX, paddingTop: T.spacing[3] },
+  backRow: { paddingHorizontal: T.spacing.pageX, paddingTop: HUD_CLEARANCE },
   backButton: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start" },
   backText: { fontFamily: T.font.medium, fontSize: T.fontSize.body },
 

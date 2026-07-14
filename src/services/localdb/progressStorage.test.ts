@@ -25,9 +25,29 @@ describe("progressStorage", () => {
   });
 
   it("returns the saved progress when a valid one is stored", async () => {
-    mockGetItem.mockResolvedValue(JSON.stringify({ xp: 120, level: 3, completedCount: 4 }));
+    mockGetItem.mockResolvedValue(
+      JSON.stringify({ xp: 120, level: 3, completedCount: 4, coins: 60, ranked: true })
+    );
 
-    await expect(loadProgress()).resolves.toEqual({ xp: 120, level: 3, completedCount: 4 });
+    await expect(loadProgress()).resolves.toEqual({
+      xp: 120,
+      level: 3,
+      completedCount: 4,
+      coins: 60,
+      ranked: true,
+    });
+  });
+
+  it("defaults coins and ranked for progress saved before they existed", async () => {
+    mockGetItem.mockResolvedValue(JSON.stringify({ xp: 10, level: 1, completedCount: 0 }));
+
+    await expect(loadProgress()).resolves.toEqual({
+      xp: 10,
+      level: 1,
+      completedCount: 0,
+      coins: 0,
+      ranked: false,
+    });
   });
 
   it("falls back to the default when nothing is stored", async () => {
@@ -55,11 +75,11 @@ describe("progressStorage", () => {
   });
 
   it("saves progress as JSON under the progress key", async () => {
-    await saveProgress({ xp: 50, level: 2, completedCount: 1 });
+    await saveProgress({ xp: 50, level: 2, completedCount: 1, coins: 8, ranked: true });
 
     expect(mockSetItem).toHaveBeenCalledWith(
       "swiftchoice.priorityProgress",
-      JSON.stringify({ xp: 50, level: 2, completedCount: 1 })
+      JSON.stringify({ xp: 50, level: 2, completedCount: 1, coins: 8, ranked: true })
     );
   });
 });

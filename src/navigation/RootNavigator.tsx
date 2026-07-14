@@ -6,6 +6,7 @@
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
+import { XpHud } from "@/components/XpHud";
 import { useAuth } from "@/hooks/useAuth";
 import { AppTabs } from "@/navigation/AppTabs";
 import type { AppStackParamList, AuthStackParamList } from "@/navigation/types";
@@ -42,31 +43,30 @@ export function RootNavigator() {
   // Signed in and verified: show the main app. That is the tabs, plus the Fuel
   // and Focus screens which slide up over the tab bar when opened.
   if (user) {
+    // The XP HUD is an overlay sibling of the navigator, so it shows at the same
+    // top-right spot on every signed-in screen (tabs plus the module screens).
     return (
-      <AppStack.Navigator screenOptions={{ headerShown: false }}>
-        <AppStack.Screen name="MainTabs" component={AppTabs} />
-        <AppStack.Screen 
-          name="Fuel" 
-          component={FuelScreen} 
-          options={{ 
-            animation: "slide_from_bottom" 
-          }} 
-        />
-        <AppStack.Screen 
-          name="Focus" 
-          component={FocusScreen} 
-          options={{ 
-            animation: "slide_from_bottom" 
-          }} 
-        />
-        <AppStack.Screen 
-          name="Priority" 
-          component={PriorityScreen} 
-          options={{ 
-            animation: "slide_from_bottom" 
-          }} 
-        />
-      </AppStack.Navigator>
+      <View style={styles.appRoot}>
+        <AppStack.Navigator screenOptions={{ headerShown: false }}>
+          <AppStack.Screen name="MainTabs" component={AppTabs} />
+          <AppStack.Screen
+            name="Fuel"
+            component={FuelScreen}
+            options={{ animation: "slide_from_bottom" }}
+          />
+          <AppStack.Screen
+            name="Focus"
+            component={FocusScreen}
+            options={{ animation: "slide_from_bottom" }}
+          />
+          <AppStack.Screen
+            name="Priority"
+            component={PriorityScreen}
+            options={{ animation: "slide_from_bottom" }}
+          />
+        </AppStack.Navigator>
+        <XpHud />
+      </View>
     );
   }
 
@@ -80,6 +80,7 @@ export function RootNavigator() {
 }
 
 const styles = StyleSheet.create({
+  appRoot: { flex: 1 },
   center: {
     flex: 1,
     alignItems: "center",

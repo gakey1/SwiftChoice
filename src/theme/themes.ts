@@ -64,12 +64,14 @@ export const arcadeDark: ThemeColors = {
 };
 
 export const arcadeLight: ThemeColors = {
-  bg: "#F1ECFC",
-  card: "rgba(255, 255, 255, 0.74)",
+  // A deeper lavender than the mockup's pale wash, so white cards, the nav and
+  // the HUD have more contrast and the light mode does not read as washed out.
+  bg: "#E4DBF3",
+  card: "rgba(255, 255, 255, 0.82)",
   cardSolid: "#FFFFFF",
-  chip: "rgba(126, 90, 214, 0.08)",
-  cardLine: "rgba(150, 120, 230, 0.30)",
-  track: "rgba(126, 90, 214, 0.16)",
+  chip: "rgba(126, 90, 214, 0.10)",
+  cardLine: "rgba(150, 120, 230, 0.42)",
+  track: "rgba(126, 90, 214, 0.18)",
 
   ink: "#251C48",
   ink2: "#6A5E90",
