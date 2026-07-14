@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  badgeLabel: { fontFamily: T.font.mono, fontSize: 9.5, textAlign: "center" },
+  badgeLabel: { fontFamily: T.font.monoMedium, fontSize: 10.5, textAlign: "center" },
 
   // Quest
   questCard: {
