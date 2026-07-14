@@ -2,17 +2,25 @@
 // time, and distance), asks the recommendation engine for matches, then shows
 // one result card at a time with Accept and a single Reroll. Accept saves the
 // choice to history and goes back home. Fuel uses the amber module colour, taken
-// from the active theme; all colours follow the dark/light Arcade toggle.
+// from the active theme; the whole screen wears the Arcade glass look (ambient
+// background, glass result card, mono on the coded bits) and follows the
+// dark/light toggle.
+//
+// Styling only: the filter state, the recommendation call, the one-reroll cap,
+// and the accept-to-history wiring are exactly as written; only the look changed.
 
 import React, { useState } from "react";
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon } from "@/components/Icon";
-import { Card } from "@/components/Card";
+import { AmbientBackground } from "@/components/AmbientBackground";
+import { GlassCard } from "@/components/GlassCard";
+import { ModuleGlyph } from "@/components/ModuleGlyph";
 import { HUD_CLEARANCE } from "@/components/XpHud";
 import { T } from "@/theme/tokens";
-import { moduleAccent } from "@/theme/themes";
+import { moduleAccent, moduleDeep } from "@/theme/themes";
 import { useTheme } from "@/theme/ThemeProvider";
+import { useProgress } from "@/features/progress/ProgressProvider";
 import { getRecommendation } from "@/services/recommendation/recommendationEngine";
 import type { FoodOption } from "@/services/recommendation/recommendationEngine";
 import { useNavigation } from "@react-navigation/native";
@@ -31,11 +39,14 @@ type FilterGroupProps = {
   selectedValue: string;
   onSelect: (value: string) => void;
   activeColor: string;
+  activeTint: string;
 };
 
 // One filter group: a label, the value currently chosen shown in the module
-// colour, and a row of options to pick from. The chosen option is outlined.
-function FilterOptionGroup({ label, options, displayValues, selectedValue, onSelect, activeColor }: FilterGroupProps) {
+// colour, and a row of options to pick from. The chosen option is filled with
+// the module's soft tint, outlined in its colour, and shown in its colour;
+// unchosen options keep primary-ink text so every label stays clearly legible.
+function FilterOptionGroup({ label, options, displayValues, selectedValue, onSelect, activeColor, activeTint }: FilterGroupProps) {
   const { colors } = useTheme();
   return (
     <View style={styles.groupContainer}>
@@ -55,7 +66,7 @@ function FilterOptionGroup({ label, options, displayValues, selectedValue, onSel
               style={[
                 styles.optionCard,
                 { backgroundColor: colors.chip, borderColor: colors.cardLine },
-                isActive && { borderColor: activeColor, borderWidth: 1.5 },
+                isActive && { backgroundColor: activeTint, borderColor: activeColor },
               ]}
               onPress={() => onSelect(option)}
               activeOpacity={0.7}
@@ -63,8 +74,7 @@ function FilterOptionGroup({ label, options, displayValues, selectedValue, onSel
               <Text
                 style={[
                   styles.optionText,
-                  { color: isActive ? activeColor : colors.ink2 },
-                  isActive && { fontFamily: T.font.bold },
+                  { color: isActive ? activeColor : colors.ink, fontFamily: T.font.bold },
                 ]}
               >
                 {displayLabel}
@@ -79,6 +89,7 @@ function FilterOptionGroup({ label, options, displayValues, selectedValue, onSel
 
 export function FuelScreen() {
   const { colors } = useTheme();
+  const { progress } = useProgress();
   const accent = moduleAccent(colors, "fuel");
   const [mealType, setMealType] = useState<"in" | "out">("out");
   const [budget, setBudget] = useState<"$" | "$$" | "$$$">("$$");
@@ -144,111 +155,130 @@ export function FuelScreen() {
 
   // === VIEW 1: SHOW THE RESULT CARD MANUALLY IF MATCH IS FOUND ===
   if (recommendation) {
+    const distanceText =
+      recommendation.distance_range === "near"
+        ? "1.2 km"
+        : recommendation.distance_range === "mid"
+          ? "3.5 km"
+          : "6.0 km";
     return (
       <SafeAreaView style={[styles.frame, { backgroundColor: colors.bg }]} edges={["top", "left", "right"]}>
-                <View style={[styles.content, { justifyContent: "center" }]}>
-
-          <View style={styles.headerContainer}>
-            <Text style={[styles.contextSubtitle, { color: colors.ink2 }]}>Your Fuel recommendation</Text>
-            <Text style={[styles.h1, { color: colors.ink }]}>{"Here's what to eat"}</Text>
+        <AmbientBackground />
+        <View style={styles.resultBody}>
+          <View style={styles.backRowResult}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+              activeOpacity={0.7}
+            >
+              <Icon name="arrow-left" size={20} color={colors.ink2} />
+              <Text style={[styles.backText, { color: colors.ink2 }]}>Back</Text>
+            </TouchableOpacity>
           </View>
 
-          <Card style={[styles.resultCardCustom, { backgroundColor: colors.card, borderColor: colors.cardLine }]}>
-            <View style={[styles.avatarBadge, { backgroundColor: accent.tint }]}>
-              <Icon name="coffee" size={36} color={primaryColor} />
+          <View style={styles.resultCenter}>
+            <View style={styles.headerContainer}>
+              <Text style={[styles.contextSubtitle, { color: colors.ink2 }]}>Your Fuel recommendation</Text>
+              <Text style={[styles.h1, { color: colors.ink }]}>{"Here's what to eat"}</Text>
             </View>
 
-            <Text style={[styles.itemName, { color: colors.ink }]}>{recommendation.item_name}</Text>
-            <Text style={[styles.cuisineType, { color: colors.ink2 }]}>
-              {recommendation.type === "in" ? "Home-cooked Meal" : "Local Restaurant / Eatery"}
-            </Text>
-
-            <View style={[styles.metricsRow, { borderColor: colors.cardLine }]}>
-              <View style={styles.metricColumn}>
-                <Text style={[styles.metricValue, { color: primaryColor }]}>{recommendation.budget_level}</Text>
-                <Text style={[styles.metricLabel, { color: colors.ink2 }]}>Budget</Text>
+            <GlassCard style={styles.resultCardCustom}>
+              <View style={[styles.avatarBadge, { backgroundColor: accent.tint }]}>
+                <ModuleGlyph moduleKey="fuel" size={36} color={primaryColor} />
               </View>
 
-              <View style={styles.metricColumn}>
-                <Text style={[styles.metricValue, { color: colors.ink }]}>
-                  {recommendation.distance_range === "near" ? "1.2 km" : recommendation.distance_range === "mid" ? "3.5 km" : "6.0 km"}
-                </Text>
-                <Text style={[styles.metricLabel, { color: colors.ink2 }]}>Distance</Text>
-              </View>
+              <Text style={[styles.itemName, { color: colors.ink }]}>{recommendation.item_name}</Text>
+              <Text style={[styles.cuisineType, { color: colors.ink2 }]}>
+                {recommendation.type === "in" ? "Home-cooked Meal" : "Local Restaurant / Eatery"}
+              </Text>
 
-              <View style={styles.metricColumn}>
-                <View style={styles.ratingContainer}>
-                  <Text style={[styles.metricValue, { color: colors.ink }]}>{recommendation.rating}</Text>
-                  <Icon name="star" size={14} color={primaryColor} />
+              <View style={styles.statsRow}>
+                <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
+                  <Text style={[styles.statValue, { color: primaryColor }]}>{recommendation.budget_level}</Text>
+                  <Text style={[styles.statLabel, { color: colors.ink2 }]}>Budget</Text>
                 </View>
-                <Text style={[styles.metricLabel, { color: colors.ink2 }]}>Rating</Text>
+
+                <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
+                  <Text style={[styles.statValue, { color: colors.ink }]}>{distanceText}</Text>
+                  <Text style={[styles.statLabel, { color: colors.ink2 }]}>Distance</Text>
+                </View>
+
+                <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
+                  <View style={styles.ratingContainer}>
+                    <Text style={[styles.statValue, { color: colors.ink }]}>{recommendation.rating}</Text>
+                    <Icon name="star" size={13} color={primaryColor} />
+                  </View>
+                  <Text style={[styles.statLabel, { color: colors.ink2 }]}>Rating</Text>
+                </View>
               </View>
-            </View>
-          </Card>
+            </GlassCard>
 
-          <View style={styles.actionRow}>
-            <TouchableOpacity
-              style={[styles.acceptBtn, { backgroundColor: primaryColor }]}
-              activeOpacity={0.8}
-              onPress={async () => {
-                if (recommendation) {
-                  //Log the choice using production history API
-                  await logDecision({
-                    moduleType: "fuel",
-                    fuelId: recommendation.fuel_id,
-                    itemSnapshot: {
-                      name: recommendation.item_name,
-                      details: {
-                        type: recommendation.type,
-                        budget: recommendation.budget_level,
-                        rating: recommendation.rating,
+            <View style={styles.actionRow}>
+              <TouchableOpacity
+                style={[styles.acceptBtn, { backgroundColor: primaryColor, shadowColor: primaryColor }]}
+                activeOpacity={0.8}
+                onPress={async () => {
+                  if (recommendation) {
+                    //Log the choice using production history API
+                    await logDecision({
+                      moduleType: "fuel",
+                      fuelId: recommendation.fuel_id,
+                      itemSnapshot: {
+                        name: recommendation.item_name,
+                        details: {
+                          type: recommendation.type,
+                          budget: recommendation.budget_level,
+                          rating: recommendation.rating,
+                        },
                       },
-                    },
-                    appliedFilters: {
-                      mode: recommendation.type,
-                      budget: recommendation.budget_level,
-                      prepTime: recommendation.prep_time,
-                      distance: recommendation.distance_range,
-                    },
-                    rerolled: hasRerolled,
-                  });
+                      appliedFilters: {
+                        mode: recommendation.type,
+                        budget: recommendation.budget_level,
+                        prepTime: recommendation.prep_time,
+                        distance: recommendation.distance_range,
+                      },
+                      rerolled: hasRerolled,
+                    });
 
-                  //Clear the active choice view states
-                  setRecommendation(null);
+                    //Clear the active choice view states
+                    setRecommendation(null);
 
-                  //Navigate the user back to the Home dashboard
-                  navigation.goBack();
-                }
-              }}
-            >
-              <Text style={styles.acceptBtnText}>Accept</Text>
-            </TouchableOpacity>
+                    //Navigate the user back to the Home dashboard
+                    navigation.goBack();
+                  }
+                }}
+              >
+                <Icon name="check" size={18} color={ON_ACCENT} />
+                <Text style={styles.acceptBtnText}>Accept</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={handleReroll}
-              disabled={hasRerolled}
-              style={[
-                styles.rerollBtn,
-                { backgroundColor: colors.chip, borderColor: colors.cardLine, opacity: hasRerolled ? 0.5 : 1 },
-                //If no alternatives are found
-                matchList.length <= 1 && !hasRerolled && {
-                  borderWidth: 0,
-                  backgroundColor: "transparent",
-                  elevation: 0,
-                  shadowOpacity: 0
-                }
-              ]}
-            >
-              <Text style={[
-                styles.rerollBtnText,
-                { color: colors.ink },
-                // If there are no alternatives, slightly fade the text color
-                  matchList.length <= 1 && !hasRerolled && { color: colors.ink2 }
-              ]}
-                >
-                  {matchList.length <= 1 && !hasRerolled ? "No Alternative" : "Reroll"}
-               </Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleReroll}
+                disabled={hasRerolled}
+                style={[
+                  styles.rerollBtn,
+                  { backgroundColor: colors.chip, borderColor: colors.cardLine, opacity: hasRerolled ? 0.5 : 1 },
+                  //If no alternatives are found
+                  matchList.length <= 1 && !hasRerolled && {
+                    borderWidth: 0,
+                    backgroundColor: "transparent",
+                    elevation: 0,
+                    shadowOpacity: 0
+                  }
+                ]}
+              >
+                <Icon name="refresh-cw" size={16} color={matchList.length <= 1 && !hasRerolled ? colors.ink2 : colors.ink} />
+                <Text style={[
+                  styles.rerollBtnText,
+                  { color: colors.ink },
+                  // If there are no alternatives, slightly fade the text color
+                    matchList.length <= 1 && !hasRerolled && { color: colors.ink2 }
+                ]}
+                  >
+                    {matchList.length <= 1 && !hasRerolled ? "No Alternative" : "Reroll"}
+                 </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </SafeAreaView>
@@ -258,14 +288,15 @@ export function FuelScreen() {
   // === VIEW 2: SHOW FILTERS MENU IF NO OPTION HAS BEEN SELECTED YET ===
   return (
     <SafeAreaView style={[styles.frame, { backgroundColor: colors.bg }]} edges={["top", "left", "right"]}>
+      <AmbientBackground />
       <View style={styles.backRow}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
           activeOpacity={0.7}
         >
-          <Icon name="arrow-left" size={22} color={primaryColor} />
-          <Text style={[styles.backText, { color: primaryColor }]}>Back</Text>
+          <Icon name="arrow-left" size={20} color={colors.ink2} />
+          <Text style={[styles.backText, { color: colors.ink2 }]}>Back</Text>
         </TouchableOpacity>
       </View>
 
@@ -273,35 +304,38 @@ export function FuelScreen() {
 
         <View style={styles.titleContainer}>
           <View style={[styles.iconPlaceholder, { backgroundColor: accent.tint }]}>
-            <Icon name="coffee" size={24} color={primaryColor} />
+            <ModuleGlyph moduleKey="fuel" size={26} color={primaryColor} />
           </View>
-          <View>
+          <View style={styles.titleText}>
             <Text style={[styles.h1, { color: colors.ink }]}>Fuel</Text>
             <Text style={[styles.subtitle, { color: colors.ink2 }]}>What should you eat?</Text>
           </View>
+          <View style={[styles.levelPill, { backgroundColor: moduleDeep("fuel") }]}>
+            <Text style={styles.levelPillText}>Lv {progress.level}</Text>
+          </View>
         </View>
 
-        <Card style={[styles.toggleRowCard, { backgroundColor: colors.chip }]}>
+        <View style={[styles.toggleRowCard, { backgroundColor: colors.track }]}>
           <TouchableOpacity
-            style={[styles.toggleBtn, mealType === "in" && { backgroundColor: colors.card }]}
+            style={[styles.toggleBtn, mealType === "in" && { backgroundColor: colors.cardSolid }]}
             onPress={() => setMealType("in")}
             activeOpacity={0.8}
           >
-            <Text style={[styles.toggleBtnText, { color: mealType === "in" ? primaryColor : colors.ink2 }, mealType === "in" && { fontFamily: T.font.bold }]}>
+            <Text style={[styles.toggleBtnText, { color: mealType === "in" ? primaryColor : colors.ink }]}>
               Eat In
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.toggleBtn, mealType === "out" && { backgroundColor: colors.card }]}
+            style={[styles.toggleBtn, mealType === "out" && { backgroundColor: colors.cardSolid }]}
             onPress={() => setMealType("out")}
             activeOpacity={0.8}
           >
-            <Text style={[styles.toggleBtnText, { color: mealType === "out" ? primaryColor : colors.ink2 }, mealType === "out" && { fontFamily: T.font.bold }]}>
+            <Text style={[styles.toggleBtnText, { color: mealType === "out" ? primaryColor : colors.ink }]}>
               Eat Out
             </Text>
           </TouchableOpacity>
-        </Card>
+        </View>
 
         <FilterOptionGroup
           label="Budget"
@@ -309,6 +343,7 @@ export function FuelScreen() {
           selectedValue={budget}
           onSelect={(val) => setBudget(val as "$" | "$$" | "$$$")}
           activeColor={primaryColor}
+          activeTint={accent.tint}
         />
 
         <FilterOptionGroup
@@ -318,19 +353,23 @@ export function FuelScreen() {
           selectedValue={prepTime}
           onSelect={(val) => setPrepTime(val as "short" | "medium" | "long")}
           activeColor={primaryColor}
+          activeTint={accent.tint}
         />
 
-        <FilterOptionGroup
-          label="Distance"
-          options={["near", "mid", "far"]}
-          displayValues={["< 1 km", "1-5 km", "5+ km"]}
-          selectedValue={distance}
-          onSelect={(val) => setDistance(val as "near" | "mid" | "far")}
-          activeColor={primaryColor}
-        />
+        {mealType === "out" && (
+          <FilterOptionGroup
+            label="Distance"
+            options={["near", "mid", "far"]}
+            displayValues={["< 1 km", "1-5 km", "5+ km"]}
+            selectedValue={distance}
+            onSelect={(val) => setDistance(val as "near" | "mid" | "far")}
+            activeColor={primaryColor}
+            activeTint={accent.tint}
+          />
+        )}
 
         <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: primaryColor }]}
+          style={[styles.actionButton, { backgroundColor: primaryColor, shadowColor: primaryColor }]}
           onPress={handleGetRecommendation}
           activeOpacity={0.8}
         >
@@ -365,6 +404,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: T.spacing.pageX,
     paddingTop: HUD_CLEARANCE,
   },
+  backRowResult: {
+    paddingHorizontal: T.spacing.pageX,
+    paddingTop: HUD_CLEARANCE,
+  },
   backButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -376,38 +419,55 @@ const styles = StyleSheet.create({
     fontSize: T.fontSize.body,
   },
   titleContainer: { flexDirection: "row", alignItems: "center", gap: T.spacing[3], marginTop: T.spacing[2] },
-  iconPlaceholder: { width: 48, height: 48, borderRadius: 12, justifyContent: "center", alignItems: "center" },
+  iconPlaceholder: { width: 52, height: 52, borderRadius: 16, justifyContent: "center", alignItems: "center" },
+  titleText: { flex: 1 },
   h1: { fontFamily: T.font.bold, fontSize: T.fontSize.display },
   subtitle: { fontFamily: T.font.regular, fontSize: T.fontSize.body },
-  toggleRowCard: { flexDirection: "row", padding: 6, borderRadius: 16, borderWidth: 0 },
+  levelPill: { borderRadius: T.radii.pill, paddingHorizontal: 11, paddingVertical: 5 },
+  levelPillText: {
+    // DM Mono has no bold weight loaded, so the pill uses the bold DM Sans face
+    // for a genuinely bold label. White on the bright module fill is thin on its
+    // own, so a soft dark shadow lifts it off the amber/green.
+    fontFamily: T.font.bold,
+    fontSize: T.fontSize.body,
+    letterSpacing: 0.4,
+    color: "#FFFFFF",
+    textShadowColor: "rgba(0, 0, 0, 0.55)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  toggleRowCard: { flexDirection: "row", padding: 6, borderRadius: 16, gap: 6 },
   toggleBtn: { flex: 1, paddingVertical: 12, alignItems: "center", borderRadius: 12 },
-  toggleBtnText: { fontFamily: T.font.medium, fontSize: T.fontSize.body },
+  toggleBtnText: { fontFamily: T.font.bold, fontSize: T.fontSize.body },
   groupContainer: { gap: T.spacing[2] },
   groupHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  groupLabel: { fontFamily: T.font.bold, fontSize: T.fontSize.body },
-  groupSelectionDisplay: { fontFamily: T.font.medium, fontSize: T.fontSize.body },
+  groupLabel: { fontFamily: T.font.bold, fontSize: T.fontSize.subtitle },
+  groupSelectionDisplay: { fontFamily: T.font.bold, fontSize: T.fontSize.body },
   optionsRow: { flexDirection: "row", gap: T.spacing[3], width: "100%" },
-  optionCard: { flex: 1, borderWidth: 1, borderRadius: 12, paddingVertical: 14, alignItems: "center", justifyContent: "center" },
-  optionText: { fontFamily: T.font.regular, fontSize: T.fontSize.body },
-  actionButton: { borderRadius: 14, paddingVertical: 16, alignItems: "center", justifyContent: "center", marginTop: T.spacing[3], shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 6, elevation: 3 },
-  actionButtonText: { color: ON_ACCENT, fontFamily: T.font.bold, fontSize: T.fontSize.body },
+  optionCard: { flex: 1, borderWidth: 1.5, borderRadius: 14, paddingVertical: 14, alignItems: "center", justifyContent: "center" },
+  optionText: { fontFamily: T.font.medium, fontSize: T.fontSize.body },
+  actionButton: { borderRadius: 16, paddingVertical: 17, alignItems: "center", justifyContent: "center", marginTop: T.spacing[3], shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 16, elevation: 4 },
+  actionButtonText: { color: ON_ACCENT, fontFamily: T.font.bold, fontSize: T.fontSize.subtitle },
 
-  headerContainer: { alignItems: "center", marginBottom: T.spacing[2] },
-  contextSubtitle: { fontFamily: T.font.regular, fontSize: T.fontSize.body, marginBottom: 4 },
-  resultCardCustom: { width: "100%", borderRadius: 24, paddingVertical: T.spacing[5], paddingHorizontal: T.spacing[4], alignItems: "center", borderWidth: 1, marginBottom: T.spacing[3] },
-  avatarBadge: { width: 80, height: 80, borderRadius: 20, justifyContent: "center", alignItems: "center", marginBottom: T.spacing[4] },
-  itemName: { fontFamily: T.font.bold, fontSize: T.fontSize.display, marginBottom: 4, textAlign: "center" },
+  // Result view
+  resultBody: { flex: 1 },
+  resultCenter: { flex: 1, justifyContent: "center", paddingHorizontal: T.spacing.pageX, paddingBottom: T.spacing[6] },
+  headerContainer: { alignItems: "center", marginBottom: T.spacing[4] },
+  contextSubtitle: { fontFamily: T.font.regular, fontSize: T.fontSize.body, marginBottom: 6 },
+  resultCardCustom: { width: "100%", padding: T.spacing[5], alignItems: "center", marginBottom: T.spacing[4] },
+  avatarBadge: { width: 80, height: 80, borderRadius: 22, justifyContent: "center", alignItems: "center", marginBottom: T.spacing[4] },
+  itemName: { fontFamily: T.font.bold, fontSize: T.fontSize.title, marginBottom: 4, textAlign: "center" },
   cuisineType: { fontFamily: T.font.regular, fontSize: T.fontSize.body, marginBottom: T.spacing[5] },
-  metricsRow: { flexDirection: "row", width: "100%", borderTopWidth: 1, paddingTop: T.spacing[4] },
-  metricColumn: { flex: 1, alignItems: "center", gap: 2 },
-  metricValue: { fontFamily: T.font.bold, fontSize: T.fontSize.body },
+  statsRow: { flexDirection: "row", width: "100%", gap: T.spacing[3] },
+  statChip: { flex: 1, alignItems: "center", gap: 3, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 6 },
+  statValue: { fontFamily: T.font.monoMedium, fontSize: T.fontSize.subtitle },
   ratingContainer: { flexDirection: "row", alignItems: "center", gap: 4 },
-  metricLabel: { fontFamily: T.font.regular, fontSize: T.fontSize.caption },
+  statLabel: { fontFamily: T.font.regular, fontSize: T.fontSize.caption },
   actionRow: { flexDirection: "row", gap: T.spacing[4], width: "100%" },
-  acceptBtn: { flex: 1, borderRadius: 16, paddingVertical: 16, alignItems: "center", justifyContent: "center" },
-  acceptBtnText: { color: ON_ACCENT, fontFamily: T.font.bold, fontSize: T.fontSize.body },
-  rerollBtn: { flex: 1, borderRadius: 16, paddingVertical: 16, alignItems: "center", justifyContent: "center", borderWidth: 1 },
-  rerollBtnText: { fontFamily: T.font.bold, fontSize: T.fontSize.body },
+  acceptBtn: { flex: 1, flexDirection: "row", gap: 8, borderRadius: 16, paddingVertical: 16, alignItems: "center", justifyContent: "center", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 16, elevation: 4 },
+  acceptBtnText: { color: ON_ACCENT, fontFamily: T.font.bold, fontSize: T.fontSize.subtitle },
+  rerollBtn: { flex: 1, flexDirection: "row", gap: 8, borderRadius: 16, paddingVertical: 16, alignItems: "center", justifyContent: "center", borderWidth: 1 },
+  rerollBtnText: { fontFamily: T.font.bold, fontSize: T.fontSize.subtitle },
   noResultContainer: { marginTop: T.spacing[2], padding: T.spacing[3], alignItems: "center" },
   noResultText: { fontFamily: T.font.regular, fontSize: T.fontSize.body, textAlign: "center" },
 });

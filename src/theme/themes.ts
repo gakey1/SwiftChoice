@@ -47,8 +47,8 @@ export const arcadeDark: ThemeColors = {
   track: "rgba(255, 255, 255, 0.12)",
 
   ink: "#F4F1FF",
-  ink2: "#B4ADD6",
-  ink3: "#8B82B8", // section headers; brightened to clear WCAG AA (5.3:1 on bg)
+  ink2: "#C7C0E4", // secondary text; brightened so small labels stay legible
+  ink3: "#A29AC7", // section headers, hints; brightened well past WCAG AA for small text
 
   teal: "#22E0C4",
   fuel: "#FFB23E",
@@ -74,8 +74,8 @@ export const arcadeLight: ThemeColors = {
   track: "rgba(126, 90, 214, 0.18)",
 
   ink: "#251C48",
-  ink2: "#6A5E90",
-  ink3: "#665E7B", // section headers; darkened to clear WCAG AA (5.3:1 on bg)
+  ink2: "#574C77", // secondary text; darkened so small labels stay legible
+  ink3: "#5F5675", // section headers, hints; darkened well past WCAG AA for small text
 
   teal: "#10BCA6",
   fuel: "#EE9614",
@@ -109,6 +109,21 @@ export function moduleAccent(
       return { color: colors.focus, tint: colors.focusTint };
     case "priority":
       return { color: colors.priority, tint: colors.priorityTint };
+  }
+}
+
+// A deeper, richer shade of each module colour, for solid fills that must carry
+// white text (the Lv pill, small badges). The bright module accents are too
+// light for white to read on; these darker shades keep the hue but give white
+// real contrast. Theme-independent because the text on them is always white.
+export function moduleDeep(key: "fuel" | "focus" | "priority"): string {
+  switch (key) {
+    case "fuel":
+      return "#A15F0C"; // deep amber
+    case "focus":
+      return "#0E7D48"; // deep green
+    case "priority":
+      return "#6438C9"; // deep purple
   }
 }
 

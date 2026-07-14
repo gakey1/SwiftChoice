@@ -8,7 +8,7 @@ import { FocusScreen } from "./FocusScreen";
 
 // Stub the native icon set so this test does not pull in expo-font / expo-asset,
 // which are not resolvable under Jest.
-jest.mock("@expo/vector-icons", () => ({ Feather: "Feather" }));
+jest.mock("@expo/vector-icons", () => ({ Feather: "Feather", MaterialCommunityIcons: "MaterialCommunityIcons" }));
 
 // Mock the useNavigation hook from React Navigation.
 jest.mock("@react-navigation/native", () => ({

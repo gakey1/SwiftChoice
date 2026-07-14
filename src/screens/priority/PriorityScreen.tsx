@@ -24,14 +24,16 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
+import { AmbientBackground } from "@/components/AmbientBackground";
 import { GameIcon } from "@/components/GameIcon";
+import { GlassCard } from "@/components/GlassCard";
 import { Icon } from "@/components/Icon";
 import { HUD_CLEARANCE } from "@/components/XpHud";
 import type { AppStackParamList } from "@/navigation/types";
 import { coreAchievements, earnedFirst } from "@/features/progress/achievements";
 import { capFor, levelTitle, xpFraction } from "@/features/progress/progress";
 import { useProgress } from "@/features/progress/ProgressProvider";
-import { moduleAccent } from "@/theme/themes";
+import { moduleAccent, moduleDeep } from "@/theme/themes";
 import { useTheme } from "@/theme/ThemeProvider";
 import { T } from "@/theme/tokens";
 
@@ -230,6 +232,7 @@ export function PriorityScreen() {
 
   return (
     <SafeAreaView style={[styles.frame, { backgroundColor: colors.bg }]} edges={["top", "left", "right"]}>
+      <AmbientBackground />
       {/* Back row */}
       <View style={styles.backRow}>
         <TouchableOpacity
@@ -260,7 +263,7 @@ export function PriorityScreen() {
         </View>
 
         {/* Gamification card */}
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardLine }]}>
+        <GlassCard style={styles.card}>
           <View style={styles.gamiRow}>
             <View style={[styles.mascot, { backgroundColor: accent.tint, borderColor: colors.cardLine }]}>
               <Icon name="award" size={26} color={primaryColor} />
@@ -268,7 +271,7 @@ export function PriorityScreen() {
             <View style={styles.gamiBody}>
               <View style={styles.gamiTopRow}>
                 <View style={styles.levelWrap}>
-                  <View style={[styles.levelPill, { backgroundColor: primaryColor }]}>
+                  <View style={[styles.levelPill, { backgroundColor: moduleDeep("priority") }]}>
                     <Text style={styles.levelPillText}>LV {progress.level}</Text>
                   </View>
                   <Text style={[styles.levelTitle, { color: colors.ink }]} numberOfLines={1}>
@@ -321,10 +324,10 @@ export function PriorityScreen() {
               </View>
             ))}
           </View>
-        </View>
+        </GlassCard>
 
         {/* Composer */}
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardLine }]}>
+        <GlassCard style={styles.card}>
           <View style={styles.inputRow}>
             <TextInput
               style={[
@@ -355,7 +358,7 @@ export function PriorityScreen() {
             onSelect={setUrgency}
             inkColor={colors.ink}
             hintColor={colors.ink3}
-            neutralText={colors.ink2}
+            neutralText={colors.ink}
             neutralBg={colors.chip}
             neutralBorder={colors.cardLine}
           />
@@ -366,11 +369,11 @@ export function PriorityScreen() {
             onSelect={setImportance}
             inkColor={colors.ink}
             hintColor={colors.ink3}
-            neutralText={colors.ink2}
+            neutralText={colors.ink}
             neutralBg={colors.chip}
             neutralBorder={colors.cardLine}
           />
-        </View>
+        </GlassCard>
 
         {/* Status pill */}
         {taskList.length > 0 && (
@@ -394,11 +397,10 @@ export function PriorityScreen() {
           {taskList.map((item, index) => {
             const isTop = isRanked && index === 0;
             return (
-              <View
+              <GlassCard
                 key={item.taskId}
                 style={[
                   styles.taskCard,
-                  { backgroundColor: colors.card, borderColor: colors.cardLine },
                   isTop && { borderColor: primaryColor, borderWidth: 1.5 },
                 ]}
               >
@@ -446,7 +448,7 @@ export function PriorityScreen() {
                     <Icon name="trash-2" size={17} color={colors.ink3} />
                   </TouchableOpacity>
                 </View>
-              </View>
+              </GlassCard>
             );
           })}
 
@@ -683,10 +685,13 @@ const styles = StyleSheet.create({
   levelWrap: { flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 1 },
   levelPill: { borderRadius: T.radii.pill, paddingHorizontal: 9, paddingVertical: 3 },
   levelPillText: {
-    fontFamily: T.font.monoMedium,
+    fontFamily: T.font.bold,
     fontSize: T.fontSize.micro,
     color: "#FFFFFF",
     letterSpacing: 0.5,
+    textShadowColor: "rgba(0, 0, 0, 0.55)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   levelTitle: { fontFamily: T.font.bold, fontSize: T.fontSize.body, flexShrink: 1 },
   streakChip: {
@@ -714,7 +719,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  badgeLabel: { fontFamily: T.font.mono, fontSize: 9.5, textAlign: "center" },
+  badgeLabel: { fontFamily: T.font.monoMedium, fontSize: 10.5, textAlign: "center" },
 
   // Composer
   inputRow: { flexDirection: "row", gap: T.spacing[3] },
@@ -736,13 +741,13 @@ const styles = StyleSheet.create({
   selectorRow: { flexDirection: "row", gap: T.spacing[2] },
   selectorOption: {
     flex: 1,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderRadius: T.radii.button,
     paddingVertical: 13,
     alignItems: "center",
     justifyContent: "center",
   },
-  selectorOptionText: { fontFamily: T.font.monoMedium, fontSize: T.fontSize.body },
+  selectorOptionText: { fontFamily: T.font.bold, fontSize: T.fontSize.body },
 
   // Status pill
   statusRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: T.spacing[1] },
@@ -779,7 +784,7 @@ const styles = StyleSheet.create({
   taskActionBtn: { width: 38, height: 38, borderRadius: 11, justifyContent: "center", alignItems: "center" },
 
   emptyState: { paddingVertical: 26, paddingHorizontal: 20, alignItems: "center" },
-  emptyText: { fontFamily: T.font.regular, fontSize: T.fontSize.body, textAlign: "center" },
+  emptyText: { fontFamily: T.font.medium, fontSize: T.fontSize.body, textAlign: "center" },
 
   // Sticky footer CTA
   footer: {
