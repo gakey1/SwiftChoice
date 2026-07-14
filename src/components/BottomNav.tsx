@@ -1,6 +1,11 @@
 // The bar of three tabs at the bottom of the app: Home, History and Settings.
 // The tab you are on is shown in teal. This bar shows on every main screen, so
 // it always uses teal rather than one module's colour.
+//
+// It uses the solid card surface (a dark purple in dark mode, near-white in
+// light mode) with a clear top border, matching the mockup's dark nav bar and
+// staying visible instead of washing out. A translucent blur was tried first but
+// read too light over dark content, so a solid surface is used deliberately.
 
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
@@ -33,7 +38,7 @@ export type BottomNavProps = {
 export function BottomNav({ active, onNavigate }: BottomNavProps) {
   const { colors } = useTheme();
   return (
-    <View style={[styles.bar, { backgroundColor: colors.card, borderTopColor: colors.cardLine }]}>
+    <View style={[styles.bar, { backgroundColor: colors.cardSolid, borderTopColor: colors.cardLine }]}>
       {ITEMS.map((item) => {
         const on = item.key === active;
         const tint = on ? colors.teal : colors.ink3;
@@ -47,7 +52,9 @@ export function BottomNav({ active, onNavigate }: BottomNavProps) {
             accessibilityLabel={item.label}
           >
             <Icon name={item.icon} size={23} color={tint} />
-            <Text style={[styles.label, { color: tint }]}>{item.label}</Text>
+            <Text style={[styles.label, { color: tint, fontFamily: on ? T.font.bold : T.font.semibold }]}>
+              {item.label}
+            </Text>
           </Pressable>
         );
       })}
@@ -68,7 +75,6 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   label: {
-    fontFamily: T.font.semibold,
     fontSize: T.fontSize.micro,
   },
 });
