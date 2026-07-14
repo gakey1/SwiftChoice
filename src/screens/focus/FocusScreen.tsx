@@ -2,7 +2,12 @@
 // asks the recommendation engine for matching spots, then shows one result card
 // at a time with Accept and a single Reroll. Accept saves the choice to history
 // and goes back home. Focus uses the green module colour, taken from the active
-// theme; all colours follow the dark/light Arcade toggle.
+// theme; the whole screen wears the Arcade glass look (ambient background, glass
+// result card, mono on the coded bits) and follows the dark/light toggle.
+//
+// Styling only: the energy/vibe state, the recommendation call, the one-reroll
+// cap, and the accept-to-history wiring are exactly as written; only the look
+// changed.
 
 import React, { useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -10,7 +15,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
-import { Card } from "@/components/Card";
+import { AmbientBackground } from "@/components/AmbientBackground";
+import { GlassCard } from "@/components/GlassCard";
+import { ModuleGlyph } from "@/components/ModuleGlyph";
 import { Icon } from "@/components/Icon";
 import { HUD_CLEARANCE } from "@/components/XpHud";
 import type { AppStackParamList } from "@/navigation/types";
@@ -19,7 +26,8 @@ import {
   type FocusOption,
 } from "@/services/recommendation/recommendationEngine";
 import { logDecision } from "@/features/history/historyStorage";
-import { moduleAccent } from "@/theme/themes";
+import { useProgress } from "@/features/progress/ProgressProvider";
+import { moduleAccent, moduleDeep } from "@/theme/themes";
 import { useTheme } from "@/theme/ThemeProvider";
 import { T } from "@/theme/tokens";
 
@@ -36,10 +44,13 @@ type FilterGroupProps = {
   selectedValue: string;
   onSelect: (value: string) => void;
   activeColor: string;
+  activeTint: string;
 };
 
 // One filter group: a label, the value currently chosen shown in the module
-// colour, and a row of options to pick from. The chosen option is outlined.
+// colour, and a row of options to pick from. The chosen option is filled with
+// the module's soft tint, outlined in its colour, and shown in its colour;
+// unchosen options keep primary-ink text so every label stays clearly legible.
 function FilterOptionGroup({
   label,
   options,
@@ -47,6 +58,7 @@ function FilterOptionGroup({
   selectedValue,
   onSelect,
   activeColor,
+  activeTint,
 }: FilterGroupProps) {
   const { colors } = useTheme();
   return (
@@ -69,7 +81,7 @@ function FilterOptionGroup({
               style={[
                 styles.optionCard,
                 { backgroundColor: colors.chip, borderColor: colors.cardLine },
-                isActive && { borderColor: activeColor, borderWidth: 1.5 },
+                isActive && { backgroundColor: activeTint, borderColor: activeColor },
               ]}
               onPress={() => onSelect(option)}
               activeOpacity={0.7}
@@ -77,8 +89,7 @@ function FilterOptionGroup({
               <Text
                 style={[
                   styles.optionText,
-                  { color: isActive ? activeColor : colors.ink2 },
-                  isActive && { fontFamily: T.font.bold },
+                  { color: isActive ? activeColor : colors.ink, fontFamily: T.font.bold },
                 ]}
               >
                 {displayLabel}
@@ -93,6 +104,7 @@ function FilterOptionGroup({
 
 export function FocusScreen() {
   const { colors } = useTheme();
+  const { progress } = useProgress();
   const accent = moduleAccent(colors, "focus");
   const [energyLevel, setEnergyLevel] = useState<EnergyLevel>("medium");
   const [vibe, setVibe] = useState<FocusVibe>("background");
@@ -151,26 +163,27 @@ export function FocusScreen() {
   if (recommendation) {
     return (
       <SafeAreaView style={[styles.frame, { backgroundColor: colors.bg }]} edges={["top", "left", "right"]}>
+        <AmbientBackground />
         <View style={styles.backRow}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={styles.backButton}
             activeOpacity={0.7}
           >
-            <Icon name="arrow-left" size={22} color={primaryColor} />
-            <Text style={[styles.backText, { color: primaryColor }]}>Back</Text>
+            <Icon name="arrow-left" size={20} color={colors.ink2} />
+            <Text style={[styles.backText, { color: colors.ink2 }]}>Back</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={[styles.content, { justifyContent: "center" }]}>
+        <View style={[styles.content, styles.resultCenter]}>
           <View style={styles.headerContainer}>
             <Text style={[styles.contextSubtitle, { color: colors.ink2 }]}>Your Focus recommendation</Text>
             <Text style={[styles.h1, { color: colors.ink }]}>{"Here's where to focus"}</Text>
           </View>
 
-          <Card style={[styles.resultCardCustom, { backgroundColor: colors.card, borderColor: colors.cardLine }]}>
+          <GlassCard style={styles.resultCardCustom}>
             <View style={[styles.avatarBadge, { backgroundColor: accent.tint }]}>
-              <Icon name="book-open" size={36} color={primaryColor} />
+              <ModuleGlyph moduleKey="focus" size={36} color={primaryColor} />
             </View>
 
             <Text style={[styles.itemName, { color: colors.ink }]}>{recommendation.spot_name}</Text>
@@ -179,32 +192,32 @@ export function FocusScreen() {
               {vibeLabel(recommendation.vibe)} vibe
             </Text>
 
-            <View style={[styles.metricsRow, { borderColor: colors.cardLine }]}>
-              <View style={styles.metricColumn}>
-                <Text style={[styles.metricValue, { color: primaryColor }]}>
+            <View style={styles.statsRow}>
+              <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
+                <Text style={[styles.statValue, { color: primaryColor }]}>
                   {energyLabel(recommendation.energy_level)}
                 </Text>
-                <Text style={[styles.metricLabel, { color: colors.ink2 }]}>Energy</Text>
+                <Text style={[styles.statLabel, { color: colors.ink2 }]}>Energy</Text>
               </View>
 
-              <View style={styles.metricColumn}>
-                <Text style={[styles.metricValue, { color: colors.ink }]}>{vibeLabel(recommendation.vibe)}</Text>
-                <Text style={[styles.metricLabel, { color: colors.ink2 }]}>Vibe</Text>
+              <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
+                <Text style={[styles.statValue, { color: colors.ink }]}>{vibeLabel(recommendation.vibe)}</Text>
+                <Text style={[styles.statLabel, { color: colors.ink2 }]}>Vibe</Text>
               </View>
 
-              <View style={styles.metricColumn}>
+              <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
                 <View style={styles.ratingContainer}>
-                  <Text style={[styles.metricValue, { color: colors.ink }]}>{recommendation.rating}</Text>
-                  <Icon name="star" size={14} color={primaryColor} />
+                  <Text style={[styles.statValue, { color: colors.ink }]}>{recommendation.rating}</Text>
+                  <Icon name="star" size={13} color={primaryColor} />
                 </View>
-                <Text style={[styles.metricLabel, { color: colors.ink2 }]}>Rating</Text>
+                <Text style={[styles.statLabel, { color: colors.ink2 }]}>Rating</Text>
               </View>
             </View>
-          </Card>
+          </GlassCard>
 
           <View style={styles.actionRow}>
             <TouchableOpacity
-              style={[styles.acceptBtn, { backgroundColor: primaryColor }]}
+              style={[styles.acceptBtn, { backgroundColor: primaryColor, shadowColor: primaryColor }]}
               activeOpacity={0.8}
               onPress={async () => {
                 // Record the accepted decision via the shared history API.
@@ -227,6 +240,7 @@ export function FocusScreen() {
                 navigation.goBack();
               }}
             >
+              <Icon name="check" size={18} color={ON_ACCENT} />
               <Text style={styles.acceptBtnText}>Accept</Text>
             </TouchableOpacity>
 
@@ -239,6 +253,7 @@ export function FocusScreen() {
                 { opacity: hasRerolled || matchList.length <= 1 ? 0.5 : 1 },
               ]}
             >
+              <Icon name="refresh-cw" size={16} color={colors.ink} />
               <Text style={[styles.rerollBtnText, { color: colors.ink }]}>Reroll</Text>
             </TouchableOpacity>
           </View>
@@ -249,14 +264,15 @@ export function FocusScreen() {
 
   return (
     <SafeAreaView style={[styles.frame, { backgroundColor: colors.bg }]} edges={["top", "left", "right"]}>
+      <AmbientBackground />
       <View style={styles.backRow}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
           activeOpacity={0.7}
         >
-          <Icon name="arrow-left" size={22} color={primaryColor} />
-          <Text style={[styles.backText, { color: primaryColor }]}>Back</Text>
+          <Icon name="arrow-left" size={20} color={colors.ink2} />
+          <Text style={[styles.backText, { color: colors.ink2 }]}>Back</Text>
         </TouchableOpacity>
       </View>
 
@@ -267,11 +283,14 @@ export function FocusScreen() {
       >
         <View style={styles.titleContainer}>
           <View style={[styles.iconPlaceholder, { backgroundColor: accent.tint }]}>
-            <Icon name="book-open" size={24} color={primaryColor} />
+            <ModuleGlyph moduleKey="focus" size={26} color={primaryColor} />
           </View>
-          <View>
+          <View style={styles.titleText}>
             <Text style={[styles.h1, { color: colors.ink }]}>Focus</Text>
             <Text style={[styles.subtitle, { color: colors.ink2 }]}>Where should you study or work?</Text>
+          </View>
+          <View style={[styles.levelPill, { backgroundColor: moduleDeep("focus") }]}>
+            <Text style={styles.levelPillText}>Lv {progress.level}</Text>
           </View>
         </View>
 
@@ -282,6 +301,7 @@ export function FocusScreen() {
           selectedValue={energyLevel}
           onSelect={(val) => setEnergyLevel(val as EnergyLevel)}
           activeColor={primaryColor}
+          activeTint={accent.tint}
         />
 
         <FilterOptionGroup
@@ -291,10 +311,11 @@ export function FocusScreen() {
           selectedValue={vibe}
           onSelect={(val) => setVibe(val as FocusVibe)}
           activeColor={primaryColor}
+          activeTint={accent.tint}
         />
 
         <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: primaryColor }]}
+          style={[styles.actionButton, { backgroundColor: primaryColor, shadowColor: primaryColor }]}
           onPress={handleGetRecommendation}
           activeOpacity={0.8}
         >
@@ -341,6 +362,7 @@ const styles = StyleSheet.create({
     width: "100%",
     alignSelf: "center",
   },
+  resultCenter: { flex: 1, justifyContent: "center" },
   backRow: {
     paddingHorizontal: T.spacing.pageX,
     paddingTop: HUD_CLEARANCE,
@@ -362,67 +384,77 @@ const styles = StyleSheet.create({
     marginTop: T.spacing[2],
   },
   iconPlaceholder: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+    width: 52,
+    height: 52,
+    borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
   },
+  titleText: { flex: 1 },
   h1: { fontFamily: T.font.bold, fontSize: T.fontSize.display },
   subtitle: { fontFamily: T.font.regular, fontSize: T.fontSize.body },
+  levelPill: { borderRadius: T.radii.pill, paddingHorizontal: 11, paddingVertical: 5 },
+  levelPillText: {
+    // DM Mono has no bold weight loaded, so the pill uses the bold DM Sans face
+    // for a genuinely bold label. White on the bright module fill is thin on its
+    // own, so a soft dark shadow lifts it off the amber/green.
+    fontFamily: T.font.bold,
+    fontSize: T.fontSize.body,
+    letterSpacing: 0.4,
+    color: "#FFFFFF",
+    textShadowColor: "rgba(0, 0, 0, 0.55)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
   groupContainer: { gap: T.spacing[2] },
   groupHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  groupLabel: { fontFamily: T.font.bold, fontSize: T.fontSize.body },
-  groupSelectionDisplay: { fontFamily: T.font.medium, fontSize: T.fontSize.body },
+  groupLabel: { fontFamily: T.font.bold, fontSize: T.fontSize.subtitle },
+  groupSelectionDisplay: { fontFamily: T.font.bold, fontSize: T.fontSize.body },
   optionsRow: { flexDirection: "row", gap: T.spacing[3], width: "100%" },
   optionCard: {
     flex: 1,
-    borderWidth: 1,
-    borderRadius: 12,
+    borderWidth: 1.5,
+    borderRadius: 14,
     paddingVertical: 14,
     alignItems: "center",
     justifyContent: "center",
   },
-  optionText: { fontFamily: T.font.regular, fontSize: T.fontSize.body },
+  optionText: { fontFamily: T.font.medium, fontSize: T.fontSize.body },
   actionButton: {
-    borderRadius: 14,
-    paddingVertical: 16,
+    borderRadius: 16,
+    paddingVertical: 17,
     alignItems: "center",
     justifyContent: "center",
     marginTop: T.spacing[3],
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 4,
   },
-  actionButtonText: { color: ON_ACCENT, fontFamily: T.font.bold, fontSize: T.fontSize.body },
-  headerContainer: { alignItems: "center", marginBottom: T.spacing[2] },
+  actionButtonText: { color: ON_ACCENT, fontFamily: T.font.bold, fontSize: T.fontSize.subtitle },
+  headerContainer: { alignItems: "center", marginBottom: T.spacing[4] },
   contextSubtitle: {
     fontFamily: T.font.regular,
     fontSize: T.fontSize.body,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   resultCardCustom: {
     width: "100%",
-    borderRadius: 24,
-    paddingVertical: T.spacing[5],
-    paddingHorizontal: T.spacing[4],
+    padding: T.spacing[5],
     alignItems: "center",
-    borderWidth: 1,
-    marginBottom: T.spacing[3],
+    marginBottom: T.spacing[4],
   },
   avatarBadge: {
     width: 80,
     height: 80,
-    borderRadius: 20,
+    borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: T.spacing[4],
   },
   itemName: {
     fontFamily: T.font.bold,
-    fontSize: T.fontSize.display,
+    fontSize: T.fontSize.title,
     marginBottom: 4,
     textAlign: "center",
   },
@@ -432,34 +464,37 @@ const styles = StyleSheet.create({
     marginBottom: T.spacing[5],
     textAlign: "center",
   },
-  metricsRow: {
-    flexDirection: "row",
-    width: "100%",
-    borderTopWidth: 1,
-    paddingTop: T.spacing[4],
-  },
-  metricColumn: { flex: 1, alignItems: "center", gap: 2 },
-  metricValue: { fontFamily: T.font.bold, fontSize: T.fontSize.body },
+  statsRow: { flexDirection: "row", width: "100%", gap: T.spacing[3] },
+  statChip: { flex: 1, alignItems: "center", gap: 3, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 6 },
+  statValue: { fontFamily: T.font.monoMedium, fontSize: T.fontSize.subtitle },
   ratingContainer: { flexDirection: "row", alignItems: "center", gap: 4 },
-  metricLabel: { fontFamily: T.font.regular, fontSize: T.fontSize.caption },
+  statLabel: { fontFamily: T.font.regular, fontSize: T.fontSize.caption },
   actionRow: { flexDirection: "row", gap: T.spacing[4], width: "100%" },
   acceptBtn: {
     flex: 1,
+    flexDirection: "row",
+    gap: 8,
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: "center",
     justifyContent: "center",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 4,
   },
-  acceptBtnText: { color: ON_ACCENT, fontFamily: T.font.bold, fontSize: T.fontSize.body },
+  acceptBtnText: { color: ON_ACCENT, fontFamily: T.font.bold, fontSize: T.fontSize.subtitle },
   rerollBtn: {
     flex: 1,
+    flexDirection: "row",
+    gap: 8,
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
   },
-  rerollBtnText: { fontFamily: T.font.bold, fontSize: T.fontSize.body },
+  rerollBtnText: { fontFamily: T.font.bold, fontSize: T.fontSize.subtitle },
   noResultContainer: { marginTop: T.spacing[2], padding: T.spacing[3], alignItems: "center" },
   noResultText: {
     fontFamily: T.font.regular,

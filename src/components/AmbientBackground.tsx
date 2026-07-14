@@ -13,7 +13,10 @@ import { useTheme } from "@/theme/ThemeProvider";
 
 export function AmbientBackground() {
   const { colors, isDark } = useTheme();
-  const opacity = isDark ? 0.5 : 0.65;
+  // Light mode keeps the blobs faint so the bright accent washes never overpower
+  // the dark text that sits directly on the background (headers, labels, filter
+  // option text). Dark mode can carry a stronger glow against the deep bg.
+  const opacity = isDark ? 0.5 : 0.34;
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">

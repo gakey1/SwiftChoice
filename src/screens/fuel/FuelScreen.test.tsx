@@ -7,9 +7,10 @@ import React from "react";
 import { render, fireEvent } from "@testing-library/react-native";
 import { FuelScreen } from "./FuelScreen";
 
-// Stub the native icon set so this test does not pull in expo-font / expo-asset,
-// which are not resolvable under Jest.
-jest.mock("@expo/vector-icons", () => ({ Feather: "Feather" }));
+// Stub the native icon sets so this test does not pull in expo-font / expo-asset,
+// which are not resolvable under Jest. Both sets are stubbed because the screen's
+// module glyph uses MaterialCommunityIcons and its other icons use Feather.
+jest.mock("@expo/vector-icons", () => ({ Feather: "Feather", MaterialCommunityIcons: "MaterialCommunityIcons" }));
 
 //Mock the useNavigation hook from React Navigation
 jest.mock("@react-navigation/native", () => ({
