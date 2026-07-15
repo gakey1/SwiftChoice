@@ -253,12 +253,13 @@ export function PriorityScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Only show the status badge if there are tasks in the list */}
       {taskList.length > 0 && (
-        <View style={[styles.statusBadge, { backgroundColor: isRanked ? colors.tertiary : colors.primary }]}>
-          <Text style={styles.statusText}>
-            {isRanked ? "MODE: SORTED BY PRIORITY" : "MODE: UNSORTED (NEW TASKS ADDED)"}
+        <View style={styles.statusRow}>
+          <Text style={[styles.statusLabel, { color: colors.ink }]}>
+            {isRanked ? "Ranked by urgency + importance" : "Unsorted"}
           </Text>
+        </View>
+      )}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -313,14 +314,6 @@ export function PriorityScreen() {
                 </Text>
               </View>
             </View>
-            <View style={styles.tagRow}>
-              <View style={[styles.tag, { backgroundColor: getLevelColor(item.urgency) }]}>
-                <Text style={styles.tagText}>URGENCY: {item.urgency}</Text>
-              </View>
-
-              <View style={[styles.tag, { backgroundColor: getLevelColor(item.importance) }]}>
-                <Text style={styles.tagText}>IMPORTANCE: {item.importance}</Text>
-              </View>
           </View>
 
           <View style={[styles.badgeRow, { borderTopColor: colors.cardLine }]}>
@@ -662,132 +655,7 @@ function ConfettiOverlay({
   );
 }
 
-const colors = {
-  primary: '#FFB700',   
-  secondary: '#00BFA7', 
-  tertiary: '#484580',  
-  neutral: '#F9F9F9',   
-  white: '#FFFFFF',
-  danger: '#DC3545',
-  success: '#28A745'
-};
-
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    paddingTop: 60, 
-    paddingHorizontal: 20, 
-    backgroundColor: colors.neutral,
-  },
-  title: { 
-    color: colors.tertiary, 
-    fontSize: 24, 
-    fontWeight: 'bold' 
-  },
-  header: { 
-    fontSize: 28, 
-    fontWeight: '900', 
-    marginBottom: 20,
-    color: colors.tertiary
-  },
-  inputSection: { 
-    flexDirection: 'row', 
-    gap: 10, 
-    marginBottom: 20 
-  },
-  input: { 
-    flex: 1, 
-    borderWidth: 3, 
-    borderColor: colors.secondary, 
-    padding: 15, 
-    backgroundColor: colors.white,
-    fontWeight: '600'
-  },
-  plusButton: { 
-    backgroundColor: colors.tertiary, 
-    width: 60, 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    borderWidth: 3, 
-    borderColor: colors.tertiary
-  },
-  plusButtonText: { 
-    color: colors.white,
-    fontSize: 24, 
-    fontWeight: '900' 
-  },
-  selectorGroup: { marginBottom: 15 },
-  label: { fontWeight: '900', marginBottom: 5, fontSize: 12, color: colors.tertiary },
-  buttonRow: { flexDirection: 'row', gap: 10 },
-  smallButton: { 
-    flex: 1, 
-    padding: 12, 
-    borderWidth: 3, 
-    borderColor: colors.secondary, 
-    alignItems: 'center' 
-  },
-  activeButton: { backgroundColor: colors.primary },
-  smallButtonText: { fontWeight: 'bold', fontSize: 12, color: colors.secondary },
-  activeButtonText: { color: colors.white },
-  card: { 
-    padding: 15, 
-    marginBottom: 10, 
-    backgroundColor: colors.white, 
-    borderWidth: 3, 
-    borderColor: colors.tertiary
-  },
-  cardRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    marginBottom: 5 
-  },
-  taskTitle: { fontWeight: '900', fontSize: 16, color: colors.tertiary },
-  tagRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
-  tag: { 
-    backgroundColor: colors.neutral, 
-    padding: 5, 
-    borderWidth: 2, 
-    borderColor: colors.tertiary, 
-  },
-  tagText: { fontSize: 10, fontWeight: '900' },
-  rankButton: { 
-    backgroundColor: colors.primary, 
-    padding: 20, 
-    alignItems: 'center', 
-    marginTop: 'auto', 
-    marginBottom: 20 
-  },
-  rankButtonText: { 
-    color: colors.white, 
-    fontWeight: '900', 
-    fontSize: 16 
-  },
-  actionRow: { 
-  flexDirection: 'row', 
-  gap: 15 
-  },
-  completeText: { 
-    color: colors.success, 
-    fontWeight: '900', 
-    fontSize: 12 
-  },
-  deleteText: { 
-    color: colors.danger, 
-    fontWeight: '900', 
-    fontSize: 12 
-  },
-  statusBadge: { 
-  padding: 10, 
-  alignItems: 'center', 
-  marginBottom: 10 
-  },
-  statusText: { 
-    color: colors.white, 
-    fontWeight: '900', 
-    fontSize: 10, 
-    letterSpacing: 1 
-  }
-});
   frame: { flex: 1 },
   scroll: { flex: 1 },
   content: {
