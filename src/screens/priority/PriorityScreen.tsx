@@ -471,6 +471,28 @@ export function PriorityScreen() {
                     <LevelBadge kind="Urgency" level={item.urgency} />
                     <LevelBadge kind="Importance" level={item.importance} />
                   </View>
+                  {isTop && (
+                  <TouchableOpacity
+                    disabled={item.status === 'InProgress'}
+                    onPress={() => {
+                      setTaskList(taskList.map(t => 
+                        t.taskId === item.taskId ? { ...t, status: 'InProgress' } : t
+                      ));
+                    }}
+                    style={{
+                      marginTop: 12,
+                      backgroundColor: item.status === 'InProgress' ? colors.ink3 : primaryColor,
+                      paddingVertical: 10,
+                      borderRadius: 8,
+                      alignItems: "center",
+                      opacity: item.status === 'InProgress' ? 0.7 : 1,
+                    }}
+                  >
+                    <Text style={{ color: "#FFFFFF", fontWeight: 'bold' }}>
+                      {item.status === 'InProgress' ? "In Progress" : "Start Task"}
+                    </Text>
+                  </TouchableOpacity>
+                )}
                 </View>
 
                 <View style={styles.taskActions}>
