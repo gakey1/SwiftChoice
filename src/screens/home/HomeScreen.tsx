@@ -119,7 +119,7 @@ export function HomeScreen() {
         <View style={styles.headerRow}>
           <View style={styles.brand}>
             <View style={[styles.logo, { backgroundColor: colors.teal }]}>
-              <Text style={styles.logoText}>S</Text>
+              <Text style={[styles.logoText, { color: colors.onAccent }]}>S</Text>
             </View>
             <Text style={[styles.brandName, { color: colors.ink }]}>SwiftChoice</Text>
           </View>
@@ -148,7 +148,9 @@ export function HomeScreen() {
               <View style={styles.playerTop}>
                 <View style={styles.levelWrap}>
                   <View style={[styles.levelPill, { backgroundColor: colors.teal }]}>
-                    <Text style={styles.levelPillText}>LV {progress.level}</Text>
+                    <Text style={[styles.levelPillText, { color: colors.onAccent }]}>
+                      LV {progress.level}
+                    </Text>
                   </View>
                   <Text style={[styles.levelTitle, { color: colors.ink }]} numberOfLines={1}>
                     {title}

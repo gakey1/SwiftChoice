@@ -171,7 +171,12 @@ export function HistoryScreen() {
                       styles.bar,
                       {
                         height: `${Math.max(day.count > 0 ? 12 : 6, (day.count / maxBar) * 100)}%`,
-                        backgroundColor: day.isToday ? colors.teal : colors.tealTint,
+                        // Solid accent both ways, with the non-today days dimmed by
+                        // opacity rather than a faint tint: the tint is near-invisible
+                        // on the light theme's pale surface, while a translucent solid
+                        // stays legible in both themes.
+                        backgroundColor: colors.teal,
+                        opacity: day.isToday ? 1 : 0.4,
                       },
                     ]}
                   />

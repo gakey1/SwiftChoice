@@ -29,6 +29,12 @@ export type ThemeColors = {
   focus: string;
   priority: string;
 
+  // Text/icon colour for content sitting ON a solid accent fill (buttons, pills,
+  // the logo). Theme-aware: white in the light theme (whose accents are deep) and
+  // near-black in the dark theme (whose accents are bright), so a label on an
+  // accent clears WCAG AA either way.
+  onAccent: string;
+
   // Faint accent fills (for tinted backgrounds) and glows (for soft shadows).
   tealTint: string;
   fuelTint: string;
@@ -55,6 +61,9 @@ export const arcadeDark: ThemeColors = {
   focus: "#43E58E",
   priority: "#B98BFF",
 
+  // Dark theme accents are bright, so text on them is near-black.
+  onAccent: "#141026",
+
   tealTint: "rgba(34, 224, 196, 0.20)",
   fuelTint: "rgba(255, 178, 62, 0.22)",
   focusTint: "rgba(67, 229, 142, 0.22)",
@@ -77,10 +86,19 @@ export const arcadeLight: ThemeColors = {
   ink2: "#574C77", // secondary text; darkened so small labels stay legible
   ink3: "#5F5675", // section headers, hints; darkened well past WCAG AA for small text
 
-  teal: "#10BCA6",
-  fuel: "#EE9614",
-  focus: "#1FBE70",
-  priority: "#8B54F6",
+  // Accents are deepened for the light theme so accent-coloured text and figures
+  // (level number, stat figures, module counts, chips) clear WCAG AA on the near-
+  // white glass. The brighter shades sit around 2:1 on light and read as washed
+  // out; these darker shades reach 4.5:1 on the card and 3:1 on their own tint,
+  // while keeping each hue. The dark theme keeps the brighter accents (they carry
+  // fine on the dark surfaces). Same hues, so module-colour scoping is unchanged.
+  teal: "#0A7A6C",
+  fuel: "#A2660E",
+  focus: "#16844E",
+  priority: "#7C48DF",
+
+  // Light theme accents are deep, so text on them is white.
+  onAccent: "#FFFFFF",
 
   tealTint: "rgba(16, 188, 166, 0.15)",
   fuelTint: "rgba(238, 150, 20, 0.16)",

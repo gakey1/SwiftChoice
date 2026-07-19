@@ -347,7 +347,7 @@ export function PriorityScreen() {
               activeOpacity={0.85}
               accessibilityLabel="Add task"
             >
-              <Icon name="plus" size={22} color="#FFFFFF" />
+              <Icon name="plus" size={22} color={colors.onAccent} />
             </TouchableOpacity>
           </View>
 
@@ -412,7 +412,7 @@ export function PriorityScreen() {
                     ]}
                   >
                     {isTop ? (
-                      <Icon name="award" size={18} color="#FFFFFF" />
+                      <Icon name="award" size={18} color={colors.onAccent} />
                     ) : (
                       <Text style={[styles.rankNum, { color: colors.ink2 }]}>{index + 1}</Text>
                     )}
@@ -470,8 +470,8 @@ export function PriorityScreen() {
           disabled={!canRank}
           activeOpacity={0.85}
         >
-          <Icon name="bar-chart-2" size={20} color="#FFFFFF" />
-          <Text style={styles.rankButtonText}>Rank my tasks</Text>
+          <Icon name="bar-chart-2" size={20} color={colors.onAccent} />
+          <Text style={[styles.rankButtonText, { color: colors.onAccent }]}>Rank my tasks</Text>
         </TouchableOpacity>
       </View>
 
@@ -491,7 +491,7 @@ export function PriorityScreen() {
             },
           ]}
         >
-          <Text style={styles.toastText}>{toastText}</Text>
+          <Text style={[styles.toastText, { color: colors.onAccent }]}>{toastText}</Text>
         </Animated.View>
       )}
     </SafeAreaView>

@@ -29,10 +29,6 @@ export type ButtonProps = {
   disabled?: boolean;
 };
 
-// Dark ink sits on top of the bright accent fills (accept / module) so the label
-// stays readable on the accent in both the dark and light Arcade themes.
-const ACCENT_TEXT = "#141026";
-
 export function Button({
   variant = "accept",
   color,
@@ -59,21 +55,23 @@ export function Button({
     }
   }
 
-  // The main label colour for each look.
+  // The main label colour for each look. On the filled looks (accept / module)
+  // the label sits on the accent, so it uses the theme's on-accent colour.
   const labelStyle =
     variant === "outline"
       ? { color: accent, fontFamily: T.font.semibold }
       : variant === "reroll"
         ? { color: colors.ink }
-        : { color: ACCENT_TEXT };
+        : { color: colors.onAccent };
 
-  // The smaller side-label colour for each look.
+  // The smaller side-label colour for each look. On the filled looks it is the
+  // on-accent colour, dimmed a little so it reads as secondary.
   const subStyle =
     variant === "reroll"
       ? { color: colors.ink3 }
       : variant === "outline"
         ? { color: colors.ink2 }
-        : { color: "rgba(20,16,38,0.7)" };
+        : { color: colors.onAccent, opacity: 0.75 };
 
   return (
     <Pressable
