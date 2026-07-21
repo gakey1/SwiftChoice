@@ -26,9 +26,19 @@ import {
 import { loadAvatarIndex, saveAvatarIndex } from "@/services/localdb/profileStorage";
 import { T } from "@/theme/tokens";
 import { useTheme } from "@/theme/ThemeProvider";
+import { Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const DIET_OPTIONS = ["None set", "Vegetarian", "No beef", "Halal"];
-const BUDGET_OPTIONS = ["Under $20", "$20 - $50", "$50 - $100", "$100+"];
+//const BUDGET_OPTIONS = ["Under $20", "$20 - $50", "$50 - $100", "$100+"];
+const BUDGET_OPTIONS = ['budget', 'moderate', 'premium'];
+
+const BUDGET_LABELS: Record<string, string> = {
+  budget: 'Under $15 (Budget-friendly)',
+  moderate: '$15 to $35 (Moderate)',
+  premium: 'Over $35 (Premium)',
+};
+
 const HOURS_OPTIONS = ["9am - 5pm", "7am - 3pm", "Flexible"];
 
 type PreferenceField = "diet" | "budget" | "hours";
@@ -81,14 +91,45 @@ export function SettingsScreen() {
 
     const next = {
       dietaryRestrictions: field === "diet" ? nextValue : diet ?? "",
-      defaultBudget: field === "budget" ? nextValue : budget ?? "",
+      //defaultBudget: field === "budget" ? nextValue : budget ?? "",
       workHours: field === "hours" ? nextValue : hours ?? "",
     };
 
     setDiet(next.dietaryRestrictions);
-    setBudget(next.defaultBudget);
+    //setBudget(next.defaultBudget);
     setHours(next.workHours);
 
+    //await savePreferences(next);
+  }
+
+  // Instant 1-tap picker for budget to avoid multi-clicking
+  function handleOpenBudgetPicker() {
+    Alert.alert(
+      "Select Budget",
+      "Choose your preferred budget tier:",
+      [
+        { text: "Under $15 (Budget-friendly)", onPress: () => updateBudgetPreference('budget') },
+        { text: "$15 to $35 (Moderate)", onPress: () => updateBudgetPreference('moderate') },
+        { text: "Over $35 (Premium)", onPress: () => updateBudgetPreference('premium') },
+        { text: "Cancel", style: "cancel" }
+      ],
+      { cancelable: true }
+    );
+  }
+
+  async function updateBudgetPreference(selectedTier: string) {
+    // 1. Update local state
+    setBudget(selectedTier);
+    
+    // 2. Save to AsyncStorage so FuelScreen picks it up instantly
+    await AsyncStorage.setItem('user_budget_tier', selectedTier);
+    
+    // 3. Save to your preferences store (matching your existing structure)
+    const next = {
+      dietaryRestrictions: diet ?? "",
+      defaultBudget: selectedTier,
+      workHours: hours ?? "",
+    };
     await savePreferences(next);
   }
 
@@ -162,9 +203,11 @@ export function SettingsScreen() {
             onPress={() => cycleOption(diet ?? "", DIET_OPTIONS, "diet")}
           />
           <SettingRow
-            label="Default Budget"
-            value={budget ?? ""}
-            onPress={() => cycleOption(budget ?? "", BUDGET_OPTIONS, "budget")}
+            label="Budget"
+            //value={budget ?? ""}
+            value={BUDGET_LABELS[budget ?? 'budget'] ?? 'Not set'}
+            //onPress={() => cycleOption(budget ?? "", BUDGET_OPTIONS, "budget")}
+            onPress={handleOpenBudgetPicker}
           />
           <SettingRow
             label="Work Hours"

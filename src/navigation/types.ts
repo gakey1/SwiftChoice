@@ -20,4 +20,5 @@ export type AppStackParamList = {
   Fuel: undefined;
   Focus: undefined;
   Priority: undefined;
+  BudgetSurvey: undefined;
 };
