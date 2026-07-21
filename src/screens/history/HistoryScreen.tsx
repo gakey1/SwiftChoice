@@ -1,51 +1,67 @@
-// Read-only decision history. Lists the decisions saved by the shared
-// history API (logDecision) whenever the user accepts a recommendation. It
-// reloads each time the tab gains focus, so a decision just accepted on the
-// Fuel or Focus screen appears the moment the user lands here.
+// The History screen, rebuilt as the Arcade "mental-energy dashboard" from the
+// design mockup. Six stacked blocks, all fed from data this slice already owns:
 //
-// The list can be filtered by module (Fuel / Focus / Priority) and by time
-// (Today / This week). Filtering is done in memory over the already-loaded
-// list: the shown list is derived with useMemo from the full list plus the two
-// filters, so there is no second copy of state to keep in sync.
+//   1. Level card    - level ring + XP-to-next bar (the shared progress store)
+//   2. This week      - decisions, reroll rate, most active time (decision history)
+//   3. Seven-day bars - decisions per day, today highlighted (decision history)
+//   4. Module counts  - Fuel / Focus / Priority totals (decision history)
+//   5. Achievements   - the eight-badge gallery (progress + history)
+//   6. Recent         - the newest accepted decisions (decision history)
 //
-// Colours come from the active theme via useTheme(), so this screen follows the
-// dark/light Arcade toggle. Only colours are theme-aware; spacing, sizes and
-// font names stay in the StyleSheet. The filter chip labels use the mono font
-// for the "coded" Arcade look.
+// It wears the Arcade shell (ambient glow + frosted glass), reads the active
+// theme so it follows the dark/light toggle, and reloads the history each time
+// the tab gains focus so a just-accepted decision shows immediately. Progress
+// (level, XP, badges) comes live from the shared provider, so it needs no reload.
+//
+// Module colours appear only as data encoding on the per-module count tiles and
+// stat figures (the same pattern Home uses); the screen's own chrome, the level
+// ring and the earned badges stay teal, the universal colour, per the brand law.
 
-import { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useCallback, useState } from "react";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 
-import { Card } from "@/components/Card";
+import { AmbientBackground } from "@/components/AmbientBackground";
+import { GameIcon } from "@/components/GameIcon";
+import { GlassCard } from "@/components/GlassCard";
+import { ModuleGlyph } from "@/components/ModuleGlyph";
+import { ProgressRing } from "@/components/ProgressRing";
 import { HUD_CLEARANCE } from "@/components/XpHud";
-import { getDecisions, type DecisionRecord } from "@/features/history/historyStorage";
-import { T } from "@/theme/tokens";
+import { getDecisions, type DecisionModuleType, type DecisionRecord } from "@/features/history/historyStorage";
+import { computeHistoryStats, type HistoryStats } from "@/features/history/historyStats";
+import { galleryAchievements } from "@/features/progress/achievements";
+import { capFor, levelTitle, xpFraction } from "@/features/progress/progress";
+import { useProgress } from "@/features/progress/ProgressProvider";
+import type { ModuleKey } from "@/theme/modules";
+import { moduleAccent } from "@/theme/themes";
 import { useTheme } from "@/theme/ThemeProvider";
+import { T } from "@/theme/tokens";
 
-const MODULE_LABEL: Record<DecisionRecord["moduleType"], string> = {
+const MODULE_LABEL: Record<DecisionModuleType, string> = {
   fuel: "Fuel",
   focus: "Focus",
   priority: "Priority",
 };
 
-type ModuleFilter = "all" | DecisionRecord["moduleType"];
-type TimeFilter = "all" | "today" | "week";
+const MODULE_ORDER: readonly ModuleKey[] = ["fuel", "focus", "priority"];
 
-const MODULE_FILTERS: readonly ModuleFilter[] = ["all", "fuel", "focus", "priority"];
-const MODULE_FILTER_LABEL: Record<ModuleFilter, string> = {
-  all: "All",
-  fuel: "Fuel",
-  focus: "Focus",
-  priority: "Priority",
-};
+// How many recent decisions the list shows. The dashboard is a summary, not the
+// full log, so it stays short.
+const RECENT_LIMIT = 6;
 
-const TIME_FILTERS: readonly TimeFilter[] = ["all", "today", "week"];
-const TIME_FILTER_LABEL: Record<TimeFilter, string> = {
-  all: "All time",
-  today: "Today",
-  week: "This week",
+// The presentational XP each accepted decision is worth, shown on its recent-list
+// pill. It mirrors the daily-quest reward on Home; the history store does not
+// record per-decision XP, so this is reward flavour, not a stored figure.
+const XP_PER_DECISION = 50;
+
+const EMPTY_STATS: HistoryStats = {
+  weekCount: 0,
+  allTime: 0,
+  rerollRate: 0,
+  mostActive: null,
+  moduleCounts: { fuel: 0, focus: 0, priority: 0 },
+  weekBars: Array.from({ length: 7 }, () => ({ label: "", count: 0, isToday: false })),
 };
 
 // decidedAt is an ISO string. Show a short, readable day-and-time, e.g.
@@ -63,185 +79,212 @@ function formatDecidedAt(iso: string): string {
   });
 }
 
-// True if a decision's timestamp falls inside the chosen time range. "today" is
-// the current calendar day; "week" is the last seven days.
-function withinRange(iso: string, range: TimeFilter): boolean {
-  if (range === "all") {
-    return true;
-  }
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) {
-    return false;
-  }
-  const now = new Date();
-  if (range === "today") {
-    return (
-      date.getFullYear() === now.getFullYear() &&
-      date.getMonth() === now.getMonth() &&
-      date.getDate() === now.getDate()
-    );
-  }
-  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-  return date.getTime() <= now.getTime() && now.getTime() - date.getTime() <= sevenDaysMs;
-}
-
-// A row of pick-one filter chips in the universal teal/neutral style. Generic so
-// the same row drives both the module filter and the time filter. Reads the
-// active theme for its colours.
-function FilterChipRow<TValue extends string>({
-  options,
-  value,
-  onChange,
-  labels,
-}: {
-  options: readonly TValue[];
-  value: TValue;
-  onChange: (next: TValue) => void;
-  labels: Record<TValue, string>;
-}) {
-  const { colors } = useTheme();
-  return (
-    <View style={styles.chipRow}>
-      {options.map((option) => {
-        const selected = option === value;
-        return (
-          <Pressable
-            key={option}
-            onPress={() => onChange(option)}
-            style={[
-              styles.chip,
-              selected
-                ? { backgroundColor: colors.tealTint, borderColor: colors.teal }
-                : { backgroundColor: colors.chip, borderColor: colors.cardLine },
-            ]}
-            accessibilityRole="radio"
-            accessibilityState={{ selected }}
-            accessibilityLabel={labels[option]}
-          >
-            <Text style={[styles.chipText, { color: selected ? colors.teal : colors.ink2 }]}>
-              {labels[option]}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
 export function HistoryScreen() {
   const { colors } = useTheme();
+  const { progress } = useProgress();
   const [decisions, setDecisions] = useState<DecisionRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [moduleFilter, setModuleFilter] = useState<ModuleFilter>("all");
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
+  const [stats, setStats] = useState<HistoryStats>(EMPTY_STATS);
 
-  // Reload on every focus rather than once on mount, so the list is fresh after
-  // the user accepts a new recommendation and navigates back here. The `active`
-  // guard stops a late response from setting state after the screen has blurred.
+  // Reload on every focus rather than once on mount, so the dashboard is fresh
+  // after the user accepts a new recommendation. Stats are derived here (not
+  // during render) with an explicit "now", so no clock is read while rendering.
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      setLoading(true);
-      setError(false);
-
       getDecisions()
         .then((rows) => {
-          if (active) setDecisions(rows);
+          if (!active) return;
+          setDecisions(rows);
+          setStats(computeHistoryStats(rows, Date.now()));
         })
         .catch(() => {
-          if (active) setError(true);
-        })
-        .finally(() => {
-          if (active) setLoading(false);
+          if (active) {
+            setDecisions([]);
+            setStats(EMPTY_STATS);
+          }
         });
-
       return () => {
         active = false;
       };
     }, [])
   );
 
-  // Derived, not stored: the shown list is computed from the full list plus the
-  // two filters, and only recomputed when one of those changes.
-  const shown = useMemo(
-    () =>
-      decisions.filter(
-        (decision) =>
-          (moduleFilter === "all" || decision.moduleType === moduleFilter) &&
-          withinRange(decision.decidedAt, timeFilter)
-      ),
-    [decisions, moduleFilter, timeFilter]
-  );
+  const level = progress.level;
+  const pct = xpFraction(progress.xp, level);
+  const cap = capFor(level);
+  const badges = galleryAchievements(progress, stats.moduleCounts);
+  const recent = decisions.slice(0, RECENT_LIMIT);
+
+  // Tallest bar sets the scale so the chart always uses its full height.
+  const maxBar = Math.max(1, ...stats.weekBars.map((d) => d.count));
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={["top", "left", "right"]}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.frame, { backgroundColor: colors.bg }]} edges={["top", "left", "right"]}>
+      <AmbientBackground />
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={[styles.title, { color: colors.ink }]}>History</Text>
-        <Text style={[styles.subtitle, { color: colors.ink2 }]}>The decisions you have accepted</Text>
-      </View>
+        <Text style={[styles.subtitle, { color: colors.ink2 }]}>Your mental-energy dashboard</Text>
 
-      {loading ? (
-        <View style={styles.centre}>
-          <ActivityIndicator color={colors.teal} />
-        </View>
-      ) : error ? (
-        <View style={styles.centre}>
-          <Text style={[styles.muted, { color: colors.ink2 }]}>
-            Could not load your history. Try again in a moment.
-          </Text>
-        </View>
-      ) : decisions.length === 0 ? (
-        <View style={styles.centre}>
-          <Text style={[styles.emptyTitle, { color: colors.ink }]}>No decisions yet</Text>
-          <Text style={[styles.muted, { color: colors.ink2 }]}>
-            Accept a Fuel or Focus recommendation and it will show up here.
-          </Text>
-        </View>
-      ) : (
-        <>
-          <View style={styles.filters}>
-            <FilterChipRow
-              options={MODULE_FILTERS}
-              value={moduleFilter}
-              onChange={setModuleFilter}
-              labels={MODULE_FILTER_LABEL}
-            />
-            <FilterChipRow
-              options={TIME_FILTERS}
-              value={timeFilter}
-              onChange={setTimeFilter}
-              labels={TIME_FILTER_LABEL}
+        {/* 1. Level card */}
+        <GlassCard style={styles.levelCard}>
+          <ProgressRing
+            size={72}
+            thickness={8}
+            pct={pct}
+            color={colors.teal}
+            track={colors.track}
+            innerColor={colors.cardSolid}
+          >
+            <Text style={[styles.ringLevel, { color: colors.teal }]}>{level}</Text>
+            <Text style={[styles.ringLabel, { color: colors.ink3 }]}>LEVEL</Text>
+          </ProgressRing>
+          <View style={styles.levelBody}>
+            <Text style={[styles.levelTitle, { color: colors.ink }]}>{levelTitle(level)}</Text>
+            <Text style={[styles.levelXp, { color: colors.ink2 }]}>
+              {progress.xp} / {cap} XP to next level
+            </Text>
+            <View style={[styles.xpTrack, { backgroundColor: colors.track }]}>
+              <View style={[styles.xpFill, { width: `${pct * 100}%`, backgroundColor: colors.teal }]} />
+            </View>
+          </View>
+        </GlassCard>
+
+        {/* 2 + 3. This week + seven-day bars */}
+        <GlassCard style={styles.weekCard}>
+          <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>THIS WEEK</Text>
+          <View style={styles.statsRow}>
+            <Stat value={String(stats.weekCount)} label="Decisions" color={colors.teal} inkColor={colors.ink2} />
+            <Stat value={`${stats.rerollRate}%`} label="Reroll rate" color={colors.fuel} inkColor={colors.ink2} />
+            <Stat
+              value={stats.mostActive ?? "-"}
+              label="Most active"
+              color={colors.priority}
+              inkColor={colors.ink2}
             />
           </View>
+          <View style={styles.barRow}>
+            {stats.weekBars.map((day, i) => (
+              <View key={i} style={styles.barCol}>
+                <View style={styles.barTrack}>
+                  <View
+                    style={[
+                      styles.bar,
+                      {
+                        height: `${Math.max(day.count > 0 ? 12 : 6, (day.count / maxBar) * 100)}%`,
+                        backgroundColor: day.isToday ? colors.teal : colors.tealTint,
+                      },
+                    ]}
+                  />
+                </View>
+                <Text style={[styles.barLabel, { color: day.isToday ? colors.teal : colors.ink3 }]}>
+                  {day.label}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </GlassCard>
 
-          {shown.length === 0 ? (
-            <View style={styles.centre}>
-              <Text style={[styles.muted, { color: colors.ink2 }]}>
-                No decisions match these filters.
-              </Text>
-            </View>
-          ) : (
-            <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-              {shown.map((decision) => (
-                <Card
-                  key={decision.historyId}
-                  style={[styles.row, { backgroundColor: colors.card, borderColor: colors.cardLine }]}
+        {/* 4. Module counts */}
+        <View style={styles.countGrid}>
+          {MODULE_ORDER.map((key) => {
+            const accent = moduleAccent(colors, key);
+            return (
+              <View key={key} style={[styles.countTile, { backgroundColor: accent.tint }]}>
+                <Text style={[styles.countNum, { color: accent.color }]}>{stats.moduleCounts[key]}</Text>
+                <Text style={[styles.countLabel, { color: accent.color }]}>{MODULE_LABEL[key]}</Text>
+              </View>
+            );
+          })}
+        </View>
+
+        {/* 5. Achievements */}
+        <Text style={[styles.sectionLabel, styles.blockLabel, { color: colors.ink3 }]}>ACHIEVEMENTS</Text>
+        <GlassCard style={styles.badgeCard}>
+          <View style={styles.badgeGrid}>
+            {badges.map((b) => (
+              <View key={b.id} style={styles.badge}>
+                <View
+                  style={[
+                    styles.badgeIcon,
+                    b.earned
+                      ? { backgroundColor: colors.tealTint, borderColor: colors.teal }
+                      : { backgroundColor: colors.chip, borderColor: colors.cardLine, opacity: 0.55 },
+                  ]}
                 >
-                  <Text style={[styles.itemName, { color: colors.ink }]}>
-                    {decision.itemSnapshot.name}
-                  </Text>
-                  <Text style={[styles.meta, { color: colors.ink2 }]}>
-                    {MODULE_LABEL[decision.moduleType]} · {formatDecidedAt(decision.decidedAt)}
-                    {decision.rerolled ? " · rerolled" : ""}
-                  </Text>
-                </Card>
-              ))}
-            </ScrollView>
-          )}
-        </>
-      )}
+                  <GameIcon
+                    glyph={b.earned ? b.glyph : "lock"}
+                    size={19}
+                    color={b.earned ? colors.teal : colors.ink3}
+                  />
+                </View>
+                <Text
+                  style={[styles.badgeLabel, { color: b.earned ? colors.ink2 : colors.ink3 }]}
+                  numberOfLines={1}
+                >
+                  {b.name}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </GlassCard>
+
+        {/* 6. Recent decisions */}
+        <Text style={[styles.sectionLabel, styles.blockLabel, { color: colors.ink3 }]}>RECENT DECISIONS</Text>
+        {recent.length === 0 ? (
+          <GlassCard style={styles.emptyCard}>
+            <Text style={[styles.emptyTitle, { color: colors.ink }]}>No decisions yet</Text>
+            <Text style={[styles.emptyBody, { color: colors.ink2 }]}>
+              Accept a Fuel or Focus recommendation and it will show up here.
+            </Text>
+          </GlassCard>
+        ) : (
+          <View style={styles.recentList}>
+            {recent.map((d) => {
+              const accent = moduleAccent(colors, d.moduleType);
+              return (
+                <GlassCard key={d.historyId} style={styles.recentRow}>
+                  <View style={[styles.recentIcon, { backgroundColor: accent.tint }]}>
+                    <ModuleGlyph moduleKey={d.moduleType} size={20} color={accent.color} />
+                  </View>
+                  <View style={styles.recentBody}>
+                    <Text style={[styles.recentName, { color: colors.ink }]} numberOfLines={1}>
+                      {d.itemSnapshot.name}
+                    </Text>
+                    <Text style={[styles.recentMeta, { color: colors.ink2 }]} numberOfLines={1}>
+                      {MODULE_LABEL[d.moduleType]} · {formatDecidedAt(d.decidedAt)}
+                      {d.rerolled ? " · rerolled" : ""}
+                    </Text>
+                  </View>
+                  <View style={[styles.xpPill, { backgroundColor: colors.tealTint }]}>
+                    <Text style={[styles.xpPillText, { color: colors.teal }]}>+{XP_PER_DECISION}</Text>
+                  </View>
+                </GlassCard>
+              );
+            })}
+          </View>
+        )}
+      </ScrollView>
     </SafeAreaView>
+  );
+}
+
+// One stat column in the THIS WEEK card: a big mono number over a small label.
+function Stat({
+  value,
+  label,
+  color,
+  inkColor,
+}: {
+  value: string;
+  label: string;
+  color: string;
+  inkColor: string;
+}) {
+  return (
+    <View style={styles.stat}>
+      <Text style={[styles.statValue, { color }]}>{value}</Text>
+      <Text style={[styles.statLabel, { color: inkColor }]}>{label}</Text>
+    </View>
   );
 }
 
@@ -249,32 +292,70 @@ export function HistoryScreen() {
 // Colours are applied inline from useTheme() because StyleSheet.create runs once
 // at import, before a theme is known, so a colour baked in here could not switch.
 const styles = StyleSheet.create({
-  safe: { flex: 1 },
-  header: {
+  frame: { flex: 1 },
+  content: {
     paddingHorizontal: T.spacing.pageX,
-    // Clear the floating XP HUD at the top-right.
     paddingTop: HUD_CLEARANCE,
-    paddingBottom: T.spacing[3],
+    paddingBottom: T.spacing[7],
   },
-  title: { fontFamily: T.font.bold, fontSize: T.fontSize.display },
-  subtitle: { fontFamily: T.font.regular, fontSize: T.fontSize.body, marginTop: 2 },
-  filters: {
-    paddingHorizontal: T.spacing.pageX,
-    paddingBottom: T.spacing[3],
-    gap: T.spacing[2],
+  title: { fontFamily: T.font.bold, fontSize: 27, letterSpacing: -0.4 },
+  subtitle: { fontFamily: T.font.regular, fontSize: T.fontSize.subtitle, marginTop: 4, marginBottom: T.spacing[4] },
+
+  // Level card
+  levelCard: { flexDirection: "row", alignItems: "center", gap: 16, padding: T.spacing[4] },
+  ringLevel: { fontFamily: T.font.monoMedium, fontSize: 19, lineHeight: 21 },
+  ringLabel: { fontFamily: T.font.mono, fontSize: 8.5, letterSpacing: 0.6, marginTop: 1 },
+  levelBody: { flex: 1, minWidth: 0 },
+  levelTitle: { fontFamily: T.font.bold, fontSize: T.fontSize.subtitle },
+  levelXp: { fontFamily: T.font.regular, fontSize: T.fontSize.body, marginTop: 3, marginBottom: 9 },
+  xpTrack: { height: 8, borderRadius: T.radii.pill, overflow: "hidden" },
+  xpFill: { height: "100%", borderRadius: T.radii.pill },
+
+  // This week + bars
+  weekCard: { padding: T.spacing[4], marginTop: T.spacing[3] },
+  sectionLabel: { fontFamily: T.font.mono, fontSize: T.fontSize.caption, letterSpacing: 0.5 },
+  blockLabel: { marginTop: T.spacing[4], marginBottom: T.spacing[3] },
+  statsRow: { flexDirection: "row", marginTop: T.spacing[3], marginBottom: T.spacing[4] },
+  stat: { flex: 1, gap: 3 },
+  statValue: { fontFamily: T.font.monoMedium, fontSize: 23 },
+  statLabel: { fontFamily: T.font.regular, fontSize: T.fontSize.body },
+  barRow: { flexDirection: "row", alignItems: "flex-end", gap: 9, height: 92 },
+  barCol: { flex: 1, alignItems: "center", gap: 9 },
+  barTrack: { width: "100%", height: 70, justifyContent: "flex-end" },
+  bar: { width: "100%", borderRadius: 8, minHeight: 6 },
+  barLabel: { fontFamily: T.font.monoMedium, fontSize: T.fontSize.caption },
+
+  // Module counts
+  countGrid: { flexDirection: "row", gap: 12, marginTop: T.spacing[4] },
+  countTile: { flex: 1, borderRadius: 18, paddingVertical: 20, alignItems: "center" },
+  countNum: { fontFamily: T.font.monoMedium, fontSize: 26 },
+  countLabel: { fontFamily: T.font.bold, fontSize: T.fontSize.body, marginTop: 4 },
+
+  // Achievements
+  badgeCard: { padding: T.spacing[4] },
+  badgeGrid: { flexDirection: "row", flexWrap: "wrap" },
+  badge: { width: "25%", alignItems: "center", gap: 5, marginBottom: T.spacing[3] },
+  badgeIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    borderWidth: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: T.spacing[2] },
-  chip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1 },
-  chipText: { fontFamily: T.font.mono, fontSize: T.fontSize.caption },
-  centre: { flex: 1, alignItems: "center", justifyContent: "center", padding: T.spacing[5] },
+  badgeLabel: { fontFamily: T.font.monoMedium, fontSize: 9.5, textAlign: "center" },
+
+  // Recent
+  recentList: { gap: 12 },
+  recentRow: { flexDirection: "row", alignItems: "center", gap: 15, padding: 15 },
+  recentIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: "center", alignItems: "center" },
+  recentBody: { flex: 1, minWidth: 0 },
+  recentName: { fontFamily: T.font.bold, fontSize: T.fontSize.subtitle },
+  recentMeta: { fontFamily: T.font.regular, fontSize: T.fontSize.body, marginTop: 2 },
+  xpPill: { borderRadius: T.radii.pill, paddingHorizontal: 9, paddingVertical: 4 },
+  xpPillText: { fontFamily: T.font.monoMedium, fontSize: T.fontSize.caption },
+
+  emptyCard: { padding: T.spacing[4] },
   emptyTitle: { fontFamily: T.font.bold, fontSize: T.fontSize.subtitle, marginBottom: T.spacing[1] },
-  muted: { fontFamily: T.font.regular, fontSize: T.fontSize.body, textAlign: "center" },
-  list: {
-    paddingHorizontal: T.spacing.pageX,
-    paddingBottom: T.spacing[6],
-    gap: T.spacing[3],
-  },
-  row: { width: "100%" },
-  itemName: { fontFamily: T.font.bold, fontSize: T.fontSize.body },
-  meta: { fontFamily: T.font.regular, fontSize: T.fontSize.caption, marginTop: 2 },
+  emptyBody: { fontFamily: T.font.regular, fontSize: T.fontSize.body, lineHeight: 20 },
 });
