@@ -244,6 +244,7 @@ export function PriorityScreen() {
         text: "Rank them", 
         onPress: () => {
           handleRankTasks();
+          setIsRanked(true);
           markRanked();
           reward(20, "Ranked. Start with #1.");
           celebrate();
@@ -257,7 +258,7 @@ export function PriorityScreen() {
   // on Home.
   const badges = earnedFirst(coreAchievements(progress));
 
-  const canRank = taskList.length >= 2;
+  const canRank = taskList.length >= 2 && !isRanked;
   const xpWidth = xpBar.interpolate({
     inputRange: [0, 1],
     outputRange: ["0%", "100%"],
@@ -403,7 +404,7 @@ export function PriorityScreen() {
             selected={urgency}
             onSelect={setUrgency}
             inkColor={colors.ink}
-            hintColor={colors.ink3}
+            hintColor={colors.ink2}
             neutralText={colors.ink}
             neutralBg={colors.chip}
             neutralBorder={colors.cardLine}
@@ -414,7 +415,7 @@ export function PriorityScreen() {
             selected={importance}
             onSelect={setImportance}
             inkColor={colors.ink}
-            hintColor={colors.ink3}
+            hintColor={colors.ink2}
             neutralText={colors.ink}
             neutralBg={colors.chip}
             neutralBorder={colors.cardLine}
@@ -625,7 +626,7 @@ function LevelSelector({
               onPress={() => onSelect(lvl)}
               activeOpacity={0.7}
             >
-              <Text style={[styles.selectorOptionText, { color: active ? palette.fg : neutralText }]}>
+              <Text style={[styles.selectorOptionText, { color: active ? palette.fg : inkColor }]}>
                 {lvl}
               </Text>
             </TouchableOpacity>
