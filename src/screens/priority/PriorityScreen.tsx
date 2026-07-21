@@ -11,6 +11,7 @@
 
 import React, { useCallback, useState } from "react";
 import {
+  Alert,
   Animated,
   Easing,
   ScrollView,
@@ -36,7 +37,6 @@ import { useProgress } from "@/features/progress/ProgressProvider";
 import { moduleAccent, moduleDeep } from "@/theme/themes";
 import { useTheme } from "@/theme/ThemeProvider";
 import { T } from "@/theme/tokens";
-
 // ---------------------------------------------------------------------------
 // Tracy's decision logic (US22-24). Kept verbatim - do not change.
 // ---------------------------------------------------------------------------
@@ -80,6 +80,7 @@ export function PriorityScreen() {
   const [importance, setImportance] = useState<Level>("Medium");
   const [taskList, setTaskList] = useState<Task[]>([]);
   const [isRanked, setIsRanked] = useState<boolean>(false);
+  const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
 
   // ----- Tracy's logic (kept verbatim) -----
   const addTask = () => {
@@ -96,6 +97,7 @@ export function PriorityScreen() {
     setTaskName("");
     setIsRanked(false); // Reset to false when new data is added
   };
+
 
   const completeTask = (taskId: number) => {
     // Filter out the task by ID to remove it from the list
@@ -193,14 +195,33 @@ export function PriorityScreen() {
     [xpBar, toastAnim]
   );
 
-  // ----- UI handlers: call Tracy's logic, then layer the rewards on top -----
   const onAdd = () => {
-    if (taskName.trim() === "") return; // mirror Tracy's guard so we only reward real adds
+    if (taskName.trim() === "") return; 
+    if (editingTaskId) {
+    // Update existing task
+    setTaskList(taskList.map(t => 
+      t.taskId === editingTaskId ? { ...t, taskName, urgency, importance } : t
+    ));
+    setEditingTaskId(null);
+  } else {
     addTask();
     reward(10, "Task added, nice.");
+  }
+  
+  setTaskName("");    
+  };
+
+  const onEdit = (task: Task) => {
+    setEditingTaskId(task.taskId);
+    setTaskName(task.taskName);
+    setUrgency(task.urgency);
+    setImportance(task.importance);
   };
 
   const onComplete = (taskId: number) => {
+    const updatedList = taskList.filter((t) => t.taskId !== taskId);
+
+    setTaskList(updatedList);
     completeTask(taskId);
     bumpCompleted();
     reward(30, "Done. One less decision.");
@@ -208,16 +229,28 @@ export function PriorityScreen() {
   };
 
   const onDelete = (taskId: number) => {
-    // Same inline delete Tracy wired to the delete button, unchanged.
     setTaskList(taskList.filter((t) => t.taskId !== taskId));
   };
 
   const onRank = () => {
     if (taskList.length < 2) return;
-    handleRankTasks();
-    markRanked();
-    reward(20, "Ranked. Start with #1.");
-    celebrate();
+    
+    Alert.alert(
+    "Lock in Priority?",
+    "Once you rank your tasks, you won't be able to edit or delete them. Are you sure?",
+    [
+      { text: "Not yet", style: "cancel" },
+      { 
+        text: "Rank them", 
+        onPress: () => {
+          handleRankTasks();
+          markRanked();
+          reward(20, "Ranked. Start with #1.");
+          celebrate();
+        } 
+      }
+    ]
+  );
   };
 
   // The canonical achievements, unlocked ones first, shown the same way here and
@@ -342,14 +375,27 @@ export function PriorityScreen() {
               returnKeyType="done"
             />
             <TouchableOpacity
-              style={[styles.addButton, { backgroundColor: primaryColor }]}
+              style={[styles.addButton, { backgroundColor: editingTaskId ? colors.teal : primaryColor }]} // Optional: change color to show "Save" mode
               onPress={onAdd}
               activeOpacity={0.85}
-              accessibilityLabel="Add task"
+              accessibilityLabel={editingTaskId ? "Save task" : "Add task"}
             >
-              <Icon name="plus" size={22} color="#FFFFFF" />
+              {/* If editing, show 'save' icon; if not, show 'plus' icon */}
+              <Icon name={editingTaskId ? "save" : "plus"} size={22} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
+          {/* Cancel Edit Button */}
+          {editingTaskId !== null && (
+            <TouchableOpacity 
+              onPress={() => {
+                setEditingTaskId(null); 
+                setTaskName(""); 
+              }}
+              style={{ marginTop: 10, alignSelf: "flex-end" }}
+            >
+              <Text style={{ color: colors.ink3, fontFamily: T.font.medium }}>Cancel Edit</Text>
+            </TouchableOpacity>
+          )}
 
           <LevelSelector
             label="Urgency"
@@ -425,9 +471,42 @@ export function PriorityScreen() {
                     <LevelBadge kind="Urgency" level={item.urgency} />
                     <LevelBadge kind="Importance" level={item.importance} />
                   </View>
+                  {isTop && (
+                  <TouchableOpacity
+                    disabled={item.status === 'InProgress'}
+                    onPress={() => {
+                      setTaskList(taskList.map(t => 
+                        t.taskId === item.taskId ? { ...t, status: 'InProgress' } : t
+                      ));
+                    }}
+                    style={{
+                      marginTop: 12,
+                      backgroundColor: item.status === 'InProgress' ? colors.ink3 : primaryColor,
+                      paddingVertical: 10,
+                      borderRadius: 8,
+                      alignItems: "center",
+                      opacity: item.status === 'InProgress' ? 0.7 : 1,
+                    }}
+                  >
+                    <Text style={{ color: "#FFFFFF", fontWeight: 'bold' }}>
+                      {item.status === 'InProgress' ? "In Progress" : "Start Task"}
+                    </Text>
+                  </TouchableOpacity>
+                )}
                 </View>
 
                 <View style={styles.taskActions}>
+                  {/* Edit Button */}
+                  {/* Disable Edit and Delete buttons if isRanked is true */}
+                  <TouchableOpacity
+                    onPress={() => onEdit(item)}
+                    disabled={isRanked}
+                    style={[styles.taskActionBtn, { backgroundColor: isRanked ? colors.ink3 : colors.chip, borderColor: colors.cardLine, borderWidth: 1 }]}
+                    activeOpacity={0.7}
+                  >
+                    <Icon name="edit-2" size={17} color={isRanked ? colors.bg : colors.ink3} />
+                  </TouchableOpacity>
+                  {/* Complete Button */}
                   <TouchableOpacity
                     onPress={() => onComplete(item.taskId)}
                     style={[styles.taskActionBtn, { backgroundColor: colors.tealTint }]}
@@ -436,16 +515,17 @@ export function PriorityScreen() {
                   >
                     <Icon name="check" size={19} color={colors.teal} />
                   </TouchableOpacity>
+                  {/* Delete Button */}
                   <TouchableOpacity
                     onPress={() => onDelete(item.taskId)}
+                    disabled={isRanked}
                     style={[
                       styles.taskActionBtn,
-                      { backgroundColor: colors.chip, borderColor: colors.cardLine, borderWidth: 1 },
+                      { backgroundColor: isRanked ? colors.ink3 : colors.chip, borderColor: colors.cardLine, borderWidth: 1 },
                     ]}
                     activeOpacity={0.7}
-                    accessibilityLabel="Delete task"
                   >
-                    <Icon name="trash-2" size={17} color={colors.ink3} />
+                    <Icon name="trash-2" size={17} color={isRanked ? colors.bg : colors.ink3} />
                   </TouchableOpacity>
                 </View>
               </GlassCard>
