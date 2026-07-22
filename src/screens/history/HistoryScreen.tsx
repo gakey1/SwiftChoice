@@ -31,7 +31,7 @@ import { HUD_CLEARANCE } from "@/components/XpHud";
 import { getDecisions, type DecisionModuleType, type DecisionRecord } from "@/features/history/historyStorage";
 import { computeHistoryStats, type HistoryStats } from "@/features/history/historyStats";
 import { galleryAchievements } from "@/features/progress/achievements";
-import { capFor, levelTitle, xpFraction } from "@/features/progress/progress";
+import { capFor, levelTitle, xpFraction, XP_PER_DECISION } from "@/features/progress/progress";
 import { useProgress } from "@/features/progress/ProgressProvider";
 import type { ModuleKey } from "@/theme/modules";
 import { moduleAccent } from "@/theme/themes";
@@ -50,10 +50,9 @@ const MODULE_ORDER: readonly ModuleKey[] = ["fuel", "focus", "priority"];
 // full log, so it stays short.
 const RECENT_LIMIT = 6;
 
-// The presentational XP each accepted decision is worth, shown on its recent-list
-// pill. It mirrors the daily-quest reward on Home; the history store does not
-// record per-decision XP, so this is reward flavour, not a stored figure.
-const XP_PER_DECISION = 50;
+// The XP each accepted decision is worth, shown on its recent-list pill. The
+// figure comes from the progress module, which is also what the Fuel and Focus
+// Accept handlers award, so the pill and the running total cannot drift apart.
 
 const EMPTY_STATS: HistoryStats = {
   weekCount: 0,
