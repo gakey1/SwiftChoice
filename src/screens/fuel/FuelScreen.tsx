@@ -21,6 +21,7 @@ import { T } from "@/theme/tokens";
 import { moduleAccent, moduleDeep } from "@/theme/themes";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useProgress } from "@/features/progress/ProgressProvider";
+import { XP_PER_DECISION } from "@/features/progress/progress";
 import { getRecommendation } from "@/services/recommendation/recommendationEngine";
 import type { FoodOption } from "@/services/recommendation/recommendationEngine";
 import { useNavigation } from "@react-navigation/native";
@@ -89,7 +90,7 @@ function FilterOptionGroup({ label, options, displayValues, selectedValue, onSel
 
 export function FuelScreen() {
   const { colors } = useTheme();
-  const { progress } = useProgress();
+  const { progress, awardXp } = useProgress();
   const accent = moduleAccent(colors, "fuel");
   const [mealType, setMealType] = useState<"in" | "out">("out");
   const [budget, setBudget] = useState<"$" | "$$" | "$$$">("$$");
@@ -239,6 +240,10 @@ export function FuelScreen() {
                       },
                       rerolled: hasRerolled,
                     });
+
+                    // Award the XP the History row and the Home quest pill both
+                    // advertise, so the label and the running total agree.
+                    awardXp(XP_PER_DECISION);
 
                     //Clear the active choice view states
                     setRecommendation(null);
