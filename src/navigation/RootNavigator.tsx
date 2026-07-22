@@ -2,7 +2,7 @@
 // either the login screens (signed out) or the main app with its tabs (signed
 // in). Because the two sides are kept separate, a signed-out person can never
 // reach the app screens, since those screens are not even loaded.
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
@@ -16,6 +16,7 @@ import { VerifyEmailScreen } from "@/screens/auth/VerifyEmailScreen";
 import { FuelScreen } from "@/screens/fuel/FuelScreen";
 import { FocusScreen } from "@/screens/focus/FocusScreen";
 import { PriorityScreen } from "@/screens/priority/PriorityScreen";
+import { BudgetSurveyScreen } from '../screens/auth/BudgetSurveyScreen';
 import { T } from "@/theme/tokens";
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -53,6 +54,19 @@ export function RootNavigator() {
             name="Fuel"
             component={FuelScreen}
             options={{ animation: "slide_from_bottom" }}
+            listeners={({ navigation }) => ({
+              focus: async () => {
+                try {
+                  const isCompleted = await AsyncStorage.getItem('budget_survey_completed');
+                  if (isCompleted !== 'true') {
+                    // Swap the current screen to the survey so they don't see Fuel first
+                    navigation.replace('BudgetSurvey');
+                  }
+                } catch (error) {
+                  console.error("Failed to check budget survey status", error);
+                }
+              },
+            })}
           />
           <AppStack.Screen
             name="Focus"
@@ -62,6 +76,11 @@ export function RootNavigator() {
           <AppStack.Screen
             name="Priority"
             component={PriorityScreen}
+            options={{ animation: "slide_from_bottom" }}
+          />
+          <AppStack.Screen 
+            name="BudgetSurvey" 
+            component={BudgetSurveyScreen} 
             options={{ animation: "slide_from_bottom" }}
           />
         </AppStack.Navigator>

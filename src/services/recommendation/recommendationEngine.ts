@@ -61,15 +61,29 @@ export interface FilterCriteria {
  * Places API structure (mocked for now). Both paths return the matching set in
  * a randomly shuffled order.
  */
+
+// Helper to map UI tiers ('budget', 'moderate', 'premium') to database symbols ('$', '$$', '$$$')
+function mapTierToSymbol(tierOrSymbol: string): "$" | "$$" | "$$$" {
+  if (tierOrSymbol === 'budget') return '$';
+  if (tierOrSymbol === 'moderate') return '$$';
+  if (tierOrSymbol === 'premium') return '$$$';
+  if (tierOrSymbol === '$' || tierOrSymbol === '$$' || tierOrSymbol === '$$$') {
+    return tierOrSymbol;
+  }
+  return '$$'; // Default fallback
+}
 export async function getRecommendation(
   criteria: FilterCriteria
 ): Promise<FoodOption[] | null> {
+  // Convert whatever came from settings/survey into the symbol format your pool/API expects
+  const resolvedBudget = mapTierToSymbol(criteria.budget);
+
   // Pathway A: Eat In. Filter the local pool by budget and prep time.
   if (criteria.type === "in") {
     const matchingOptions = FOOD_POOL.filter((food) => {
       return (
         food.type === "in" &&
-        food.budget_level === criteria.budget &&
+        food.budget_level === resolvedBudget &&
         food.prep_time === criteria.prepTime
       );
     });
@@ -77,10 +91,10 @@ export async function getRecommendation(
     return shuffleOptions(matchingOptions);
   }
 
-  // Pathway B: Eat Out. Bypass the local pool and use the external Google
-  // Places API structure.
+  //Pathway B: Eat Out. Bypass the local pool and use the external Google
+  //Places API structure.
   try {
-    // Use the device location if provided, otherwise default to Melbourne CBD.
+    //Use the device location if provided, otherwise default to Melbourne CBD.
     const lat = criteria.userLatitude ?? -37.8136;
     const lng = criteria.userLongitude ?? 144.9631;
 
@@ -90,7 +104,7 @@ export async function getRecommendation(
     );
 
     const apiResults: GooglePlaceResult[] = await fetchMockGooglePlaces(
-      criteria.budget
+      resolvedBudget
     );
 
     // Transform the raw Google API payload into the app's FoodOption schema.
@@ -100,7 +114,7 @@ export async function getRecommendation(
         user_id: "user_123",
         item_name: place.displayName.text,
         type: "out",
-        budget_level: criteria.budget,
+        budget_level: resolvedBudget,
         prep_time: criteria.prepTime,
         distance_range: criteria.distance ?? "near",
         rating: place.rating.toFixed(1),
