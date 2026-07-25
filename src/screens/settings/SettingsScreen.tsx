@@ -27,7 +27,6 @@ import { loadAvatarIndex, saveAvatarIndex } from "@/services/localdb/profileStor
 import { T } from "@/theme/tokens";
 import { useTheme } from "@/theme/ThemeProvider";
 import { Alert } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const DIET_OPTIONS = ["None set", "Vegetarian", "No beef", "Halal"];
 //const BUDGET_OPTIONS = ["Under $20", "$20 - $50", "$50 - $100", "$100+"];
@@ -91,7 +90,7 @@ export function SettingsScreen() {
 
     const next = {
       dietaryRestrictions: field === "diet" ? nextValue : diet ?? "",
-      //defaultBudget: field === "budget" ? nextValue : budget ?? "",
+      defaultBudget: budget ?? "moderate",
       workHours: field === "hours" ? nextValue : hours ?? "",
     };
 
@@ -99,7 +98,7 @@ export function SettingsScreen() {
     //setBudget(next.defaultBudget);
     setHours(next.workHours);
 
-    //await savePreferences(next);
+    await savePreferences(next);
   }
 
   // Instant 1-tap picker for budget to avoid multi-clicking
@@ -108,9 +107,9 @@ export function SettingsScreen() {
       "Select Budget",
       "Choose your preferred budget tier:",
       [
-        { text: "Under $15 (Budget-friendly)", onPress: () => updateBudgetPreference('budget') },
-        { text: "$15 to $35 (Moderate)", onPress: () => updateBudgetPreference('moderate') },
-        { text: "Over $35 (Premium)", onPress: () => updateBudgetPreference('premium') },
+        { text: "Under $15", onPress: () => updateBudgetPreference('budget') },
+        { text: "$15 to $35", onPress: () => updateBudgetPreference('moderate') },
+        { text: "Over $35", onPress: () => updateBudgetPreference('premium') },
         { text: "Cancel", style: "cancel" }
       ],
       { cancelable: true }
@@ -118,13 +117,10 @@ export function SettingsScreen() {
   }
 
   async function updateBudgetPreference(selectedTier: string) {
-    // 1. Update local state
+    //Update local state
     setBudget(selectedTier);
     
-    // 2. Save to AsyncStorage so FuelScreen picks it up instantly
-    await AsyncStorage.setItem('user_budget_tier', selectedTier);
-    
-    // 3. Save to your preferences store (matching your existing structure)
+    //Save to your preferences store (matching your existing structure)
     const next = {
       dietaryRestrictions: diet ?? "",
       defaultBudget: selectedTier,

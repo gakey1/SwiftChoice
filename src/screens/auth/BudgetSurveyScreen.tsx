@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme } from "@/theme/ThemeProvider";
 import { moduleDeep } from '../../theme/themes';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { loadPreferences, savePreferences } from '../../services/localdb/preferencesStorage';
 
 export function BudgetSurveyScreen({ navigation, route }: { navigation: any; route: any }) {
   const { colors } = useTheme();
@@ -10,9 +10,12 @@ export function BudgetSurveyScreen({ navigation, route }: { navigation: any; rou
 
   const handleSave = async () => {
     try {
-        await AsyncStorage.setItem('user_budget_tier', selectedTier);
-        await AsyncStorage.setItem('budget_survey_completed', 'true');
-        
+        const currentPrefs = await loadPreferences();
+        await savePreferences({
+        ...currentPrefs,
+        defaultBudget: selectedTier, //Updates the budget key in SQLite
+      });
+        // Navigate to Fuel once saved successfully
         navigation.replace('Fuel'); 
     } catch (error) {
         console.error('Failed to save budget preference', error);
