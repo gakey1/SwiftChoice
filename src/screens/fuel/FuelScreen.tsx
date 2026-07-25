@@ -12,7 +12,6 @@
 import React, { useEffect, useState } from "react";
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon } from "@/components/Icon";
@@ -31,6 +30,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import type { AppStackParamList } from "@/navigation/types";
 import { logDecision } from "@/features/history/historyStorage";
+import { loadPreferences } from "@/services/localdb/preferencesStorage";
 
 // Dark ink sits on top of the bright accent fills (buttons), for contrast.
 const ON_ACCENT = "#141026";
@@ -157,9 +157,17 @@ export function FuelScreen() {
 
       async function loadBudgetPreference() {
         try {
-          const savedTier = await AsyncStorage.getItem('user_budget_tier');
-          if (active && savedTier) {
-            setUserTier(savedTier);
+          const savedTier = await loadPreferences();
+          if (active && savedTier.defaultBudget) {
+            setUserTier(savedTier.defaultBudget);
+
+            if (savedTier.defaultBudget === 'budget') {
+              setBudget('$');
+            } else if (savedTier.defaultBudget === 'moderate') {
+              setBudget('$$');
+            } else if (savedTier.defaultBudget === 'premium') {
+              setBudget('$$$');
+            }
           }
         } catch (error) {
           console.error("Failed to load user budget tier", error);
