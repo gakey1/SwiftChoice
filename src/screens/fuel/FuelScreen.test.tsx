@@ -4,7 +4,7 @@
 // result or empty state.
 
 import React from "react";
-import { render, fireEvent, waitFor } from "@testing-library/react-native";
+import { act, render, fireEvent, waitFor } from "@testing-library/react-native";
 import { FuelScreen } from "./FuelScreen";
 import { XP_PER_DECISION } from "@/features/progress/progress";
 
@@ -13,17 +13,33 @@ import { XP_PER_DECISION } from "@/features/progress/progress";
 // module glyph uses MaterialCommunityIcons and its other icons use Feather.
 jest.mock("@expo/vector-icons", () => ({ Feather: "Feather", MaterialCommunityIcons: "MaterialCommunityIcons" }));
 
-//Mock the useNavigation hook from React Navigation
+// Mock the navigation hooks this screen uses. useFocusEffect is included because
+// the screen reloads the saved budget through it; left out, it would be undefined
+// and throw as soon as the screen renders. It stands in as a plain effect so the
+// reload runs once on render, the way arriving on the screen runs it for real.
+// Jest only lets a mock factory reach names starting with "mock", hence the alias.
+const mockUseEffect = React.useEffect;
 jest.mock("@react-navigation/native", () => ({
   useNavigation: () => ({
     goBack: jest.fn(),
   }),
+  useFocusEffect: (effect: () => void | (() => void)) => mockUseEffect(effect, [effect]),
 }));
 
 // Mock the history layer so this test does not pull in the SQLite chain
 // (historyStorage -> db.ts -> expo-sqlite), which is not resolvable under Jest.
 jest.mock("@/features/history/historyStorage", () => ({
   logDecision: jest.fn(),
+}));
+
+// Mock the settings layer for the same reason: the screen reads the saved budget
+// through it, which would otherwise pull expo-sqlite in through db.ts.
+jest.mock("@/services/localdb/preferencesStorage", () => ({
+  loadPreferences: jest.fn(async () => ({
+    dietaryRestrictions: "None set",
+    defaultBudget: "moderate",
+    workHours: "9am - 5pm",
+  })),
 }));
 
 // Spy on the shared progress store so the XP award on Accept can be asserted.
@@ -42,9 +58,17 @@ jest.mock("@/features/progress/ProgressProvider", () => ({
   }),
 }));
 
+// Renders the screen and lets the saved-budget load that runs on focus finish
+// first, so the state it sets does not land in the middle of an assertion.
+async function renderFuelScreen() {
+  const utils = render(<FuelScreen />);
+  await act(async () => {});
+  return utils;
+}
+
 describe("FuelScreen", () => {
-  it("renders the header and filter components correctly", () => {
-    const { getByText } = render(<FuelScreen />);
+  it("renders the header and filter components correctly", async () => {
+    const { getByText } = await renderFuelScreen();
 
     //Verify the core layout titles render safely
     expect(getByText("Fuel")).toBeTruthy();
@@ -54,20 +78,30 @@ describe("FuelScreen", () => {
     expect(getByText("Distance")).toBeTruthy();
   });
 
-  it("updates state and styling when changing the primary toggle button", () => {
-    const { getByText } = render(<FuelScreen />);
-    
+  it("updates state and styling when changing the primary toggle button", async () => {
+    const { getByText } = await renderFuelScreen();
+
     const eatInButton = getByText("Eat In");
-    
+
     //Simulate user tapping on the 'Eat In' option
     fireEvent.press(eatInButton);
-    
+
     //Confirms the component handles interaction event smoothly
     expect(eatInButton).toBeTruthy();
   });
 
+  it("starts from the budget saved in settings", async () => {
+    // The survey and the Settings picker both write the level here, so arriving
+    // on Fuel shows that person's own ranges rather than the neutral default.
+    const { getAllByText, queryByText } = await renderFuelScreen();
+
+    // The moderate ranges, not the "no answer yet" ones.
+    expect(getAllByText("$22 - $28").length).toBeGreaterThan(0);
+    expect(queryByText("$25 - $50")).toBeNull();
+  });
+
   it("triggers the recommendation engine when clicking the main action button", async () => {
-    const { getByText, findByText } = render(<FuelScreen />);
+    const { getByText, findByText } = await renderFuelScreen();
 
     const actionButton = getByText("Decide for Me");
 
@@ -86,7 +120,7 @@ describe("FuelScreen", () => {
 
   it("awards the advertised XP when a recommendation is accepted", async () => {
     mockAwardXp.mockClear();
-    const { getByText, findByText, queryByText } = render(<FuelScreen />);
+    const { getByText, findByText, queryByText } = await renderFuelScreen();
 
     fireEvent.press(getByText("Decide for Me"));
     await findByText(/Your Fuel recommendation|No exact match found/i, {}, { timeout: 3000 });

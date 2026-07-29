@@ -10,7 +10,7 @@
 // come from the active theme via useTheme(); section labels use the mono font.
 
 import { useEffect, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Button } from "@/components/Button";
@@ -19,6 +19,7 @@ import { HUD_CLEARANCE } from "@/components/XpHud";
 import { AVATARS } from "@/features/profile/avatars";
 import { useAuth } from "@/hooks/useAuth";
 import { logout } from "@/services/auth";
+import { isBudgetTier, saveBudgetTier } from "@/services/firestore/users";
 import {
   loadPreferences,
   savePreferences,
@@ -28,7 +29,14 @@ import { T } from "@/theme/tokens";
 import { useTheme } from "@/theme/ThemeProvider";
 
 const DIET_OPTIONS = ["None set", "Vegetarian", "No beef", "Halal"];
-const BUDGET_OPTIONS = ["Under $20", "$20 - $50", "$50 - $100", "$100+"];
+const BUDGET_OPTIONS = ['budget', 'moderate', 'premium'];
+
+const BUDGET_LABELS: Record<string, string> = {
+  budget: 'Under $15 (Budget-friendly)',
+  moderate: '$15 to $35 (Moderate)',
+  premium: 'Over $35 (Premium)',
+};
+
 const HOURS_OPTIONS = ["9am - 5pm", "7am - 3pm", "Flexible"];
 
 type PreferenceField = "diet" | "budget" | "hours";
@@ -81,15 +89,53 @@ export function SettingsScreen() {
 
     const next = {
       dietaryRestrictions: field === "diet" ? nextValue : diet ?? "",
-      defaultBudget: field === "budget" ? nextValue : budget ?? "",
+      defaultBudget: budget ?? "moderate",
       workHours: field === "hours" ? nextValue : hours ?? "",
     };
 
     setDiet(next.dietaryRestrictions);
-    setBudget(next.defaultBudget);
     setHours(next.workHours);
 
     await savePreferences(next);
+  }
+
+  // Instant 1-tap picker for budget to avoid multi-clicking
+  function handleOpenBudgetPicker() {
+    Alert.alert(
+      "Select Budget",
+      "Choose your preferred budget tier:",
+      [
+        { text: "Under $15", onPress: () => updateBudgetPreference('budget') },
+        { text: "$15 to $35", onPress: () => updateBudgetPreference('moderate') },
+        { text: "Over $35", onPress: () => updateBudgetPreference('premium') },
+        { text: "Cancel", style: "cancel" }
+      ],
+      { cancelable: true }
+    );
+  }
+
+  async function updateBudgetPreference(selectedTier: string) {
+    // Show the new choice straight away.
+    setBudget(selectedTier);
+
+    // Save it alongside the other settings on this device.
+    const next = {
+      dietaryRestrictions: diet ?? "",
+      defaultBudget: selectedTier,
+      workHours: hours ?? "",
+    };
+    await savePreferences(next);
+
+    // Keep the profile in step, since that is the copy the survey checks and
+    // the one that follows the user to another device. Changing the budget here
+    // would otherwise leave the profile holding the original survey answer.
+    if (user && isBudgetTier(selectedTier)) {
+      try {
+        await saveBudgetTier(user.uid, selectedTier);
+      } catch (error) {
+        console.warn("Could not save the budget level to the profile", error);
+      }
+    }
   }
 
   // Signs the user out. The auth listener notices and returns them to login.
@@ -162,9 +208,11 @@ export function SettingsScreen() {
             onPress={() => cycleOption(diet ?? "", DIET_OPTIONS, "diet")}
           />
           <SettingRow
-            label="Default Budget"
-            value={budget ?? ""}
-            onPress={() => cycleOption(budget ?? "", BUDGET_OPTIONS, "budget")}
+            label="Budget"
+            //value={budget ?? ""}
+            value={BUDGET_LABELS[budget ?? 'budget'] ?? 'Not set'}
+            //onPress={() => cycleOption(budget ?? "", BUDGET_OPTIONS, "budget")}
+            onPress={handleOpenBudgetPicker}
           />
           <SettingRow
             label="Work Hours"

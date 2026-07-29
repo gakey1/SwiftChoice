@@ -9,7 +9,8 @@
 // Styling only: the filter state, the recommendation call, the one-reroll cap,
 // and the accept-to-history wiring are exactly as written; only the look changed.
 
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon } from "@/components/Icon";
@@ -24,11 +25,11 @@ import { useProgress } from "@/features/progress/ProgressProvider";
 import { XP_PER_DECISION } from "@/features/progress/progress";
 import { getRecommendation } from "@/services/recommendation/recommendationEngine";
 import type { FoodOption } from "@/services/recommendation/recommendationEngine";
-import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import type { AppStackParamList } from "@/navigation/types";
 import { logDecision } from "@/features/history/historyStorage";
+import { loadPreferences } from "@/services/localdb/preferencesStorage";
 
 // Dark ink sits on top of the bright accent fills (buttons), for contrast.
 const ON_ACCENT = "#141026";
@@ -88,15 +89,84 @@ function FilterOptionGroup({ label, options, displayValues, selectedValue, onSel
   );
 }
 
+type BudgetRangeItem = { label: string; min: number; max: number };
+type TierRanges = { low: BudgetRangeItem; medium: BudgetRangeItem; high: BudgetRangeItem };
+
+export function getBudgetRanges(tier: string | null): TierRanges {
+  switch (tier) {
+    case 'budget': 
+      return { 
+        low: { label: 'Under $10', min: 0, max: 10 },
+        medium: { label: '$10 - $12', min: 10, max: 12 },
+        high: { label: '$12 - $15', min: 12, max: 15 },
+      };
+    case 'moderate': 
+      return { 
+        low: { label: '$15 - $22', min: 15, max: 22 },
+        medium: { label: '$22 - $28', min: 22, max: 28 },
+        high: { label: '$28 - $35', min: 28, max: 35 },
+      };
+    case 'premium': 
+      return { 
+        low: { label: '$35 - $55', min: 35, max: 55 },
+        medium: { label: '$55 - $75', min: 55, max: 75 },
+        high: { label: 'Over $75', min: 75, max: Infinity },
+      };
+    default: 
+      return { 
+        low: { label: 'Under $25', min: 0, max: 25 },
+        medium: { label: '$25 - $50', min: 25, max: 50 },
+        high: { label: 'Over $50', min: 50, max: Infinity }
+      }; 
+  }
+}
+
 export function FuelScreen() {
   const { colors } = useTheme();
   const { progress, awardXp } = useProgress();
   const accent = moduleAccent(colors, "fuel");
+  const [userTier, setUserTier] = useState<string | null>(null);
+
   const [mealType, setMealType] = useState<"in" | "out">("out");
   const [budget, setBudget] = useState<"$" | "$$" | "$$$">("$$");
   const [prepTime, setPrepTime] = useState<"short" | "medium" | "long">("medium");
   const [distance, setDistance] = useState<"near" | "mid" | "far">("mid");
   const [hasRerolled, setHasRerolled] = useState<boolean>(false);
+
+  // Re-loads the saved budget level every time the screen comes into focus, so
+  // changing it in Settings shows here without restarting the app.
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+
+      async function loadBudgetPreference() {
+        try {
+          const savedTier = await loadPreferences();
+          if (active && savedTier.defaultBudget) {
+            setUserTier(savedTier.defaultBudget);
+
+            if (savedTier.defaultBudget === 'budget') {
+              setBudget('$');
+            } else if (savedTier.defaultBudget === 'moderate') {
+              setBudget('$$');
+            } else if (savedTier.defaultBudget === 'premium') {
+              setBudget('$$$');
+            }
+          }
+        } catch (error) {
+          console.error("Failed to load user budget tier", error);
+        }
+      }
+
+      loadBudgetPreference();
+
+      return () => {
+        active = false;
+      };
+    }, [])
+  );
+  // Get the dynamic labels based on the tier
+  const budgetRanges = getBudgetRanges(userTier);
 
   const [recommendation, setRecommendation] = useState<FoodOption | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
@@ -110,12 +180,16 @@ export function FuelScreen() {
   const handleGetRecommendation = async () => {
     setHasSearched(false);
 
+    const budgetKey = budget === "$" ? "low" : budget === "$$" ? "medium" : "high";
+    const selectedRange = budgetRanges[budgetKey];
+
     const randomizedList = await getRecommendation({
       type: mealType,
       budget: budget,
       prepTime: prepTime,
       distance: mealType === "in" ? undefined : distance,
     }) as unknown as FoodOption[];
+
     if (randomizedList && randomizedList.length > 0) {
       setMatchList(randomizedList);
       setCurrentIndex(0);
@@ -345,6 +419,11 @@ export function FuelScreen() {
         <FilterOptionGroup
           label="Budget"
           options={["$", "$$", "$$$"]}
+          displayValues={[
+            budgetRanges.low.label, 
+            budgetRanges.medium.label, 
+            budgetRanges.high.label
+          ]}
           selectedValue={budget}
           onSelect={(val) => setBudget(val as "$" | "$$" | "$$$")}
           activeColor={primaryColor}
