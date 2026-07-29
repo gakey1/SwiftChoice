@@ -5,6 +5,7 @@
 
 import { fetchNearbyPlaces, fetchPlacesByArea, type GooglePlaceResult } from "./googlePlaces";
 import { getCurrentPosition } from "@/services/location/locationService";
+import { distanceMeters } from "./openStreetMapPlaces";
 
 // Define what a Food Option choice looks like.
 export interface FoodOption {
@@ -16,6 +17,11 @@ export interface FoodOption {
   prep_time: "short" | "medium" | "long";
   distance_range: "near" | "mid" | "far";
   rating: string;
+  // How far the place actually is from where the search ran, in metres. Only
+  // set for live Eat Out results, where we know both points. The card shows this
+  // instead of the distance band the user picked, so the figure is measured
+  // rather than assumed.
+  distance_meters?: number | undefined;
   // Set to the area the user typed when the search used that instead of the
   // phone's position. The screen shows it, so a result is never presented as
   // nearby when it came from a typed area rather than real location.
@@ -187,6 +193,13 @@ export async function getRecommendation(
         // the rating chip rather than showing a zero or an invented score.
         rating: place.rating === undefined ? "" : place.rating.toFixed(1),
         searched_area: hasPosition ? undefined : typedArea,
+        // Measured only when we know where the search ran from and where the
+        // place is. A typed-area search has no user position, so it stays unset
+        // and the card falls back to the band.
+        distance_meters:
+          hasPosition && place.location
+            ? distanceMeters(lat as number, lng as number, place.location.latitude, place.location.longitude)
+            : undefined,
       };
     });
 

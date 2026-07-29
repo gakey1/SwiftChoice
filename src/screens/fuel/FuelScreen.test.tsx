@@ -5,7 +5,7 @@
 
 import React from "react";
 import { act, render, fireEvent, waitFor } from "@testing-library/react-native";
-import { FuelScreen } from "./FuelScreen";
+import { FuelScreen, formatDistance } from "./FuelScreen";
 import { XP_PER_DECISION } from "@/features/progress/progress";
 
 // Stub the native icon sets so this test does not pull in expo-font / expo-asset,
@@ -39,7 +39,12 @@ jest.mock("@/features/history/historyStorage", () => ({
 jest.mock("@/services/recommendation/googlePlaces", () => ({
   GOOGLE_ATTRIBUTION: "Powered by Google",
   fetchNearbyPlaces: jest.fn(async () => [
-    { displayName: { text: "Test Cafe" }, rating: 4.4, priceLevel: "PRICE_LEVEL_MODERATE" },
+    {
+      displayName: { text: "Test Cafe" },
+      rating: 4.4,
+      priceLevel: "PRICE_LEVEL_MODERATE",
+      location: { latitude: -37.8045, longitude: 144.9 },
+    },
   ]),
   fetchPlacesByArea: jest.fn(async () => [
     { displayName: { text: "Southport Diner" }, rating: 4.1, priceLevel: "PRICE_LEVEL_MODERATE" },
@@ -199,5 +204,28 @@ describe("FuelScreen", () => {
     // The History row and the Home quest pill both advertise this figure, so
     // accepting has to actually grant it or the label is lying to the user.
     await waitFor(() => expect(mockAwardXp).toHaveBeenCalledWith(XP_PER_DECISION));
+  });
+
+  it("shows a measured distance rather than a figure from the chosen band", async () => {
+    // The chip used to print a fixed "1.2 km" for anything marked near, which
+    // was a number nobody had measured. It now comes from the coordinates.
+    const { getByText, findByText } = await renderFuelScreen();
+
+    fireEvent.press(getByText("Decide for Me"));
+    await findByText("Test Cafe", {}, { timeout: 3000 });
+
+    // The mocked place sits about 610m north of the mocked position.
+    expect(getByText(/^\d+ m$/)).toBeTruthy();
+  });
+});
+
+describe("formatDistance", () => {
+  it("uses metres below a kilometre and kilometres above", () => {
+    expect(formatDistance({ distance_meters: 450, distance_range: "near" })).toBe("450 m");
+    expect(formatDistance({ distance_meters: 1240, distance_range: "near" })).toBe("1.2 km");
+  });
+
+  it("names the band rather than inventing a figure when nothing was measured", () => {
+    expect(formatDistance({ distance_meters: undefined, distance_range: "mid" })).toBe("Mid");
   });
 });

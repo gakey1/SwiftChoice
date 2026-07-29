@@ -93,6 +93,19 @@ function FilterOptionGroup({ label, options, displayValues, selectedValue, onSel
 type BudgetRangeItem = { label: string; min: number; max: number };
 type TierRanges = { low: BudgetRangeItem; medium: BudgetRangeItem; high: BudgetRangeItem };
 
+// Turns a result into what the Distance chip shows. Metres under a kilometre,
+// otherwise kilometres to one decimal. With no measurement it names the band
+// instead of inventing a figure.
+export function formatDistance(option: Pick<FoodOption, "distance_meters" | "distance_range">): string {
+  const metres = option.distance_meters;
+
+  if (metres !== undefined) {
+    return metres < 1000 ? `${metres} m` : `${(metres / 1000).toFixed(1)} km`;
+  }
+
+  return option.distance_range === "near" ? "Near" : option.distance_range === "mid" ? "Mid" : "Far";
+}
+
 export function getBudgetRanges(tier: string | null): TierRanges {
   switch (tier) {
     case 'budget': 
@@ -246,12 +259,11 @@ export function FuelScreen() {
 
   // === VIEW 1: SHOW THE RESULT CARD MANUALLY IF MATCH IS FOUND ===
   if (recommendation) {
-    const distanceText =
-      recommendation.distance_range === "near"
-        ? "1.2 km"
-        : recommendation.distance_range === "mid"
-          ? "3.5 km"
-          : "6.0 km";
+    // The measured distance from where the search ran, when we have it. Live
+    // Eat Out results carry a real figure. Anything else falls back to the band
+    // the user picked, as a word rather than an invented number, because a
+    // precise-looking distance we never measured is a made-up fact.
+    const distanceText = formatDistance(recommendation);
     return (
       <SafeAreaView style={[styles.frame, { backgroundColor: colors.bg }]} edges={["top", "left", "right"]}>
         <AmbientBackground />

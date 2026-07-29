@@ -12,7 +12,7 @@ This is the record of what moved and why. The plan and the reasoning behind the 
 | `googlePlacesMock.ts` | Retired | Its job is done. The real client took over the same shape |
 | `googlePlaces.test.ts` | New. 8 tests | Includes the one that fails if the requested field list changes |
 | `recommendationEngine.ts` | Eat Out calls Google. New `LOCATION_REQUIRED` result, `manualArea` input, `searched_area` on the result | The swap itself, plus refusing to guess a city when there is no position |
-| `FuelScreen.tsx` | Rating chip hides when there is no rating, "Powered by Google" on Eat Out, and a type-your-area box when location fails | Real data is patchier than the mock, Google requires the credit, and a guessed city would be wrong for most of us |
+| `FuelScreen.tsx` | Rating chip hides when there is no rating, real measured distance instead of a fixed figure, "Powered by Google" on Eat Out, and a type-your-area box when location fails | Real data is patchier than the mock, Google requires the credit, and a guessed city would be wrong for most of us |
 | `FuelScreen.test.tsx` | Live path mocked, 9 tests | The old assertions were passing through a failure path. See below |
 
 Your engine structure, the filters, the Eat In path, reroll and accept are all untouched.
@@ -29,6 +29,14 @@ The mock always returned a rating and a price. Real records often carry neither,
 | A place's price equals the band the user picked | Not true once the data is real | The card shows Google's price where they have one, and falls back to the requested band only where they do not |
 
 The last one matters for the transparency rule. We show what is actually known and nothing more.
+
+## The distance chip was showing a made-up number
+
+Worth flagging on its own, because it is the kind of thing that is easy to miss and awkward at a review.
+
+The chip printed a fixed figure chosen from the filter band: "1.2 km" for anything marked near, "3.5 km" for mid, "6.0 km" for far. It looked precise and nobody had measured it. With mock data that was harmless. With real places it is a made-up fact on screen, which is exactly what this app says it does not do.
+
+It now shows the real distance, measured from where the search ran to the coordinates Google returns for each place, as metres below a kilometre and kilometres above. We were already asking Google for those coordinates and throwing them away, so this costs nothing extra. Where nothing was measured, such as a typed-area search, the chip names the band ("Near", "Mid", "Far") rather than printing a number we do not have.
 
 ## The distance filter now means something
 
