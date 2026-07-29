@@ -2,7 +2,6 @@
 // either the login screens (signed out) or the main app with its tabs (signed
 // in). Because the two sides are kept separate, a signed-out person can never
 // reach the app screens, since those screens are not even loaded.
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
@@ -16,7 +15,8 @@ import { VerifyEmailScreen } from "@/screens/auth/VerifyEmailScreen";
 import { FuelScreen } from "@/screens/fuel/FuelScreen";
 import { FocusScreen } from "@/screens/focus/FocusScreen";
 import { PriorityScreen } from "@/screens/priority/PriorityScreen";
-import { BudgetSurveyScreen } from '../screens/auth/BudgetSurveyScreen';
+import { BudgetSurveyScreen } from "@/screens/auth/BudgetSurveyScreen";
+import { getBudgetTier } from "@/services/firestore/users";
 import { T } from "@/theme/tokens";
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -57,13 +57,20 @@ export function RootNavigator() {
             listeners={({ navigation }) => ({
               focus: async () => {
                 try {
-                  const isCompleted = await AsyncStorage.getItem('budget_survey_completed');
-                  if (isCompleted !== 'true') {
-                    // Swap the current screen to the survey so they don't see Fuel first
+                  // The answer lives on the user's profile, so it is asked once
+                  // per person rather than once per phone. Somebody who has
+                  // never answered is swapped onto the survey before they see
+                  // the Fuel filters, so the budget choice means something.
+                  const tier = await getBudgetTier(user.uid);
+                  if (tier === null) {
                     navigation.replace('BudgetSurvey');
                   }
                 } catch (error) {
-                  console.error("Failed to check budget survey status", error);
+                  // If the profile cannot be read, with no connection for
+                  // example, let them into Fuel anyway. Not being able to check
+                  // is not a good enough reason to hold somebody on a screen
+                  // they cannot get past.
+                  console.warn("Could not check the budget survey status", error);
                 }
               },
             })}

@@ -15,6 +15,14 @@ jest.mock("@/hooks/useAuth", () => ({
   useAuth: () => ({ user: { email: "a@b.com" }, initializing: false }),
 }));
 jest.mock("@/components/Icon", () => ({ Icon: () => null }));
+
+// The screen mirrors the chosen budget onto the user's profile. Mocked so the
+// test does not pull the real Firestore client in through this module.
+jest.mock("@/services/firestore/users", () => ({
+  isBudgetTier: (value: unknown) =>
+    value === "budget" || value === "moderate" || value === "premium",
+  saveBudgetTier: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock("@/services/localdb/preferencesStorage", () => ({
   loadPreferences: jest.fn().mockResolvedValue({
     dietaryRestrictions: "None set",

@@ -45,7 +45,6 @@ function hasValidNumbers(value: unknown): value is Record<string, unknown> {
     typeof p.completedCount === "number" &&
     Number.isFinite(p.completedCount) &&
     p.completedCount >= 0
-
   );
 }
 

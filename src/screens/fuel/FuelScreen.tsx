@@ -9,9 +9,8 @@
 // Styling only: the filter state, the recommendation call, the one-reroll cap,
 // and the accept-to-history wiring are exactly as written; only the look changed.
 
-import React, { useEffect, useState } from "react";
-import { useFocusEffect } from '@react-navigation/native';
-import { useCallback } from 'react';
+import React, { useCallback, useState } from "react";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon } from "@/components/Icon";
@@ -26,7 +25,6 @@ import { useProgress } from "@/features/progress/ProgressProvider";
 import { XP_PER_DECISION } from "@/features/progress/progress";
 import { getRecommendation } from "@/services/recommendation/recommendationEngine";
 import type { FoodOption } from "@/services/recommendation/recommendationEngine";
-import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import type { AppStackParamList } from "@/navigation/types";
@@ -135,23 +133,8 @@ export function FuelScreen() {
   const [distance, setDistance] = useState<"near" | "mid" | "far">("mid");
   const [hasRerolled, setHasRerolled] = useState<boolean>(false);
 
-  // Fetch the saved tier when the screen mounts
-  /*
-  useEffect(() => {
-    async function loadBudgetPreference() {
-      try {
-        const savedTier = await AsyncStorage.getItem('user_budget_tier');
-        if (savedTier) {
-          setUserTier(savedTier);
-        }
-      } catch (error) {
-        console.error("Failed to load user budget tier", error);
-      }
-    }
-    loadBudgetPreference();
-  }, []);
-*/
-// Re-loads the saved tier every time the screen comes into focus
+  // Re-loads the saved budget level every time the screen comes into focus, so
+  // changing it in Settings shows here without restarting the app.
   useFocusEffect(
     useCallback(() => {
       let active = true;

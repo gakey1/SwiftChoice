@@ -1,26 +1,48 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+import { useAuth } from "@/hooks/useAuth";
+import type { AppStackParamList } from "@/navigation/types";
+import { saveBudgetTier } from "@/services/firestore/users";
+import type { BudgetTier } from "@/services/firestore/users";
+import { loadPreferences, savePreferences } from "@/services/localdb/preferencesStorage";
 import { useTheme } from "@/theme/ThemeProvider";
-import { moduleDeep } from '../../theme/themes';
-import { loadPreferences, savePreferences } from '../../services/localdb/preferencesStorage';
+import { moduleDeep } from "@/theme/themes";
 
-export function BudgetSurveyScreen({ navigation, route }: { navigation: any; route: any }) {
+export function BudgetSurveyScreen() {
   const { colors } = useTheme();
-  const [selectedTier, setSelectedTier] = useState<'budget' | 'moderate' | 'premium'>('moderate');
+  const { user } = useAuth();
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  const [selectedTier, setSelectedTier] = useState<BudgetTier>('moderate');
 
+  // The profile is what decides whether this user has answered, so it is saved
+  // there first. The same answer is then mirrored into the on-device settings,
+  // which is where the Fuel and Settings screens already read the budget from.
+  // Each save is handled on its own so that one failing does not skip the other,
+  // and either way the user is let through rather than held on this screen.
   const handleSave = async () => {
-    try {
-        const currentPrefs = await loadPreferences();
-        await savePreferences({
-        ...currentPrefs,
-        defaultBudget: selectedTier, //Updates the budget key in SQLite
-      });
-        // Navigate to Fuel once saved successfully
-        navigation.replace('Fuel'); 
-    } catch (error) {
-        console.error('Failed to save budget preference', error);
+    if (user) {
+      try {
+        await saveBudgetTier(user.uid, selectedTier);
+      } catch (error) {
+        console.warn('Could not save the budget level to the profile', error);
+      }
     }
-};
+
+    try {
+      const currentPrefs = await loadPreferences();
+      await savePreferences({
+        ...currentPrefs,
+        defaultBudget: selectedTier,
+      });
+    } catch (error) {
+      console.warn('Could not save the budget level on the device', error);
+    }
+
+    navigation.replace('Fuel');
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
