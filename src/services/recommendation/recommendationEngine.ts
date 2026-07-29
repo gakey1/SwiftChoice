@@ -3,7 +3,8 @@
 // return the matches in a shuffled order. Eat Out is routed through a mock of
 // the Google Places API so the real one can be swapped in later.
 
-import { fetchMockGooglePlaces, type GooglePlaceResult } from "./googlePlacesMock";
+import { fetchNearbyPlaces, fetchPlacesByArea, type GooglePlaceResult } from "./googlePlaces";
+import { getCurrentPosition } from "@/services/location/locationService";
 
 // Define what a Food Option choice looks like.
 export interface FoodOption {
@@ -15,6 +16,10 @@ export interface FoodOption {
   prep_time: "short" | "medium" | "long";
   distance_range: "near" | "mid" | "far";
   rating: string;
+  // Set to the area the user typed when the search used that instead of the
+  // phone's position. The screen shows it, so a result is never presented as
+  // nearby when it came from a typed area rather than real location.
+  searched_area?: string | undefined;
 }
 
 // The mock Fuel pool used by the Eat In recommendation flow.
@@ -53,6 +58,8 @@ export interface FilterCriteria {
   // Placeholders for live GPS data (Eat Out, future Expo location streaming).
   userLatitude?: number;
   userLongitude?: number;
+  // An area the user typed, used only when the phone would not give a position.
+  manualArea?: string | undefined;
 }
 
 /*
@@ -61,6 +68,37 @@ export interface FilterCriteria {
  * Places API structure (mocked for now). Both paths return the matching set in
  * a randomly shuffled order.
  */
+
+// Returned when Eat Out has no way to know where the user is: the phone would
+// not give a position and no area was typed in. The screen asks for an area
+// rather than guessing a city, because a guess would show somebody in Queensland
+// a list of Melbourne restaurants and call them nearby.
+export const LOCATION_REQUIRED = "LOCATION_REQUIRED" as const;
+
+// How far out to search for each distance choice on the Fuel screen.
+const RADIUS_BY_DISTANCE: Record<"near" | "mid" | "far", number> = {
+  near: 1000,
+  mid: 3000,
+  far: 8000,
+};
+
+// Turns Google's price band into the symbol the rest of the app uses. Returns
+// null when Google holds no price for the place, which is common and must not
+// be mistaken for cheap.
+function priceLevelToSymbol(level: string | undefined): "$" | "$$" | "$$$" | null {
+  switch (level) {
+    case "PRICE_LEVEL_FREE":
+    case "PRICE_LEVEL_INEXPENSIVE":
+      return "$";
+    case "PRICE_LEVEL_MODERATE":
+      return "$$";
+    case "PRICE_LEVEL_EXPENSIVE":
+    case "PRICE_LEVEL_VERY_EXPENSIVE":
+      return "$$$";
+    default:
+      return null;
+  }
+}
 
 // Helper to map UI tiers ('budget', 'moderate', 'premium') to database symbols ('$', '$$', '$$$')
 function mapTierToSymbol(tierOrSymbol: string): "$" | "$$" | "$$$" {
@@ -74,7 +112,7 @@ function mapTierToSymbol(tierOrSymbol: string): "$" | "$$" | "$$$" {
 }
 export async function getRecommendation(
   criteria: FilterCriteria
-): Promise<FoodOption[] | null> {
+): Promise<FoodOption[] | null | typeof LOCATION_REQUIRED> {
   // Convert whatever came from settings/survey into the symbol format your pool/API expects
   const resolvedBudget = mapTierToSymbol(criteria.budget);
 
@@ -91,39 +129,70 @@ export async function getRecommendation(
     return shuffleOptions(matchingOptions);
   }
 
-  //Pathway B: Eat Out. Bypass the local pool and use the external Google
-  //Places API structure.
+  // Pathway B: Eat Out. Skip the local pool and ask Google Places for real
+  // places, either near the phone's position or in an area the user typed.
   try {
-    //Use the device location if provided, otherwise default to Melbourne CBD.
-    const lat = criteria.userLatitude ?? -37.8136;
-    const lng = criteria.userLongitude ?? 144.9631;
+    let lat = criteria.userLatitude;
+    let lng = criteria.userLongitude;
 
-    console.warn(`[GPS Gateway] User location at Lat: ${lat}, Lng: ${lng}`);
-    console.warn(
-      `[API Gateway] Routing to Google Places for radius: ${criteria.distance ?? "near"}, budget: ${criteria.budget}`
-    );
+    if (lat === undefined || lng === undefined) {
+      const position = await getCurrentPosition();
+      if (position.ok) {
+        lat = position.latitude;
+        lng = position.longitude;
+      }
+    }
 
-    const apiResults: GooglePlaceResult[] = await fetchMockGooglePlaces(
-      resolvedBudget
-    );
+    const hasPosition = lat !== undefined && lng !== undefined;
+    const typedArea = criteria.manualArea?.trim();
 
-    // Transform the raw Google API payload into the app's FoodOption schema.
-    const transformedOptions: FoodOption[] = apiResults.map((place, index) => {
+    // No position and nothing typed: ask rather than guess. Inventing a city
+    // here is what would show a Queensland user Melbourne restaurants.
+    if (!hasPosition && !typedArea) {
+      return LOCATION_REQUIRED;
+    }
+
+    const apiResults: GooglePlaceResult[] = hasPosition
+      ? await fetchNearbyPlaces({
+          latitude: lat as number,
+          longitude: lng as number,
+          radiusMeters: RADIUS_BY_DISTANCE[criteria.distance ?? "near"],
+        })
+      : await fetchPlacesByArea(typedArea as string);
+
+    // Google has no price filter on a nearby search, so the budget is applied
+    // here instead. Places with no price level are kept rather than dropped,
+    // because a missing price is common and dropping them can empty the list.
+    const withinBudget = apiResults.filter((place) => {
+      const level = priceLevelToSymbol(place.priceLevel);
+      return level === null || level === resolvedBudget;
+    });
+
+    // Transform Google's payload into the app's FoodOption schema. Rating and
+    // price are both optional on real records, so neither is assumed here.
+    const transformedOptions: FoodOption[] = withinBudget.map((place, index) => {
+      const placeBudget = priceLevelToSymbol(place.priceLevel);
+
       return {
         fuel_id: `google_${index}_${Date.now()}`,
         user_id: "user_123",
         item_name: place.displayName.text,
         type: "out",
-        budget_level: resolvedBudget,
+        // The place's own price where Google knows it, otherwise the band the
+        // user asked for. Never a made-up figure.
+        budget_level: placeBudget ?? resolvedBudget,
         prep_time: criteria.prepTime,
         distance_range: criteria.distance ?? "near",
-        rating: place.rating.toFixed(1),
+        // Empty means Google holds no rating for this place. The screen hides
+        // the rating chip rather than showing a zero or an invented score.
+        rating: place.rating === undefined ? "" : place.rating.toFixed(1),
+        searched_area: hasPosition ? undefined : typedArea,
       };
     });
 
     return shuffleOptions(transformedOptions);
   } catch (error) {
-    console.error("External API gateway tier failure:", error);
+    console.warn("Live places lookup failed:", error);
 
     return null;
   }

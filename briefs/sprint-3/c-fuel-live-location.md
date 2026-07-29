@@ -1,123 +1,68 @@
-# Fuel: swapping in live location, and what happens to the rating
+# Fuel live location: switching to Google Places (US17)
 
-Hi Tracy, this is the plan for making Fuel (Eat Out) find real places near the
-user, and I want your sign-off before anything touches your recommendation
-engine or your result card. The lecturer asked us to prioritise the live
-location feature, so it is no longer a stretch.
+This replaces the OpenStreetMap version of this brief. The places source changed after I checked the billing properly, so the plan changed with it. Nothing was built against the old version yet, so nothing is wasted.
 
-The good news: you built the Eat Out path around a mock seam, so most of this
-slots in behind that seam. The one thing that needs a real decision is the
-rating, because the free data source has none. I have landed on a hybrid that
-keeps your ratings where we have them and stays honest where we do not. Details
-below.
+Good news first: your mock already uses the real Google response shape, so most of your transform code stays exactly as it is.
 
-## What I have already built (your slice untouched so far)
+## What changes
 
-Both of these are new files. Neither changes your engine or your screen yet.
+| Thing | From | To |
+|-------|------|----|
+| Places source | OpenStreetMap Overpass | Google Places (New) |
+| Ratings | Hidden, because OpenStreetMap has none | Real Google ratings, shown as they are |
+| Price | A cuisine-based guess band | Google's own price level |
+| Location | Same either way | Device GPS, unchanged |
+| Weather (US21) | Open-Meteo | Open-Meteo, unchanged. Google Places does not return weather, it is a separate paid product |
 
-- `src/services/location/locationService.ts` - `getCurrentPosition()`. Asks the
-  phone for its location (free, no key, no card) and returns either a position or
-  a clear reason it failed (permission denied, or no fix). It never throws.
-- `src/services/recommendation/openStreetMapPlaces.ts` - `fetchNearbyPlaces()`.
-  Queries OpenStreetMap for restaurants, cafes and fast food near a point and
-  returns them nearest first, each with a name, a real distance in metres, and
-  its cuisine tag. No key, no card.
+## Why it changed
 
-Why OpenStreetMap and not Google Places: Google now needs a billing account with
-a card on file even inside the free tier, and none of us wants that for a student
-project. Full reasoning is in `decisions.md` D-009 and
-`briefs/sprint-3/location-and-weather-apis.md`. The trade-off is that
-OpenStreetMap has no ratings and no price, which is what the rating decision
-below is about.
+I had ruled out Google because it needs a card on file and none of us wanted to pay. Kriss pushed back on that in our consultation, so I went and checked the mechanics rather than assuming.
 
-## The change to your engine (the required part)
+Three things I found:
 
-Only the Eat Out branch of `getRecommendation` in
-`src/services/recommendation/recommendationEngine.ts` changes. Right now it does:
+1. Google does not accept prepaid cards, so the shared gift card idea would have failed at signup anyway.
+2. There is a $300 credit over 90 days, and that account **closes itself** rather than charging anyone. It cannot bill unless somebody manually clicks upgrade.
+3. Our real usage sits inside the free monthly allowance regardless, so the expected cost is zero.
 
-    fetchMockGooglePlaces(budget) -> transform to FoodOption (rating from the mock)
+So nobody contributes money. I have put my own card on it for the verification step only, and I am the only person with billing access, so the upgrade button cannot be clicked by accident. This is logged as decision D-010, which supersedes D-009.
 
-It would become:
+## What I have already done
 
-    getCurrentPosition() -> map the distance choice to a radius -> fetchNearbyPlaces() -> transform to FoodOption
+| Done | Detail |
+|------|--------|
+| Cloud project and billing | A separate project, so our Firebase project is untouched and stays on the free plan |
+| API key | Created and restricted to Places API (New) only, so it cannot be spent on anything else |
+| Key in the repo | `EXPO_PUBLIC_GOOGLE_PLACES_KEY` is in `.env.example`. Ask me for the value, it is not in the repo |
+| Device GPS | `locationService.getCurrentPosition()` has been on main since PR #62 and is tested. Returns a plain result object and never throws |
 
-Your Eat In branch, the Focus function, the shuffle, and the reroll cap do not
-change at all. `googlePlacesMock.ts` retires once this lands.
+**I will also write the API client** (`src/services/recommendation/googlePlaces.ts`), the same way I did the OpenStreetMap one, so you are not dealing with request headers. It will export the same `GooglePlaceResult` type your mock already uses. I will tell you when it is on main.
 
-## The rating decision, and the hybrid I recommend
+## What I need you to do
 
-OpenStreetMap gives us a name, a real distance and a cuisine, but no rating and
-no price. We will not invent a rating, because the whole app is built on showing
-honest, transparent information. So:
+Once my client is on main, in `recommendationEngine.ts`:
 
-- Your curated pool places (the Eat In dishes and the seeded Eat Out list) keep
-  their star rating exactly as they are now. Nothing changes for them.
-- A live place discovered from OpenStreetMap has no rating, so instead of a blank
-  or a fake star, its third chip shows the cuisine (for example "Thai"), and the
-  distance chip shows the real GPS distance instead of the current fixed guess.
+1. Swap `fetchMockGooglePlaces(resolvedBudget)` for the real call, passing the latitude and longitude through from the criteria you already accept.
+2. Keep your existing transform. `displayName.text`, `rating` and `priceLevel` all come back with the same names, so the mapping into `FoodOption` does not change.
+3. Retire `googlePlacesMock.ts` once it is working.
 
-Here is the result card, side by side. The only thing that differs is the third
-chip, and only for live places.
+Then on the result card in `FuelScreen.tsx`, add the text "Powered by Google". Google requires attribution when their place data is shown outside a map.
 
-    POOL place (has a rating, unchanged)
-    +--------+----------+-------------+
-    |  $$    |  3.5 km  |  4.5 star   |
-    | Budget | Distance |  Rating     |
-    +--------+----------+-------------+
-      distance is the current bucket guess
+## Three things that will bite if we do not plan for them
 
-    LIVE place (no rating exists)
-    +--------+----------+-------------+
-    |  $$    |  0.4 km  |   Thai      |
-    | Budget | Distance |  Cuisine    |
-    +--------+----------+-------------+
-      distance is the real distance from the phone's GPS
+| Trap | What to do |
+|------|-----------|
+| Not every place has a rating | Real results can come back with no `rating` field. `place.rating.toFixed(1)` throws on those. Guard it and show the distance instead |
+| Not every place has a price level | Same problem. Treat a missing price as unknown rather than assuming moderate |
+| Nearby Search cannot filter by price | Unlike your mock, the real endpoint has no price filter in the request. We ask for nearby places and filter by `priceLevel` after the response, which is what your mock already does anyway |
 
-So the third chip follows one simple rule:
+## One cost thing worth knowing
 
-| Place kind | Third chip | Distance chip |
-|------------|-----------|---------------|
-| Pool (has a rating) | Rating, with the star, as now | The bucket text as now |
-| Live (from OpenStreetMap) | Cuisine, plain, no star | The real GPS distance |
+Google charges by which **fields** you ask for, not just how many calls you make. Asking for name, rating, price and location is the cheap tier. Asking for reviews or photos moves us to a dearer one.
 
-This keeps your card exactly as is for pool results, never shows a rating we do
-not have, and turns the empty rating slot into something genuinely useful (what
-kind of food it is). It also upgrades the live distance from the hardcoded
-"1.2 km / 3.5 km / 6.0 km" to a true distance.
+I could not set a spending cap in the console because the free trial locks that setting, so the field list in the code is the actual cost control here. I will set it in my client. If we ever want extra fields on the card, raise it with me first rather than adding them straight in.
 
-Why not the alternatives, briefly: no one wants Google Places because of the card
-risk. Building our own ratings (users rate a place after eating) is a good idea
-but it is a whole feature that would be empty at the demo, so I have logged it as
-a Sprint 4 stretch, not now. And I checked the open review service Mangrove
-directly: it has one rated cafe in all of Melbourne and none in Sydney, so it
-cannot fill the gap.
+## What is not changing
 
-## What this needs from your files
+Your engine structure, the seam itself, the FuelScreen filters, the Eat In path, and the reroll and accept behaviour. The OpenStreetMap client stays in the repo as a working fallback in case we ever need to go back to a source that needs no card.
 
-- `recommendationEngine.ts`: the Eat Out branch swap above. The `FoodOption`
-  shape needs a small addition so a result can carry whether it is a live place,
-  its cuisine, and a real distance, so the card knows which chip to show. I will
-  keep every field you already have.
-- `FuelScreen.tsx`: the result card's third chip becomes conditional (rating for
-  pool, cuisine for live), and the distance chip shows the real distance for live
-  places. Everything else on the card stays.
-- `FuelScreen.test.tsx`: a small update to match the conditional chip.
-- `googlePlacesMock.ts`: retired.
-- One licence requirement: OpenStreetMap asks us to show a
-  "© OpenStreetMap contributors" credit wherever we show its results, so a small
-  line goes on the Eat Out result.
-
-## How I would like to do this
-
-This is your slice, so your call on who writes it. Two options:
-
-1. I make the change on a branch and you review the PR before it merges, so your
-   commits stay yours and mine are separate on top. This is the team rule we have
-   been using.
-2. You would rather do the card yourself and I hand you `fetchNearbyPlaces()` and
-   `getCurrentPosition()` to wire in. Happy either way.
-
-Either way, nothing lands on your engine or screen without your yes. Tell me if
-the hybrid sits right with you, or if you would rather the live card keep a
-"Rating" slot that says "Not rated" instead of showing the cuisine. I lean to the
-cuisine because it looks less like something is missing, but it is your screen.
+Tip for everyone: branch fresh off main before starting this. The last two pull requests were both cut from older branches and ended up behind, which is where most of our merge clashes have come from.

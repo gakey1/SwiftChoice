@@ -11,7 +11,7 @@
 
 import React, { useCallback, useState } from "react";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert } from "react-native";
+import { StyleSheet, Text, TextInput, View, TouchableOpacity, ScrollView, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon } from "@/components/Icon";
 import { AmbientBackground } from "@/components/AmbientBackground";
@@ -23,7 +23,8 @@ import { moduleAccent, moduleDeep } from "@/theme/themes";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useProgress } from "@/features/progress/ProgressProvider";
 import { XP_PER_DECISION } from "@/features/progress/progress";
-import { getRecommendation } from "@/services/recommendation/recommendationEngine";
+import { getRecommendation, LOCATION_REQUIRED } from "@/services/recommendation/recommendationEngine";
+import { GOOGLE_ATTRIBUTION } from "@/services/recommendation/googlePlaces";
 import type { FoodOption } from "@/services/recommendation/recommendationEngine";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
@@ -132,6 +133,10 @@ export function FuelScreen() {
   const [prepTime, setPrepTime] = useState<"short" | "medium" | "long">("medium");
   const [distance, setDistance] = useState<"near" | "mid" | "far">("mid");
   const [hasRerolled, setHasRerolled] = useState<boolean>(false);
+  // Only used when the phone will not give a position. The user types where they
+  // are rather than the app assuming a city they may be nowhere near.
+  const [manualArea, setManualArea] = useState<string>("");
+  const [needsArea, setNeedsArea] = useState<boolean>(false);
 
   // Re-loads the saved budget level every time the screen comes into focus, so
   // changing it in Settings shows here without restarting the app.
@@ -180,15 +185,26 @@ export function FuelScreen() {
   const handleGetRecommendation = async () => {
     setHasSearched(false);
 
-    const budgetKey = budget === "$" ? "low" : budget === "$$" ? "medium" : "high";
-    const selectedRange = budgetRanges[budgetKey];
-
-    const randomizedList = await getRecommendation({
+    const result = await getRecommendation({
       type: mealType,
       budget: budget,
       prepTime: prepTime,
       distance: mealType === "in" ? undefined : distance,
-    }) as unknown as FoodOption[];
+      manualArea: manualArea.trim() === "" ? undefined : manualArea.trim(),
+    });
+
+    // The phone gave no position and nothing was typed. Ask where they are
+    // instead of guessing, then stop here until they answer.
+    if (result === LOCATION_REQUIRED) {
+      setNeedsArea(true);
+      setMatchList([]);
+      setRecommendation(null);
+      setHasSearched(false);
+      return;
+    }
+
+    setNeedsArea(false);
+    const randomizedList = result;
 
     if (randomizedList && randomizedList.length > 0) {
       setMatchList(randomizedList);
@@ -278,14 +294,35 @@ export function FuelScreen() {
                   <Text style={[styles.statLabel, { color: colors.ink2 }]}>Distance</Text>
                 </View>
 
-                <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
-                  <View style={styles.ratingContainer}>
-                    <Text style={[styles.statValue, { color: colors.ink }]}>{recommendation.rating}</Text>
-                    <Icon name="star" size={13} color={primaryColor} />
+                {/* Google holds no rating for some real places. Show nothing
+                    rather than a zero or an invented score. */}
+                {recommendation.rating !== "" && (
+                  <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
+                    <View style={styles.ratingContainer}>
+                      <Text style={[styles.statValue, { color: colors.ink }]}>{recommendation.rating}</Text>
+                      <Icon name="star" size={13} color={primaryColor} />
+                    </View>
+                    <Text style={[styles.statLabel, { color: colors.ink2 }]}>Rating</Text>
                   </View>
-                  <Text style={[styles.statLabel, { color: colors.ink2 }]}>Rating</Text>
-                </View>
+                )}
               </View>
+
+              {/* Google requires visible credit wherever their place data is
+                  shown outside a map. Eat Out results come from them; Eat In
+                  comes from our own pool, so it does not apply there. */}
+              {/* Location was unavailable, so this searched a default city
+                  centre rather than where the user actually is. Say so plainly:
+                  a distance shown next to places in another state would be a
+                  wrong answer presented confidently. */}
+              {recommendation.searched_area !== undefined && (
+                <Text style={[styles.locationNotice, { color: colors.ink2 }]}>
+                  Places in {recommendation.searched_area}, not based on your location.
+                </Text>
+              )}
+
+              {recommendation.type === "out" && (
+                <Text style={[styles.attribution, { color: colors.ink2 }]}>{GOOGLE_ATTRIBUTION}</Text>
+              )}
             </GlassCard>
 
             <View style={styles.actionRow}>
@@ -460,7 +497,39 @@ export function FuelScreen() {
           <Text style={styles.actionButtonText}>Decide for Me</Text>
         </TouchableOpacity>
 
-        {recommendation === null && hasSearched && (
+        {/* The phone would not give a position, so ask where they are rather
+            than assuming a city. Only appears when location actually fails, so
+            seeing it often means the location permission needs looking at. */}
+        {needsArea && (
+          <View style={styles.noResultContainer}>
+            <Text style={[styles.noResultText, { color: colors.ink }]}>
+              We could not get your location. Type where you are and we will look there.
+            </Text>
+            <TextInput
+              value={manualArea}
+              onChangeText={setManualArea}
+              placeholder="Suburb or city, for example Southport QLD"
+              placeholderTextColor={colors.ink2}
+              style={[
+                styles.areaInput,
+                { color: colors.ink, borderColor: colors.cardLine, backgroundColor: colors.chip },
+              ]}
+              autoCorrect={false}
+              returnKeyType="search"
+              onSubmitEditing={handleGetRecommendation}
+            />
+            <TouchableOpacity
+              style={[styles.areaButton, { backgroundColor: primaryColor }]}
+              onPress={handleGetRecommendation}
+              activeOpacity={0.8}
+              disabled={manualArea.trim() === ""}
+            >
+              <Text style={[styles.areaButtonText, { color: ON_ACCENT }]}>Search this area</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {recommendation === null && hasSearched && !needsArea && (
           <View style={styles.noResultContainer}>
             <Text style={[styles.noResultText, { color: colors.ink2 }]}>
               No exact match found in the pool. Try changing your filters!
@@ -546,6 +615,11 @@ const styles = StyleSheet.create({
   statChip: { flex: 1, alignItems: "center", gap: 3, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 6 },
   statValue: { fontFamily: T.font.monoMedium, fontSize: T.fontSize.subtitle },
   ratingContainer: { flexDirection: "row", alignItems: "center", gap: 4 },
+  attribution: { fontSize: 11, marginTop: 10, textAlign: "center" },
+  locationNotice: { fontSize: 12, marginTop: 12, textAlign: "center", lineHeight: 17 },
+  areaInput: { width: "100%", borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, marginTop: 14, fontSize: 15 },
+  areaButton: { marginTop: 12, paddingVertical: 12, paddingHorizontal: 22, borderRadius: 12, alignSelf: "stretch", alignItems: "center" },
+  areaButtonText: { fontSize: 15, fontWeight: "700" },
   statLabel: { fontFamily: T.font.regular, fontSize: T.fontSize.caption },
   actionRow: { flexDirection: "row", gap: T.spacing[4], width: "100%" },
   acceptBtn: { flex: 1, flexDirection: "row", gap: 8, borderRadius: 16, paddingVertical: 16, alignItems: "center", justifyContent: "center", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 16, elevation: 4 },

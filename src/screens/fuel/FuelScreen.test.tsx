@@ -32,6 +32,23 @@ jest.mock("@/features/history/historyStorage", () => ({
   logDecision: jest.fn(),
 }));
 
+// Stand in for the live Google Places call and the device GPS, so the Eat Out
+// path returns a predictable result instead of failing on a missing key. Without
+// this the engine falls into its catch, the screen shows the empty state, and
+// the result-card assertions below pass without ever seeing a result.
+jest.mock("@/services/recommendation/googlePlaces", () => ({
+  GOOGLE_ATTRIBUTION: "Powered by Google",
+  fetchNearbyPlaces: jest.fn(async () => [
+    { displayName: { text: "Test Cafe" }, rating: 4.4, priceLevel: "PRICE_LEVEL_MODERATE" },
+  ]),
+  fetchPlacesByArea: jest.fn(async () => [
+    { displayName: { text: "Southport Diner" }, rating: 4.1, priceLevel: "PRICE_LEVEL_MODERATE" },
+  ]),
+}));
+jest.mock("@/services/location/locationService", () => ({
+  getCurrentPosition: jest.fn(async () => ({ ok: true, latitude: -37.8, longitude: 144.9 })),
+}));
+
 // Mock the settings layer for the same reason: the screen reads the saved budget
 // through it, which would otherwise pull expo-sqlite in through db.ts.
 jest.mock("@/services/localdb/preferencesStorage", () => ({
@@ -100,36 +117,84 @@ describe("FuelScreen", () => {
     expect(queryByText("$25 - $50")).toBeNull();
   });
 
-  it("triggers the recommendation engine when clicking the main action button", async () => {
+  it("shows a live place from Google when the main action button is pressed", async () => {
     const { getByText, findByText } = await renderFuelScreen();
 
-    const actionButton = getByText("Decide for Me");
+    fireEvent.press(getByText("Decide for Me"));
 
-    //Simulate user tapping the button to trigger the choice engine
-    fireEvent.press(actionButton);
+    // The real place name, not just "a result or the empty state". Asserting on
+    // the name is what proves the live path actually ran.
+    expect(await findByText("Test Cafe", {}, { timeout: 3000 })).toBeTruthy();
+  });
 
-    //The engine is async now (Eat Out routes through the mock Google Places
-    //call), so wait for either the result card or the empty message.
-    const hasResult = await findByText(
-      /Your Fuel recommendation|No exact match found/i,
-      {},
-      { timeout: 3000 }
-    );
-    expect(hasResult).toBeTruthy();
+  it("credits Google on an Eat Out result, which their terms require", async () => {
+    const { getByText, findByText } = await renderFuelScreen();
+
+    fireEvent.press(getByText("Decide for Me"));
+    await findByText("Test Cafe", {}, { timeout: 3000 });
+
+    expect(getByText("Powered by Google")).toBeTruthy();
+  });
+
+  it("asks where the user is instead of guessing a city when location fails", async () => {
+    // The team and the markers are spread across three states, so assuming a
+    // city would show somebody in Queensland a Melbourne restaurant and call it
+    // nearby. It has to ask.
+    const { getCurrentPosition } = jest.requireMock("@/services/location/locationService");
+    (getCurrentPosition as jest.Mock).mockResolvedValue({ ok: false, reason: "denied" });
+
+    const { getByText, findByText, queryByText } = await renderFuelScreen();
+    fireEvent.press(getByText("Decide for Me"));
+
+    expect(await findByText(/could not get your location/i)).toBeTruthy();
+    // Crucially, no recommendation at all rather than one from the wrong city.
+    expect(queryByText("Test Cafe")).toBeNull();
+
+    (getCurrentPosition as jest.Mock).mockResolvedValue({
+      ok: true,
+      latitude: -37.8,
+      longitude: 144.9,
+    });
+  });
+
+  it("searches the typed area and says the result is not based on location", async () => {
+    const { getCurrentPosition } = jest.requireMock("@/services/location/locationService");
+    (getCurrentPosition as jest.Mock).mockResolvedValue({ ok: false, reason: "denied" });
+
+    const { getByText, getByPlaceholderText, findByText } = await renderFuelScreen();
+    fireEvent.press(getByText("Decide for Me"));
+    await findByText(/could not get your location/i);
+
+    fireEvent.changeText(getByPlaceholderText(/Suburb or city/i), "Southport QLD");
+    fireEvent.press(getByText("Search this area"));
+
+    expect(await findByText("Southport Diner", {}, { timeout: 3000 })).toBeTruthy();
+    expect(getByText(/Places in Southport QLD, not based on your location/i)).toBeTruthy();
+
+    (getCurrentPosition as jest.Mock).mockResolvedValue({
+      ok: true,
+      latitude: -37.8,
+      longitude: 144.9,
+    });
+  });
+
+  it("shows no such notice when the phone did give a position", async () => {
+    const { getByText, findByText, queryByText } = await renderFuelScreen();
+
+    fireEvent.press(getByText("Decide for Me"));
+    await findByText("Test Cafe", {}, { timeout: 3000 });
+
+    expect(queryByText(/not based on your location/i)).toBeNull();
   });
 
   it("awards the advertised XP when a recommendation is accepted", async () => {
     mockAwardXp.mockClear();
-    const { getByText, findByText, queryByText } = await renderFuelScreen();
+    const { getByText, findByText } = await renderFuelScreen();
 
     fireEvent.press(getByText("Decide for Me"));
-    await findByText(/Your Fuel recommendation|No exact match found/i, {}, { timeout: 3000 });
+    await findByText("Test Cafe", {}, { timeout: 3000 });
 
-    // The empty state has no Accept button, so only assert when a result landed.
-    const accept = queryByText("Accept");
-    if (!accept) return;
-
-    fireEvent.press(accept);
+    fireEvent.press(getByText("Accept"));
 
     // The History row and the Home quest pill both advertise this figure, so
     // accepting has to actually grant it or the label is lying to the user.
