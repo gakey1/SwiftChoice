@@ -4,7 +4,8 @@
 // only, so the checks focus on the task behaviour it wraps.
 
 import React from "react";
-import { render, fireEvent } from "@testing-library/react-native";
+import { render, fireEvent, act } from "@testing-library/react-native";
+import { Alert } from "react-native";
 import { PriorityScreen } from "./PriorityScreen";
 
 // Stub the native icon set so this test does not pull in expo-font / expo-asset.
@@ -66,9 +67,43 @@ describe("PriorityScreen", () => {
 
     expect(getByText("Unsorted")).toBeTruthy();
 
+    // Ranking now asks the user to confirm before it locks the order in. The
+    // confirmation is a native alert, which renders nothing this test can query,
+    // so we read the buttons the screen handed to Alert and run the confirming
+    // one. That is the same code path as tapping "Rank them" on a device.
+    const alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+
     fireEvent.press(getByText("Rank my tasks"));
+    expect(alertSpy).toHaveBeenCalled();
+
+    const buttons = alertSpy.mock.calls[0]?.[2];
+    const confirm = buttons?.find((button) => button.text === "Rank them");
+    act(() => {
+      confirm?.onPress?.();
+    });
 
     expect(getByText("Ranked by urgency + importance")).toBeTruthy();
+
+    alertSpy.mockRestore();
+  });
+
+  it("leaves tasks unsorted if the rank confirmation is dismissed", () => {
+    const alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    const { getByPlaceholderText, getByLabelText, getByText } = render(<PriorityScreen />);
+
+    const input = getByPlaceholderText("Add a new task");
+    fireEvent.changeText(input, "Task A");
+    fireEvent.press(getByLabelText("Add task"));
+    fireEvent.changeText(input, "Task B");
+    fireEvent.press(getByLabelText("Add task"));
+
+    fireEvent.press(getByText("Rank my tasks"));
+
+    // Backing out of the confirmation must not lock the order in, because
+    // ranking is one way: once locked, tasks can no longer be edited or removed.
+    expect(getByText("Unsorted")).toBeTruthy();
+
+    alertSpy.mockRestore();
   });
 
   it("completes a task and removes it from the list", () => {

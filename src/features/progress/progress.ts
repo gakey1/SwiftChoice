@@ -14,6 +14,11 @@ export const LEVEL_TITLES = [
   "Legend",
 ] as const;
 
+// XP for accepting a recommendation in Fuel or Focus. Lives here rather than in
+// a screen because three places depend on it agreeing: the History row pill, the
+// Home daily-quest pill, and the Accept handlers that actually award it.
+export const XP_PER_DECISION = 50;
+
 // XP needed to clear a given level. Grows a little each level.
 export function capFor(level: number): number {
   return 400 + (level - 1) * 120;

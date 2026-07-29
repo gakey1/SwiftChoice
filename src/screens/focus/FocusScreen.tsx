@@ -27,6 +27,7 @@ import {
 } from "@/services/recommendation/recommendationEngine";
 import { logDecision } from "@/features/history/historyStorage";
 import { useProgress } from "@/features/progress/ProgressProvider";
+import { XP_PER_DECISION } from "@/features/progress/progress";
 import { moduleAccent, moduleDeep } from "@/theme/themes";
 import { useTheme } from "@/theme/ThemeProvider";
 import { T } from "@/theme/tokens";
@@ -104,7 +105,7 @@ function FilterOptionGroup({
 
 export function FocusScreen() {
   const { colors } = useTheme();
-  const { progress } = useProgress();
+  const { progress, awardXp } = useProgress();
   const accent = moduleAccent(colors, "focus");
   const [energyLevel, setEnergyLevel] = useState<EnergyLevel>("medium");
   const [vibe, setVibe] = useState<FocusVibe>("background");
@@ -236,6 +237,11 @@ export function FocusScreen() {
                   appliedFilters: { energyLevel, vibe },
                   rerolled: hasRerolled,
                 });
+
+                // Award the XP the History row and the Home quest pill both
+                // advertise, so the label and the running total agree.
+                awardXp(XP_PER_DECISION);
+
                 setRecommendation(null);
                 navigation.goBack();
               }}

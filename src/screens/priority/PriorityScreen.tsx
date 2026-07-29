@@ -382,7 +382,7 @@ export function PriorityScreen() {
               accessibilityLabel={editingTaskId ? "Save task" : "Add task"}
             >
               {/* If editing, show 'save' icon; if not, show 'plus' icon */}
-              <Icon name={editingTaskId ? "save" : "plus"} size={22} color="#FFFFFF" />
+              <Icon name={editingTaskId ? "save" : "plus"} size={22} color={colors.onAccent} />
             </TouchableOpacity>
           </View>
           {/* Cancel Edit Button */}
@@ -459,7 +459,7 @@ export function PriorityScreen() {
                     ]}
                   >
                     {isTop ? (
-                      <Icon name="award" size={18} color="#FFFFFF" />
+                      <Icon name="award" size={18} color={colors.onAccent} />
                     ) : (
                       <Text style={[styles.rankNum, { color: colors.ink2 }]}>{index + 1}</Text>
                     )}
@@ -489,7 +489,7 @@ export function PriorityScreen() {
                       opacity: item.status === 'InProgress' ? 0.7 : 1,
                     }}
                   >
-                    <Text style={{ color: "#FFFFFF", fontWeight: 'bold' }}>
+                    <Text style={{ color: colors.onAccent, fontWeight: 'bold' }}>
                       {item.status === 'InProgress' ? "In Progress" : "Start Task"}
                     </Text>
                   </TouchableOpacity>
@@ -551,8 +551,8 @@ export function PriorityScreen() {
           disabled={!canRank}
           activeOpacity={0.85}
         >
-          <Icon name="bar-chart-2" size={20} color="#FFFFFF" />
-          <Text style={styles.rankButtonText}>Rank my tasks</Text>
+          <Icon name="bar-chart-2" size={20} color={colors.onAccent} />
+          <Text style={[styles.rankButtonText, { color: colors.onAccent }]}>Rank my tasks</Text>
         </TouchableOpacity>
       </View>
 
@@ -572,7 +572,7 @@ export function PriorityScreen() {
             },
           ]}
         >
-          <Text style={styles.toastText}>{toastText}</Text>
+          <Text style={[styles.toastText, { color: colors.onAccent }]}>{toastText}</Text>
         </Animated.View>
       )}
     </SafeAreaView>

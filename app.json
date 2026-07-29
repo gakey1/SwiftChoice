@@ -25,7 +25,13 @@
     "plugins": [
       "expo-font",
       "expo-secure-store",
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "SwiftChoice uses your location to find eating spots near you."
+        }
+      ]
     ]
   }
 }
