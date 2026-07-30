@@ -69,8 +69,9 @@ function buildQuery(latitude: number, longitude: number, radiusMeters: number): 
 }
 
 // Great-circle distance between two lat/lng points, in metres (haversine). Used
-// to sort results by how near they are and to show a real distance.
-function distanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+// to sort results by how near they are and to show a real distance. Exported so
+// the Google path measures distance the same way rather than duplicating it.
+export function distanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6_371_000; // Earth radius in metres
   const toRad = (deg: number) => (deg * Math.PI) / 180;
   const dLat = toRad(lat2 - lat1);
