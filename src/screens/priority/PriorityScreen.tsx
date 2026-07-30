@@ -228,8 +228,24 @@ export function PriorityScreen() {
     celebrate();
   };
 
+  // Deleting a task cannot be undone and the delete button sits right next to
+  // Complete, so a mis-tap loses work. Confirm first, and name the task in the
+  // question so it is obvious which one is about to go.
   const onDelete = (taskId: number) => {
-    setTaskList(taskList.filter((t) => t.taskId !== taskId));
+    const task = taskList.find((t) => t.taskId === taskId);
+
+    Alert.alert(
+      "Delete this task?",
+      task ? `"${task.taskName}" will be removed. This cannot be undone.` : "This cannot be undone.",
+      [
+        { text: "Keep it", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => setTaskList(taskList.filter((t) => t.taskId !== taskId)),
+        },
+      ]
+    );
   };
 
   const onRank = () => {
@@ -520,6 +536,7 @@ export function PriorityScreen() {
                   <TouchableOpacity
                     onPress={() => onDelete(item.taskId)}
                     disabled={isRanked}
+                    accessibilityLabel="Delete task"
                     style={[
                       styles.taskActionBtn,
                       { backgroundColor: isRanked ? colors.ink3 : colors.chip, borderColor: colors.cardLine, borderWidth: 1 },
