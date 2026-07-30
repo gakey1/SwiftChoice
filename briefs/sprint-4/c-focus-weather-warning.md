@@ -1,6 +1,6 @@
 # Focus now warns about rain on outdoor spots (US21)
 
-The Arcade prototype shows a weather notice on the Focus result card when the spot is outdoors. That is now built and working from a real forecast rather than a mock.
+Hi Tracy. The Arcade prototype shows a weather notice on the Focus result card when the spot is outdoors, and that is now built and working from a real forecast rather than a mock. This is the record of what I changed in your screen and what it means for the work you have left there.
 
 ## What it does
 
@@ -41,10 +41,26 @@ A weather warning nobody can trust is worse than none, so the notice only appear
 
 The threshold is 50 percent. Lower would fire on most cloudy days and people would learn to ignore it.
 
+## What this means for your part
+
+Short version: your Focus screen still works exactly as it did, and nothing you have written changed behaviour.
+
+| Your code | Did I change it | What to know |
+|-----------|-----------------|--------------|
+| The energy and vibe filters | No | Untouched |
+| `getFocusRecommendation` and the matching logic | No | Untouched. I only added a field to the option type |
+| Reroll, accept, and the history wiring | No | Untouched |
+| The result card layout | Yes, one block added | The notice renders above the spot name, inside the existing `GlassCard`, only when it applies |
+| `FocusScreen.test.tsx` | Yes, 5 tests added | Your two existing tests are unchanged and still pass |
+
+The notice uses Focus green from the active theme, so the module-colour rule still holds and nothing needed a new token.
+
+**The one thing that affects your remaining work:** if you restyle or rebuild the Focus result card, keep the notice above the spot name and inside the card, as in the prototype. It is the first thing someone should read, because it may change their answer before they look at the spot itself.
+
 ## Two things you should know about the pool
 
 1. **`FocusOption` has a new `outdoor` field.** Bikash's real pool will need it when it replaces the temporary list, otherwise no spot can ever be outdoors and the feature quietly does nothing.
-2. **I marked two spots as outdoor**: "Campus Common Area", and a new "Park Bench, Fresh Air" so there is an outdoor option at low energy too. If either reads wrong to you, change it. They are placeholders in a temporary pool.
+2. **I marked two spots as outdoor**: "Campus Common Area", and a new "Park Bench, Fresh Air" so there is an outdoor option at low energy too. If either reads wrong to you, change it. They are placeholders in a temporary pool. Bikash has the matching database change, written up in `b-focus-pool-outdoor-field.md`.
 
 ## A testing note worth passing on
 
