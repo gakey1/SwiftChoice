@@ -105,6 +105,15 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
             </Button>
           </View>
 
+          <Text
+            style={[styles.resetLink, { color: colors.ink2 }]}
+            accessibilityRole="button"
+            onPress={() => navigation.navigate("ForgotPassword")}
+            testID="login-forgot-password"
+          >
+            Forgot password?
+          </Text>
+
           <View style={styles.footer}>
             <Text style={[styles.footerText, { color: colors.ink2 }]}>New here? </Text>
             <Text
@@ -161,6 +170,12 @@ const styles = StyleSheet.create({
     marginBottom: T.spacing[4],
   },
   action: { marginTop: T.spacing[2] },
+  resetLink: {
+    fontFamily: T.font.semibold,
+    fontSize: T.fontSize.body,
+    textAlign: "center",
+    marginTop: T.spacing[4],
+  },
   footer: { flexDirection: "row", justifyContent: "center", marginTop: T.spacing[5] },
   footerText: { fontFamily: T.font.regular, fontSize: T.fontSize.body },
   footerLink: { fontFamily: T.font.semibold, fontSize: T.fontSize.body },

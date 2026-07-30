@@ -9,6 +9,7 @@ import { XpHud } from "@/components/XpHud";
 import { useAuth } from "@/hooks/useAuth";
 import { AppTabs } from "@/navigation/AppTabs";
 import type { AppStackParamList, AuthStackParamList } from "@/navigation/types";
+import { ForgotPasswordScreen } from "@/screens/auth/ForgotPasswordScreen";
 import { LoginScreen } from "@/screens/auth/LoginScreen";
 import { RegisterScreen } from "@/screens/auth/RegisterScreen";
 import { VerifyEmailScreen } from "@/screens/auth/VerifyEmailScreen";
@@ -101,6 +102,7 @@ export function RootNavigator() {
     <AuthStack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
       <AuthStack.Screen name="Login" component={LoginScreen} />
       <AuthStack.Screen name="Register" component={RegisterScreen} />
+      <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
     </AuthStack.Navigator>
   );
 }

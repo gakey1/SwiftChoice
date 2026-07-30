@@ -10,6 +10,7 @@
 import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
 } from "firebase/auth";
@@ -63,4 +64,16 @@ export async function loginWithEmail(email: string, password: string): Promise<s
 // sends them back to the login screen on its own.
 export async function logout(): Promise<void> {
   await signOut(auth);
+}
+
+// Emails a password reset link for someone who cannot get in. Nobody is signed
+// in when this runs, so the email address is the only thing identifying them.
+//
+// This throws like the rest of this file, but the screen calling it deliberately
+// does not show most of what comes back. Whether an account exists for this
+// address is exactly what the login form already refuses to reveal, and a reset
+// form that said "no account with that email" would hand over the same answer by
+// another door. See passwordResetErrorMessage in features/auth/errorMessages.
+export async function sendPasswordReset(email: string): Promise<void> {
+  await sendPasswordResetEmail(auth, email.trim());
 }

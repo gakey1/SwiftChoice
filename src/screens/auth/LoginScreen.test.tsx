@@ -66,4 +66,10 @@ describe("LoginScreen", () => {
     fireEvent.press(screen.getByText("Create account"));
     expect(navigate).toHaveBeenCalledWith("Register");
   });
+
+  it("navigates to ForgotPassword from the reset link", () => {
+    const { navigate } = renderScreen();
+    fireEvent.press(screen.getByTestId("login-forgot-password"));
+    expect(navigate).toHaveBeenCalledWith("ForgotPassword");
+  });
 });
