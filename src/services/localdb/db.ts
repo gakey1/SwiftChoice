@@ -72,6 +72,9 @@ async function initialiseDatabase(): Promise<SQLite.SQLiteDatabase> {
 
   await ensureColumn(db, "focus_pool", "energy", "TEXT NOT NULL DEFAULT 'medium'");
   await ensureColumn(db, "focus_pool", "vibe", "TEXT NOT NULL DEFAULT 'background'");
+  // Whether the spot is outside. SQLite has no boolean, so 0 is no and 1 is yes.
+  // Used by the Focus rain warning, which only applies to outdoor spots.
+  await ensureColumn(db, "focus_pool", "outdoor", "INTEGER NOT NULL DEFAULT 0");
 
   return db;
 }

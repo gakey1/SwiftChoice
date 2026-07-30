@@ -11,28 +11,45 @@ export interface FocusPoolItem {
   name: string;
   energy: FocusEnergy;
   vibe: FocusVibe;
+  // Whether the spot is outside. Only outdoor spots get the rain warning on the
+  // Focus result card, since a forecast is irrelevant to a library desk.
+  outdoor: boolean;
+}
+
+// The shape SQLite actually returns. It has no boolean type, so outdoor comes
+// back as 0 or 1 and is converted before the rest of the app sees it.
+interface FocusPoolRow {
+  id: number;
+  name: string;
+  energy: FocusEnergy;
+  vibe: FocusVibe;
+  outdoor: number;
 }
 
 // Returns all saved Focus pool items ordered alphabetically.
 export async function getFocusPool(): Promise<FocusPoolItem[]> {
   const db = await getDb();
 
-  return await db.getAllAsync<FocusPoolItem>(
+  const rows = await db.getAllAsync<FocusPoolRow>(
     `SELECT
       id,
       name,
       energy,
-      vibe
+      vibe,
+      outdoor
     FROM focus_pool
     ORDER BY name`
   );
+
+  return rows.map((row) => ({ ...row, outdoor: row.outdoor === 1 }));
 }
 
 // Adds a new study/work location to the Focus pool.
 export async function addFocusItem(
   name: string,
   energy: FocusEnergy = "medium",
-  vibe: FocusVibe = "background"
+  vibe: FocusVibe = "background",
+  outdoor = false
 ): Promise<void> {
   const trimmedName = name.trim();
 
@@ -43,8 +60,8 @@ export async function addFocusItem(
   const db = await getDb();
 
   await db.runAsync(
-    "INSERT INTO focus_pool (name, energy, vibe) VALUES (?, ?, ?)",
-    [trimmedName, energy, vibe]
+    "INSERT INTO focus_pool (name, energy, vibe, outdoor) VALUES (?, ?, ?, ?)",
+    [trimmedName, energy, vibe, outdoor ? 1 : 0]
   );
 }
 
@@ -53,7 +70,8 @@ export async function updateFocusItem(
   id: number,
   name: string,
   energy: FocusEnergy = "medium",
-  vibe: FocusVibe = "background"
+  vibe: FocusVibe = "background",
+  outdoor = false
 ): Promise<void> {
   const trimmedName = name.trim();
 
@@ -64,8 +82,8 @@ export async function updateFocusItem(
   const db = await getDb();
 
   await db.runAsync(
-    "UPDATE focus_pool SET name = ?, energy = ?, vibe = ? WHERE id = ?",
-    [trimmedName, energy, vibe, id]
+    "UPDATE focus_pool SET name = ?, energy = ?, vibe = ?, outdoor = ? WHERE id = ?",
+    [trimmedName, energy, vibe, outdoor ? 1 : 0, id]
   );
 }
 

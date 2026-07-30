@@ -19,7 +19,7 @@ jest.mock("@/services/localdb/db", () => ({
 
 const mockGetDb = getDb as jest.Mock;
 
-let rows: { id: number; name: string; energy: string; vibe: string }[] = [];
+let rows: { id: number; name: string; energy: string; vibe: string; outdoor: number }[] = [];
 let nextId = 1;
 
 // A stand-in for the real database: it keeps the pool items in an array and
@@ -36,6 +36,8 @@ const mockDb = {
         name: params?.[0] as string,
         energy: params?.[1] as string,
         vibe: params?.[2] as string,
+        // SQLite stores this as 0 or 1, not a boolean, so the fake does too.
+        outdoor: params?.[3] as number,
       });
       nextId += 1;
       return;
@@ -45,10 +47,11 @@ const mockDb = {
       const name = params?.[0] as string;
       const energy = params?.[1] as string;
       const vibe = params?.[2] as string;
-      const id = params?.[3] as number;
+      const outdoor = params?.[3] as number;
+      const id = params?.[4] as number;
 
       rows = rows.map((row) =>
-        row.id === id ? { ...row, name, energy, vibe } : row
+        row.id === id ? { ...row, name, energy, vibe, outdoor } : row
       );
       return;
     }
@@ -78,8 +81,8 @@ describe("focusPoolStorage", () => {
     await addFocusItem("Cafe", "medium", "background");
 
     await expect(getFocusPool()).resolves.toEqual([
-      { id: 2, name: "Cafe", energy: "medium", vibe: "background" },
-      { id: 1, name: "Library", energy: "low", vibe: "silent" },
+      { id: 2, name: "Cafe", energy: "medium", vibe: "background", outdoor: false },
+      { id: 1, name: "Library", energy: "low", vibe: "silent", outdoor: false },
     ]);
   });
 
@@ -87,7 +90,7 @@ describe("focusPoolStorage", () => {
     await addFocusItem("Library");
 
     await expect(getFocusPool()).resolves.toEqual([
-      { id: 1, name: "Library", energy: "medium", vibe: "background" },
+      { id: 1, name: "Library", energy: "medium", vibe: "background", outdoor: false },
     ]);
   });
 
@@ -95,7 +98,7 @@ describe("focusPoolStorage", () => {
     await addFocusItem("Library", "low", "silent");
 
     await expect(getFocusRecommendationPool()).resolves.toEqual([
-      { id: 1, name: "Library", energy: "low", vibe: "silent" },
+      { id: 1, name: "Library", energy: "low", vibe: "silent", outdoor: false },
     ]);
   });
 
@@ -111,7 +114,7 @@ describe("focusPoolStorage", () => {
     await addFocusItem("  Library  ", "low", "silent");
 
     await expect(getFocusPool()).resolves.toEqual([
-      { id: 1, name: "Library", energy: "low", vibe: "silent" },
+      { id: 1, name: "Library", energy: "low", vibe: "silent", outdoor: false },
     ]);
   });
 
@@ -134,6 +137,7 @@ describe("focusPoolStorage", () => {
         name: "Quiet Library",
         energy: "high",
         vibe: "collaborative",
+        outdoor: false,
       },
     ]);
   });
@@ -145,7 +149,7 @@ describe("focusPoolStorage", () => {
     await deleteFocusItem(1);
 
     await expect(getFocusPool()).resolves.toEqual([
-      { id: 2, name: "Cafe", energy: "medium", vibe: "background" },
+      { id: 2, name: "Cafe", energy: "medium", vibe: "background", outdoor: false },
     ]);
   });
 
@@ -156,5 +160,31 @@ describe("focusPoolStorage", () => {
     await clearFocusPool();
 
     await expect(getFocusPool()).resolves.toEqual([]);
+  });
+
+  it("stores and reads back an outdoor spot", async () => {
+    // Outdoor is what the Focus rain warning keys off, so it has to survive the
+    // round trip through the database rather than being dropped on the way.
+    await addFocusItem("Park Bench", "low", "silent", true);
+
+    await expect(getFocusPool()).resolves.toEqual([
+      { id: 1, name: "Park Bench", energy: "low", vibe: "silent", outdoor: true },
+    ]);
+  });
+
+  it("treats a spot as indoors unless it is said to be outdoors", async () => {
+    await addFocusItem("Library");
+
+    const [item] = await getFocusPool();
+    expect(item?.outdoor).toBe(false);
+  });
+
+  it("can turn an outdoor spot back into an indoor one", async () => {
+    await addFocusItem("Courtyard", "medium", "background", true);
+    await updateFocusItem(1, "Courtyard Cafe", "medium", "background", false);
+
+    await expect(getFocusPool()).resolves.toEqual([
+      { id: 1, name: "Courtyard Cafe", energy: "medium", vibe: "background", outdoor: false },
+    ]);
   });
 });
