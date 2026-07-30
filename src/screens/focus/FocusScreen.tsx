@@ -9,7 +9,7 @@
 // cap, and the accept-to-history wiring are exactly as written; only the look
 // changed.
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -21,6 +21,8 @@ import { ModuleGlyph } from "@/components/ModuleGlyph";
 import { Icon } from "@/components/Icon";
 import { HUD_CLEARANCE } from "@/components/XpHud";
 import type { AppStackParamList } from "@/navigation/types";
+import { getCurrentPosition } from "@/services/location/locationService";
+import { getRainForecast } from "@/services/weather/weatherService";
 import {
   getFocusRecommendation,
   type FocusOption,
@@ -114,6 +116,10 @@ export function FocusScreen() {
   const [recommendation, setRecommendation] = useState<FocusOption | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
   const [matchList, setMatchList] = useState<FocusOption[]>([]);
+  // Only ever true when the spot is outside and rain is actually likely. Any
+  // failure along the way, no location or no forecast, leaves it false so the
+  // card shows nothing rather than a warning nobody can trust.
+  const [rainLikely, setRainLikely] = useState(false);
 
   const primaryColor = accent.color;
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
@@ -142,6 +148,42 @@ export function FocusScreen() {
     setHasRerolled(false);
     setHasSearched(true);
   }
+
+  // Checks the forecast only when the spot on screen is outdoors. A library desk
+  // does not care about rain, and asking anyway would be a wasted call.
+  useEffect(() => {
+    let active = true;
+
+    async function checkRain() {
+      if (recommendation?.outdoor !== true) {
+        setRainLikely(false);
+        return;
+      }
+
+      const position = await getCurrentPosition();
+      if (!position.ok) {
+        // Without a position there is nothing to forecast for. Show no warning
+        // rather than guessing at a city, same rule as the Fuel search.
+        if (active) setRainLikely(false);
+        return;
+      }
+
+      const forecast = await getRainForecast({
+        latitude: position.latitude,
+        longitude: position.longitude,
+      });
+
+      if (active) {
+        setRainLikely(forecast.ok && forecast.rainLikely);
+      }
+    }
+
+    checkRain();
+
+    return () => {
+      active = false;
+    };
+  }, [recommendation]);
 
   // Runs when Reroll is pressed. Shows the next spot from the list, but only
   // once per search.
@@ -186,6 +228,23 @@ export function FocusScreen() {
             <View style={[styles.avatarBadge, { backgroundColor: accent.tint }]}>
               <ModuleGlyph moduleKey="focus" size={36} color={primaryColor} />
             </View>
+
+            {/* Rain warning for outdoor spots, per the Arcade prototype. Focus
+                green is correct here: this sits on a Focus screen, and the
+                module-colour rule keeps green off the other modules. */}
+            {rainLikely && (
+              <View
+                style={[
+                  styles.weatherNotice,
+                  { backgroundColor: accent.tint, borderColor: primaryColor },
+                ]}
+              >
+                <Icon name="cloud-rain" size={18} color={primaryColor} />
+                <Text style={[styles.weatherNoticeText, { color: colors.ink2 }]}>
+                  Rain likely in the next hour. Consider an indoor spot, or take an umbrella.
+                </Text>
+              </View>
+            )}
 
             <Text style={[styles.itemName, { color: colors.ink }]}>{recommendation.spot_name}</Text>
             <Text style={[styles.cuisineType, { color: colors.ink2 }]}>
@@ -490,6 +549,17 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   acceptBtnText: { color: ON_ACCENT, fontFamily: T.font.bold, fontSize: T.fontSize.subtitle },
+  weatherNotice: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    paddingVertical: 11,
+    paddingHorizontal: 13,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderRadius: 12,
+  },
+  weatherNoticeText: { flex: 1, fontSize: 12.5, lineHeight: 17.5 },
   rerollBtn: {
     flex: 1,
     flexDirection: "row",

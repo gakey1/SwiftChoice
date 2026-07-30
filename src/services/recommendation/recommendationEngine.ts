@@ -219,16 +219,21 @@ export interface FocusOption {
   energy_level: "low" | "medium" | "high";
   vibe: "silent" | "background" | "collaborative";
   rating: string;
+  // Whether the spot is outside. Only outdoor spots get the rain warning, since
+  // the forecast is irrelevant to a library desk. The real pool will need this
+  // field too when it replaces the list below.
+  outdoor?: boolean | undefined;
 }
 
 // Temporary Focus pool used until the real pool is connected.
 export const FOCUS_POOL: FocusOption[] = [
   { focus_id: "focus_1", user_id: "user_123", spot_name: "Quiet Library Desk", energy_level: "low", vibe: "silent", rating: "4.8" },
   { focus_id: "focus_2", user_id: "user_123", spot_name: "Home Study Corner", energy_level: "low", vibe: "background", rating: "4.2" },
+  { focus_id: "focus_2_b", user_id: "user_123", spot_name: "Park Bench, Fresh Air", energy_level: "low", vibe: "silent", rating: "4.3", outdoor: true },
   { focus_id: "focus_3", user_id: "user_123", spot_name: "Small Group Study Room", energy_level: "low", vibe: "collaborative", rating: "4.0" },
   { focus_id: "focus_4", user_id: "user_123", spot_name: "University Library Floor", energy_level: "medium", vibe: "silent", rating: "4.6" },
   { focus_id: "focus_5", user_id: "user_123", spot_name: "Cafe With Soft Music", energy_level: "medium", vibe: "background", rating: "4.4" },
-  { focus_id: "focus_6", user_id: "user_123", spot_name: "Campus Common Area", energy_level: "medium", vibe: "collaborative", rating: "4.1" },
+  { focus_id: "focus_6", user_id: "user_123", spot_name: "Campus Common Area", energy_level: "medium", vibe: "collaborative", rating: "4.1", outdoor: true },
   { focus_id: "focus_7", user_id: "user_123", spot_name: "Silent Study Zone", energy_level: "high", vibe: "silent", rating: "4.7" },
   { focus_id: "focus_8", user_id: "user_123", spot_name: "Busy Coffee Shop", energy_level: "high", vibe: "background", rating: "4.3" },
   { focus_id: "focus_9", user_id: "user_123", spot_name: "Group Project Room", energy_level: "high", vibe: "collaborative", rating: "4.5" },
