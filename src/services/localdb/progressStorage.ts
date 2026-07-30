@@ -84,3 +84,16 @@ export async function saveProgress(progress: Progress): Promise<void> {
     // Ignore: persistence is best-effort.
   }
 }
+
+// Forgets the saved progress, so the reward bar starts from nothing again. Used
+// by the clear-local-data and delete-account flows. Never throws: if the store
+// cannot be reached there is nothing useful the caller could do about it, and a
+// failure here must not stop the rest of the wipe.
+export async function clearProgress(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(PROGRESS_KEY);
+  } catch {
+    // Nothing to do. The next read falls back to the defaults anyway.
+  }
+}
+

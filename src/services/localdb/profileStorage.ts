@@ -34,3 +34,15 @@ export async function saveAvatarIndex(index: number): Promise<void> {
     // Ignore: persistence is best-effort.
   }
 }
+
+// Forgets the chosen avatar, so it goes back to the first one. Used by the
+// clear-local-data and delete-account flows. Never throws, for the same reason
+// as the progress version: one failing key must not stop the rest of the wipe.
+export async function clearAvatarIndex(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(AVATAR_KEY);
+  } catch {
+    // Nothing to do. The next read falls back to the first avatar.
+  }
+}
+

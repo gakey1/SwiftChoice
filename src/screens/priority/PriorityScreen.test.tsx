@@ -119,4 +119,57 @@ describe("PriorityScreen", () => {
 
     expect(queryByText("Do laundry")).toBeNull();
   });
+
+  it("does not delete a task on the first tap", () => {
+    // Delete sits right beside Complete, so a mis-tap must not lose work. This
+    // is the part that regresses silently, because the button still looks alive.
+    const alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    const { getByPlaceholderText, getByLabelText, getByText } = render(<PriorityScreen />);
+
+    fireEvent.changeText(getByPlaceholderText("Add a new task"), "Wash the car");
+    fireEvent.press(getByLabelText("Add task"));
+
+    fireEvent.press(getByLabelText("Delete task"));
+
+    expect(alertSpy).toHaveBeenCalled();
+    // Still there. Nothing happened yet.
+    expect(getByText("Wash the car")).toBeTruthy();
+
+    alertSpy.mockRestore();
+  });
+
+  it("names the task it is about to delete", () => {
+    // A generic "are you sure" does not tell somebody which task they are about
+    // to lose when several are on screen.
+    const alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    const { getByPlaceholderText, getByLabelText } = render(<PriorityScreen />);
+
+    fireEvent.changeText(getByPlaceholderText("Add a new task"), "Wash the car");
+    fireEvent.press(getByLabelText("Add task"));
+    fireEvent.press(getByLabelText("Delete task"));
+
+    expect(String(alertSpy.mock.calls[0]?.[1])).toContain("Wash the car");
+
+    alertSpy.mockRestore();
+  });
+
+  it("deletes only once the confirmation is accepted", () => {
+    const alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    const { getByPlaceholderText, getByLabelText, getByText, queryByText } = render(<PriorityScreen />);
+
+    fireEvent.changeText(getByPlaceholderText("Add a new task"), "Wash the car");
+    fireEvent.press(getByLabelText("Add task"));
+    fireEvent.press(getByLabelText("Delete task"));
+
+    const confirm = alertSpy.mock.calls[0]?.[2]?.find((button) => button.text === "Delete");
+    act(() => {
+      confirm?.onPress?.();
+    });
+
+    expect(queryByText("Wash the car")).toBeNull();
+    // Back to the empty state, so the list really is gone rather than hidden.
+    expect(getByText(/All clear/i)).toBeTruthy();
+
+    alertSpy.mockRestore();
+  });
 });

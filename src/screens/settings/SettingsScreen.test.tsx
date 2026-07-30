@@ -2,6 +2,7 @@
 // storage are all mocked, so this checks the screen's own behaviour: pressing
 // Log out calls the logout service.
 
+import { Alert } from "react-native";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 
 import { SettingsScreen } from "@/screens/settings/SettingsScreen";
@@ -15,6 +16,12 @@ jest.mock("@/hooks/useAuth", () => ({
   useAuth: () => ({ user: { email: "a@b.com" }, initializing: false }),
 }));
 jest.mock("@/components/Icon", () => ({ Icon: () => null }));
+
+// The on-device wipe is mocked so the screen test covers the wiring and the
+// wording, not the storage layer, which has its own tests.
+jest.mock("@/features/privacy/localData", () => ({
+  clearLocalData: jest.fn().mockResolvedValue({ ok: true, failed: [] }),
+}));
 
 // The screen mirrors the chosen budget onto the user's profile. Mocked so the
 // test does not pull the real Firestore client in through this module.
@@ -59,5 +66,39 @@ describe("SettingsScreen", () => {
     await waitFor(() => {
       expect(mockLogout).toHaveBeenCalled();
     });
+  });
+
+  it("offers to clear on-device data and says the account is not affected", async () => {
+    render(
+      <ThemeProvider>
+        <SettingsScreen />
+      </ThemeProvider>
+    );
+
+    // The wording is the point. Somebody must not read this as deleting
+    // everything, because the cloud copy of their history survives it.
+    expect(await screen.findByText("Clear data on this phone")).toBeTruthy();
+    expect(
+      screen.getByText(/history already\s+saved to your account is not affected/i)
+    ).toBeTruthy();
+  });
+
+  it("asks before clearing rather than doing it on the first tap", async () => {
+    const alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
+    const { clearLocalData } = jest.requireMock("@/features/privacy/localData");
+
+    render(
+      <ThemeProvider>
+        <SettingsScreen />
+      </ThemeProvider>
+    );
+
+    fireEvent.press(await screen.findByText("Clear data on this phone"));
+
+    expect(alertSpy).toHaveBeenCalled();
+    // Nothing is wiped until the confirmation is accepted.
+    expect(clearLocalData).not.toHaveBeenCalled();
+
+    alertSpy.mockRestore();
   });
 });
