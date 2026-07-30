@@ -19,6 +19,7 @@ import { HUD_CLEARANCE } from "@/components/XpHud";
 import { AVATARS } from "@/features/profile/avatars";
 import { useAuth } from "@/hooks/useAuth";
 import { logout } from "@/services/auth";
+import { clearLocalData } from "@/features/privacy/localData";
 import { isBudgetTier, saveBudgetTier } from "@/services/firestore/users";
 import {
   loadPreferences,
@@ -45,6 +46,7 @@ export function SettingsScreen() {
   const { colors, isDark, toggleDark } = useTheme();
   const { user } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   const [diet, setDiet] = useState(DIET_OPTIONS[0]);
   const [budget, setBudget] = useState(BUDGET_OPTIONS[1]);
@@ -138,6 +140,47 @@ export function SettingsScreen() {
     }
   }
 
+  // Clears what this app has stored on the phone (US31). Deliberately worded to
+  // say "on this phone", because accepted decisions are also mirrored to the
+  // cloud and that copy survives this. Claiming more than we delete is the one
+  // thing a privacy action must not do. Deleting everything is US33.
+  async function handleClearLocalData(): Promise<void> {
+    Alert.alert(
+      "Clear data on this phone?",
+      "This removes your preferences, saved spots, meals, on-device history, progress and avatar from this phone. Your account stays, and history already saved to your account is not affected. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Clear",
+          style: "destructive",
+          onPress: async () => {
+            setClearing(true);
+            try {
+              const result = await clearLocalData();
+
+              if (result.ok) {
+                // Reset what is on screen so it matches what is now stored.
+                setDiet(DIET_OPTIONS[0]);
+                setBudget(BUDGET_OPTIONS[1]);
+                setHours(HOURS_OPTIONS[0]);
+                setAvatarIndex(0);
+                Alert.alert("Cleared", "The data this app stored on this phone has been removed.");
+              } else {
+                // Say what did not go, rather than reporting success.
+                Alert.alert(
+                  "Partly cleared",
+                  `Most of it was removed, but this was not: ${result.failed.join(", ")}. Try again, or restart the app and try once more.`
+                );
+              }
+            } finally {
+              setClearing(false);
+            }
+          },
+        },
+      ]
+    );
+  }
+
   // Signs the user out. The auth listener notices and returns them to login.
   async function handleLogout(): Promise<void> {
     setSigningOut(true);
@@ -229,6 +272,17 @@ export function SettingsScreen() {
         <View style={styles.action}>
           <Button variant="reroll" onPress={handleLogout} disabled={signingOut}>
             {signingOut ? "Logging out..." : "Log out"}
+          </Button>
+        </View>
+
+        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>YOUR DATA</Text>
+        <Text style={[styles.sub, { color: colors.ink2 }]}>
+          Clears what this app has saved on this phone. Your account stays, and history already
+          saved to your account is not affected.
+        </Text>
+        <View style={styles.action}>
+          <Button variant="reroll" onPress={handleClearLocalData} disabled={clearing}>
+            {clearing ? "Clearing..." : "Clear data on this phone"}
           </Button>
         </View>
       </ScrollView>
