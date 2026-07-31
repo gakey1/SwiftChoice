@@ -19,6 +19,7 @@ import { passwordResetErrorMessage } from "@/features/auth/errorMessages";
 import { validateEmail } from "@/features/auth/validation";
 import type { AuthStackParamList } from "@/navigation/types";
 import { sendPasswordReset } from "@/services/auth";
+import { markPasswordResetRequested } from "@/services/localdb/passwordResetFlag";
 import { T } from "@/theme/tokens";
 import { useTheme } from "@/theme/ThemeProvider";
 
@@ -48,16 +49,40 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordScreenProps) 
     setSubmitting(true);
     try {
       await sendPasswordReset(email);
+      await noteResetRequested();
       setSent(true);
     } catch (err) {
       const message = passwordResetErrorMessage(err);
       if (message === null) {
+        await noteResetRequested();
         setSent(true);
       } else {
         setFormError(message);
       }
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  // Records on this phone that a reset may now be in flight, so the next
+  // successful sign-in invalidates the two-factor enrolment (D-012). This is the
+  // only moment the app is present for the change: the reset itself completes in
+  // the browser, and Firebase exposes no password-change timestamp to check
+  // later.
+  //
+  // Deliberately also set in the enumeration case above, where the account may
+  // not exist. The app cannot tell the two apart without leaking whether the
+  // email is registered, which is the whole point of that branch. The cost of
+  // being wrong is that somebody sets their authenticator up again, which is
+  // friction rather than a lockout.
+  //
+  // A failure here must not break the flow. Not being able to write a local flag
+  // is no reason to withhold a reset link the user is waiting on.
+  async function noteResetRequested() {
+    try {
+      await markPasswordResetRequested();
+    } catch (err) {
+      console.warn("Could not record the password reset request", err);
     }
   }
 

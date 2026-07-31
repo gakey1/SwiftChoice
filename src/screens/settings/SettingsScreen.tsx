@@ -9,9 +9,11 @@
 // Settings is a universal screen, so only the teal accent is used here. Colours
 // come from the active theme via useTheme(); section labels use the mono font.
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { Button } from "@/components/Button";
 import { Icon } from "@/components/Icon";
@@ -26,6 +28,8 @@ import {
   savePreferences,
 } from "@/services/localdb/preferencesStorage";
 import { loadAvatarIndex, saveAvatarIndex } from "@/services/localdb/profileStorage";
+import { isTotpEnrolled } from "@/services/localdb/totpStorage";
+import type { AppStackParamList } from "@/navigation/types";
 import { T } from "@/theme/tokens";
 import { useTheme } from "@/theme/ThemeProvider";
 
@@ -47,6 +51,26 @@ export function SettingsScreen() {
   const { user } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [twoFactorOn, setTwoFactorOn] = useState(false);
+
+  // Settings sits in the tabs, while the 2FA screen sits on the stack above
+  // them, so the parent navigator is what routes there.
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+
+  // Re-read on every focus rather than once on mount, so coming back from the
+  // setup screen shows the new state instead of a stale value.
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      void (async () => {
+        const enrolled = await isTotpEnrolled();
+        if (active) setTwoFactorOn(enrolled);
+      })();
+      return () => {
+        active = false;
+      };
+    }, [])
+  );
 
   const [diet, setDiet] = useState(DIET_OPTIONS[0]);
   const [budget, setBudget] = useState(BUDGET_OPTIONS[1]);
@@ -273,6 +297,16 @@ export function SettingsScreen() {
           <Button variant="reroll" onPress={handleLogout} disabled={signingOut}>
             {signingOut ? "Logging out..." : "Log out"}
           </Button>
+        </View>
+
+        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>SECURITY</Text>
+        <View style={[styles.card, cardStyle]}>
+          <SettingRow
+            label="Two-factor authentication"
+            value={twoFactorOn ? "On for this phone" : "Off"}
+            onPress={() => navigation.navigate("TwoFactorSetup")}
+            isLast
+          />
         </View>
 
         <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>YOUR DATA</Text>

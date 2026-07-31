@@ -10,6 +10,6 @@ module.exports = {
   // jest-expo's default ignore list, extended with the packages this app
   // pulls in that ship untranspiled ES modules.
   transformIgnorePatterns: [
-    "node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|@react-navigation/.*|react-native-.*|firebase|@firebase/.*))",
+    "node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|@react-navigation/.*|react-native-.*|firebase|@firebase/.*|otpauth|@noble/hashes))",
   ],
 };

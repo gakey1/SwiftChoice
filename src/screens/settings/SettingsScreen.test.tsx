@@ -17,6 +17,27 @@ jest.mock("@/hooks/useAuth", () => ({
 }));
 jest.mock("@/components/Icon", () => ({ Icon: () => null }));
 
+// The Security row routes to the 2FA screen on the parent stack, so the screen
+// now asks for a navigation object. Faked here rather than wrapping the test in
+// a real NavigationContainer, which would pull the whole navigator in.
+const mockNavigate = jest.fn();
+jest.mock("@react-navigation/native", () => ({
+  useNavigation: () => ({ navigate: mockNavigate }),
+  // Runs the effect once on mount, which is enough for a screen that is
+  // rendered and never re-focused within a test.
+  useFocusEffect: (effect: () => void | (() => void)) => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { useEffect } = require("react");
+    useEffect(effect, [effect]);
+  },
+}));
+
+// The keychain is unavailable under Jest, so the enrolment lookup behind the
+// Security row is mocked. Its own behaviour is covered in totpStorage.test.ts.
+jest.mock("@/services/localdb/totpStorage", () => ({
+  isTotpEnrolled: jest.fn().mockResolvedValue(false),
+}));
+
 // The on-device wipe is mocked so the screen test covers the wiring and the
 // wording, not the storage layer, which has its own tests.
 jest.mock("@/features/privacy/localData", () => ({

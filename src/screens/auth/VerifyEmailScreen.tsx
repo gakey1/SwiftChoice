@@ -94,13 +94,17 @@ export function VerifyEmailScreen() {
         </View>
 
         <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: colors.ink2 }]}>Wrong account? </Text>
+          {/* Worded as an escape rather than a label, so a mistyped email is not
+              a trap: the only way out is to sign out and register again. */}
+          <Text style={[styles.footerText, { color: colors.ink2 }]}>
+            Entered the wrong email?{" "}
+          </Text>
           <Text
             style={[styles.footerLink, { color: colors.teal }]}
             accessibilityRole="button"
             onPress={() => logout()}
           >
-            Log out
+            Log out and try again
           </Text>
         </View>
       </View>

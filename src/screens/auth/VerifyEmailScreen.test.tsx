@@ -57,10 +57,10 @@ describe("VerifyEmailScreen", () => {
     expect(getByText(/New link sent/)).toBeTruthy();
   });
 
-  it("logs out when 'Log out' is pressed", () => {
+  it("logs out when the wrong-email escape is pressed", () => {
     const { getByText } = render(<VerifyEmailScreen />);
 
-    fireEvent.press(getByText("Log out"));
+    fireEvent.press(getByText("Log out and try again"));
 
     expect(mockLogout).toHaveBeenCalledTimes(1);
   });
