@@ -2,7 +2,11 @@
 // specific about what went wrong, while login always returns the same message so
 // no one can tell which emails are registered.
 
-import { loginErrorMessage, registerErrorMessage } from "@/features/auth/errorMessages";
+import {
+  loginErrorMessage,
+  passwordResetErrorMessage,
+  registerErrorMessage,
+} from "@/features/auth/errorMessages";
 
 // Sign up messages: each Firebase code maps to its own message, with a fallback.
 describe("registerErrorMessage", () => {
@@ -51,5 +55,26 @@ describe("loginErrorMessage", () => {
     const message = loginErrorMessage({ code: "auth/weird" });
     expect(message).not.toMatch(/email/i);
     expect(message).not.toMatch(/password/i);
+  });
+});
+
+// Password reset messages: null means "show the normal confirmation anyway", so
+// the codes that would reveal whether an account exists return null, and the
+// codes the user can act on return a real message.
+describe("passwordResetErrorMessage", () => {
+  it("returns null for the codes that would reveal a registered email", () => {
+    expect(passwordResetErrorMessage({ code: "auth/user-not-found" })).toBeNull();
+    expect(passwordResetErrorMessage({ code: "auth/invalid-email" })).toBeNull();
+  });
+
+  it("keeps rate-limit and network messages, since the user can act on those", () => {
+    expect(passwordResetErrorMessage({ code: "auth/too-many-requests" })).toMatch(/too many/i);
+    expect(passwordResetErrorMessage({ code: "auth/network-request-failed" })).toMatch(/network/i);
+  });
+
+  it("never says whether the account exists on an unknown code", () => {
+    const message = passwordResetErrorMessage({ code: "auth/weird" });
+    expect(message).not.toMatch(/account/i);
+    expect(message).not.toMatch(/exist/i);
   });
 });

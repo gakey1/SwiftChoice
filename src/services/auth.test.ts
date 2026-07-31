@@ -6,6 +6,7 @@
 import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
 } from "firebase/auth";
@@ -17,6 +18,7 @@ import {
   registerWithEmail,
   reloadAndCheckVerified,
   resendVerificationEmail,
+  sendPasswordReset,
 } from "@/services/auth";
 import { createUserDocument } from "@/services/firestore/users";
 
@@ -25,6 +27,7 @@ import { createUserDocument } from "@/services/firestore/users";
 jest.mock("firebase/auth", () => ({
   createUserWithEmailAndPassword: jest.fn(),
   sendEmailVerification: jest.fn(),
+  sendPasswordResetEmail: jest.fn(),
   signInWithEmailAndPassword: jest.fn(),
   signOut: jest.fn(),
 }));
@@ -37,6 +40,7 @@ const mockCreate = createUserWithEmailAndPassword as jest.Mock;
 const mockSendVerification = sendEmailVerification as jest.Mock;
 const mockSignIn = signInWithEmailAndPassword as jest.Mock;
 const mockSignOut = signOut as jest.Mock;
+const mockSendReset = sendPasswordResetEmail as jest.Mock;
 const mockCreateDoc = createUserDocument as jest.Mock;
 
 // auth.currentUser is not part of the {} mock, so tests that need it set it
@@ -153,5 +157,29 @@ describe("reloadAndCheckVerified", () => {
 
     await expect(reloadAndCheckVerified()).resolves.toBe(true);
     expect(reload).toHaveBeenCalledTimes(1);
+  });
+});
+
+// Password reset: trims the email and lets Firebase errors through, since the
+// screen is the one that decides which of them the user is allowed to see.
+describe("sendPasswordReset", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("sends the reset email with a trimmed address", async () => {
+    mockSendReset.mockResolvedValue(undefined);
+
+    await sendPasswordReset("  a@b.com  ");
+
+    expect(mockSendReset).toHaveBeenCalledWith(auth, "a@b.com");
+  });
+
+  it("passes Firebase errors through to the caller", async () => {
+    mockSendReset.mockRejectedValue({ code: "auth/too-many-requests" });
+
+    await expect(sendPasswordReset("a@b.com")).rejects.toEqual({
+      code: "auth/too-many-requests",
+    });
   });
 });
