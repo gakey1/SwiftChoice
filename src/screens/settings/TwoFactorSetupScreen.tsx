@@ -17,6 +17,7 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
+import { AmbientBackground } from "@/components/AmbientBackground";
 import { Button } from "@/components/Button";
 import { TextField } from "@/components/TextField";
 import { useAuth } from "@/hooks/useAuth";
@@ -120,6 +121,7 @@ export function TwoFactorSetupScreen({
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={["top", "bottom"]}>
+      <AmbientBackground />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={[styles.title, { color: colors.ink }]}>
           Two-factor authentication

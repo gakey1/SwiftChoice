@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+import { AmbientBackground } from "@/components/AmbientBackground";
 import { useAuth } from "@/hooks/useAuth";
 import type { AppStackParamList } from "@/navigation/types";
 import { saveBudgetTier } from "@/services/firestore/users";
@@ -46,6 +47,7 @@ export function BudgetSurveyScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
+      <AmbientBackground />
       <Text style={[styles.title, { color: colors.ink }]}>Personalize Your Budget</Text>
       <Text style={[styles.subtitle, { color: colors.ink2 }]}>
         What feels like a reasonable amount to spend on a normal meal?

@@ -28,9 +28,12 @@ export function GlassCard({ children, style, intensity }: GlassCardProps) {
       <BlurView
         intensity={intensity ?? 24}
         tint={isDark ? "dark" : "light"}
-        // iOS blurs natively; Android needs this backend or BlurView renders
-        // nothing (the card would show only the tint below, no frosted glass).
-        experimentalBlurMethod="dimezisBlurView"
+        // iOS blurs natively. This names the Android backend, but on its own it
+        // is no longer enough: expo-blur 56 also wants a blurTarget ref, and
+        // without one it falls back to no blur at all, which is why Android has
+        // never shown the frosted look. Tracked as its own item in the backlog,
+        // since threading that ref through touches every screen using this.
+        blurMethod="dimezisBlurView"
         style={StyleSheet.absoluteFill}
       />
       <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.card }]} />

@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AmbientBackground } from "@/components/AmbientBackground";
 import { Button } from "@/components/Button";
 import { TextField } from "@/components/TextField";
 import { generateCode, secondsUntilRotation, verifyCode } from "@/features/auth/totp";
@@ -86,6 +87,7 @@ export function TotpChallengeScreen({ onPassed }: TotpChallengeScreenProps) {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={["top", "bottom"]}>
+      <AmbientBackground />
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}

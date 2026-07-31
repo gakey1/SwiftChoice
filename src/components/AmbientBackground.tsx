@@ -39,12 +39,13 @@ export function AmbientBackground() {
         ]}
       />
       {/* The heavy blur is what turns the hard circles into soft glows. On
-          Android, BlurView needs this backend or it renders nothing (leaving the
-          hard circles showing). */}
+          Android this names the backend, but expo-blur 56 also wants a
+          blurTarget ref and falls back to no blur without one, so Android
+          currently shows the hard circles. Tracked in the backlog. */}
       <BlurView
         intensity={100}
         tint={isDark ? "dark" : "light"}
-        experimentalBlurMethod="dimezisBlurView"
+        blurMethod="dimezisBlurView"
         style={StyleSheet.absoluteFill}
       />
     </View>

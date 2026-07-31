@@ -7,6 +7,7 @@ import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AmbientBackground } from "@/components/AmbientBackground";
 import { Button } from "@/components/Button";
 import { useAuth } from "@/hooks/useAuth";
 import { logout, resendVerificationEmail } from "@/services/auth";
@@ -60,6 +61,7 @@ export function VerifyEmailScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]}>
+      <AmbientBackground />
       <View style={styles.content}>
         <View style={styles.brand}>
           <View style={[styles.logo, { backgroundColor: colors.teal }]}>
