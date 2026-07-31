@@ -11,6 +11,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View, Tou
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
+import { AmbientBackground } from "@/components/AmbientBackground";
 import { Button } from "@/components/Button";
 import { TextField } from "@/components/TextField";
 import { registerErrorMessage } from "@/features/auth/errorMessages";
@@ -53,6 +54,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={["top", "bottom"]}>
+      <AmbientBackground />
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}

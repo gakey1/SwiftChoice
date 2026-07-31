@@ -9,10 +9,15 @@ jest.mock("@react-native-async-storage/async-storage", () =>
   require("@react-native-async-storage/async-storage/jest/async-storage-mock")
 );
 
-// Mock expo-blur's BlurView. Its native module is not available under Jest, and
-// it is a purely visual wrapper, so a plain host-component stub lets any screen
-// that uses the glass surfaces render in tests.
-jest.mock("expo-blur", () => ({ BlurView: "BlurView" }));
+// Mock expo-blur. Its native module is not available under Jest, and both of
+// these are purely visual wrappers, so plain host-component stubs let any screen
+// using the glass surfaces render in tests. BlurTargetView is included because
+// the ambient background wraps its glows in one, which Android needs in order to
+// have something to blur.
+jest.mock("expo-blur", () => ({
+  BlurView: "BlurView",
+  BlurTargetView: "BlurTargetView",
+}));
 
 // Mock the icon sets. The real @expo/vector-icons pulls in expo-font / expo-asset
 // (not resolvable under Jest). Stub the two sets the app uses with plain host

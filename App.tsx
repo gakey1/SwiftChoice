@@ -37,6 +37,8 @@ import { ThemeProvider } from "@/theme/ThemeProvider";
 // the global XP HUD all read one in-sync source.
 import { ProgressProvider } from "@/features/progress/ProgressProvider";
 
+import { BlurTargetProvider } from "@/components/BlurTarget";
+
 export default function App() {
   // Load the four DM Sans weights the design system uses. useFonts returns
   // false until the font files are ready.
@@ -69,9 +71,15 @@ export default function App() {
       <ThemeProvider>
         <AuthProvider>
           <ProgressProvider>
-            <NavigationContainer ref={globalNavigationRef}>
-              <RootNavigator />
-            </NavigationContainer>
+            {/* Lets the glass cards on a screen blur that screen's background
+                on Android, where a BlurView has to be told what to blur.
+                Wraps the navigator because the two ends sit on opposite
+                branches of each screen's tree. */}
+            <BlurTargetProvider>
+              <NavigationContainer ref={globalNavigationRef}>
+                <RootNavigator />
+              </NavigationContainer>
+            </BlurTargetProvider>
           </ProgressProvider>
         </AuthProvider>
         {/* Controls the OS status bar tint; "auto" picks light or dark to suit

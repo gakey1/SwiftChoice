@@ -15,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
+import { AmbientBackground } from "@/components/AmbientBackground";
 import { Button } from "@/components/Button";
 import { Icon } from "@/components/Icon";
 import { HUD_CLEARANCE } from "@/components/XpHud";
@@ -219,6 +220,7 @@ export function SettingsScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={["top", "bottom"]}>
+      <AmbientBackground />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
