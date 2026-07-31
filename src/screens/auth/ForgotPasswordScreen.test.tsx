@@ -13,10 +13,15 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react-nativ
 
 import { ForgotPasswordScreen } from "@/screens/auth/ForgotPasswordScreen";
 import { sendPasswordReset } from "@/services/auth";
+import { markPasswordResetRequested } from "@/services/localdb/passwordResetFlag";
 
 jest.mock("@/services/auth", () => ({ sendPasswordReset: jest.fn() }));
+jest.mock("@/services/localdb/passwordResetFlag", () => ({
+  markPasswordResetRequested: jest.fn(),
+}));
 
 const mockSendReset = sendPasswordReset as jest.Mock;
+const mockMarkRequested = markPasswordResetRequested as jest.Mock;
 
 // Renders the screen with a fake navigation object so the links can be checked.
 function renderScreen() {
@@ -90,6 +95,33 @@ describe("ForgotPasswordScreen", () => {
         expect.stringContaining("spam")
       );
     });
+  });
+
+  it("records the reset on this phone, so the 2FA enrolment is invalidated later", async () => {
+    mockSendReset.mockResolvedValue(undefined);
+    renderScreen();
+    submitEmail();
+
+    await waitFor(() => expect(mockMarkRequested).toHaveBeenCalledTimes(1));
+  });
+
+  it("records it in the account-may-not-exist case too", async () => {
+    // The app cannot tell that branch apart without leaking whether the email is
+    // registered, so it has to behave identically here as well.
+    mockSendReset.mockRejectedValue({ code: "auth/user-not-found" });
+    renderScreen();
+    submitEmail("nobody@b.com");
+
+    await waitFor(() => expect(mockMarkRequested).toHaveBeenCalledTimes(1));
+  });
+
+  it("does not record a reset that genuinely failed to send", async () => {
+    mockSendReset.mockRejectedValue({ code: "auth/too-many-requests" });
+    renderScreen();
+    submitEmail();
+
+    await waitFor(() => expect(screen.getByTestId("forgot-password-form-error")).toBeTruthy());
+    expect(mockMarkRequested).not.toHaveBeenCalled();
   });
 
   it("navigates back to Login from the footer link", () => {

@@ -22,4 +22,8 @@ export type AppStackParamList = {
   Focus: undefined;
   Priority: undefined;
   BudgetSurvey: undefined;
+  // Reached from the Security row in Settings. The reason is set only when a
+  // password change invalidated an existing enrolment (D-012), which makes the
+  // screen explain itself rather than appearing for no visible cause.
+  TwoFactorSetup: { reason?: "password-changed" } | undefined;
 };

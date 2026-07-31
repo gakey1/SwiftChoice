@@ -2,6 +2,7 @@
 // either the login screens (signed out) or the main app with its tabs (signed
 // in). Because the two sides are kept separate, a signed-out person can never
 // reach the app screens, since those screens are not even loaded.
+import { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
@@ -9,9 +10,13 @@ import { XpHud } from "@/components/XpHud";
 import { useAuth } from "@/hooks/useAuth";
 import { AppTabs } from "@/navigation/AppTabs";
 import type { AppStackParamList, AuthStackParamList } from "@/navigation/types";
+import { consumePasswordResetInvalidation } from "@/features/auth/twoFactor";
+import { isTotpEnrolled } from "@/services/localdb/totpStorage";
 import { ForgotPasswordScreen } from "@/screens/auth/ForgotPasswordScreen";
 import { LoginScreen } from "@/screens/auth/LoginScreen";
 import { RegisterScreen } from "@/screens/auth/RegisterScreen";
+import { TotpChallengeScreen } from "@/screens/auth/TotpChallengeScreen";
+import { TwoFactorSetupScreen } from "@/screens/settings/TwoFactorSetupScreen";
 import { VerifyEmailScreen } from "@/screens/auth/VerifyEmailScreen";
 import { FuelScreen } from "@/screens/fuel/FuelScreen";
 import { FocusScreen } from "@/screens/focus/FocusScreen";
@@ -25,6 +30,42 @@ const AppStack = createNativeStackNavigator<AppStackParamList>();
 
 export function RootNavigator() {
   const { user, initializing, emailVerified } = useAuth();
+
+  // The second-factor gate (D-012). `required` is whether this phone is
+  // enrolled, `wiped` records that a password change just removed an enrolment
+  // so the setup screen can say why, and `passed` is held in memory only, never
+  // saved, so reopening the app asks again. Saving it would turn a step-up
+  // factor into a one-time formality.
+  //
+  // The uid it was computed for is stored alongside it rather than being reset
+  // on sign-out. That is what makes signing out and back in as a different
+  // person safe: the old gate simply stops matching, so it cannot be inherited.
+  const [totpGate, setTotpGate] = useState<{
+    uid: string | null;
+    required: boolean;
+    wiped: boolean;
+    passed: boolean;
+  }>({ uid: null, required: false, wiped: false, passed: false });
+
+  const uid = user?.uid;
+  const gateReady = totpGate.uid !== null && totpGate.uid === uid;
+
+  useEffect(() => {
+    if (!uid || !emailVerified) return undefined;
+
+    let active = true;
+    void (async () => {
+      // Order matters. The password-change invalidation runs first, so a reset
+      // that just removed the enrolment is not immediately challenged against
+      // the secret it deleted.
+      const wiped = await consumePasswordResetInvalidation();
+      const required = await isTotpEnrolled();
+      if (active) setTotpGate({ uid, required, wiped, passed: false });
+    })();
+    return () => {
+      active = false;
+    };
+  }, [uid, emailVerified]);
 
   // While the app is still checking who is signed in, show a loading spinner.
   if (initializing) {
@@ -42,6 +83,27 @@ export function RootNavigator() {
     return <VerifyEmailScreen />;
   }
 
+  // Signed in and verified, but the keychain has not been read yet. Hold on the
+  // spinner rather than rendering the app, so a phone with 2FA on never shows
+  // its contents for a frame before asking for the code.
+  if (user && !gateReady) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator color={T.teal} />
+      </View>
+    );
+  }
+
+  // Enrolled on this phone and no code entered yet this run. Same shape as the
+  // verify-email gate above: the app screens are not loaded until it passes.
+  if (user && totpGate.required && !totpGate.passed) {
+    return (
+      <TotpChallengeScreen
+        onPassed={() => setTotpGate((current) => ({ ...current, passed: true }))}
+      />
+    );
+  }
+
   // Signed in and verified: show the main app. That is the tabs, plus the Fuel
   // and Focus screens which slide up over the tab bar when opened.
   if (user) {
@@ -49,7 +111,13 @@ export function RootNavigator() {
     // top-right spot on every signed-in screen (tabs plus the module screens).
     return (
       <View style={styles.appRoot}>
-        <AppStack.Navigator screenOptions={{ headerShown: false }}>
+        <AppStack.Navigator
+          // A password change that removed an enrolment lands the user on the
+          // setup screen with the explanation, rather than silently dropping
+          // the factor and leaving them to notice on their own.
+          initialRouteName={totpGate.wiped ? "TwoFactorSetup" : "MainTabs"}
+          screenOptions={{ headerShown: false }}
+        >
           <AppStack.Screen name="MainTabs" component={AppTabs} />
           <AppStack.Screen
             name="Fuel"
@@ -87,8 +155,14 @@ export function RootNavigator() {
             options={{ animation: "slide_from_bottom" }}
           />
           <AppStack.Screen 
-            name="BudgetSurvey" 
-            component={BudgetSurveyScreen} 
+            name="BudgetSurvey"
+            component={BudgetSurveyScreen}
+            options={{ animation: "slide_from_bottom" }}
+          />
+          <AppStack.Screen
+            name="TwoFactorSetup"
+            component={TwoFactorSetupScreen}
+            initialParams={totpGate.wiped ? { reason: "password-changed" } : undefined}
             options={{ animation: "slide_from_bottom" }}
           />
         </AppStack.Navigator>
