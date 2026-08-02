@@ -18,6 +18,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AmbientBackground } from "@/components/AmbientBackground";
 import { Button } from "@/components/Button";
 import { TextField } from "@/components/TextField";
+import { showsDemoCodeOnChallenge } from "@/features/auth/demoCode";
 import { generateCode, secondsUntilRotation, verifyCode } from "@/features/auth/totp";
 import { useAuth } from "@/hooks/useAuth";
 import { logout } from "@/services/auth";
@@ -42,9 +43,14 @@ export function TotpChallengeScreen({ onPassed }: TotpChallengeScreenProps) {
   const [demoCode, setDemoCode] = useState("");
   const [secondsLeft, setSecondsLeft] = useState(0);
 
-  // Mirrors the setup screen's demo display, for the same reason: the factor has
-  // to be demonstrable on a simulator with no second device.
+  // Development builds only. On this screen the demo code is the answer written
+  // on the gate, so a release build has to ask a real question. See
+  // features/auth/demoCode.ts for why setup keeps it and this screen does not.
+  const showDemoCode = showsDemoCodeOnChallenge();
+
   useEffect(() => {
+    if (!showDemoCode) return undefined;
+
     let active = true;
     const tick = async () => {
       const secret = await getTotpSecret();
@@ -58,7 +64,7 @@ export function TotpChallengeScreen({ onPassed }: TotpChallengeScreenProps) {
       active = false;
       clearInterval(timer);
     };
-  }, [accountLabel]);
+  }, [accountLabel, showDemoCode]);
 
   async function handleVerify() {
     setError(null);
@@ -106,17 +112,22 @@ export function TotpChallengeScreen({ onPassed }: TotpChallengeScreenProps) {
             SwiftChoice.
           </Text>
 
-          <View style={[styles.demo, { borderColor: colors.cardLine }]}>
-            <Text style={[styles.demoLabel, { color: colors.ink3 }]}>
-              CODE ON THIS DEVICE, FOR TESTING WITHOUT A SECOND PHONE
-            </Text>
-            <Text style={[styles.demoCode, { color: colors.ink }]} testID="totp-challenge-demo-code">
-              {demoCode}
-            </Text>
-            <Text style={[styles.demoLabel, { color: colors.ink3 }]}>
-              Changes in {secondsLeft}s
-            </Text>
-          </View>
+          {showDemoCode ? (
+            <View style={[styles.demo, { borderColor: colors.cardLine }]}>
+              <Text style={[styles.demoLabel, { color: colors.ink3 }]}>
+                CODE ON THIS DEVICE, DEVELOPMENT BUILDS ONLY
+              </Text>
+              <Text
+                style={[styles.demoCode, { color: colors.ink }]}
+                testID="totp-challenge-demo-code"
+              >
+                {demoCode}
+              </Text>
+              <Text style={[styles.demoLabel, { color: colors.ink3 }]}>
+                Changes in {secondsLeft}s
+              </Text>
+            </View>
+          ) : null}
 
           <TextField
             label="Six-digit code"

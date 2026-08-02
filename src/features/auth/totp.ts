@@ -104,3 +104,14 @@ export function verifyCode(
 export function secondsUntilRotation(now: Date): number {
   return PERIOD_SECONDS - (Math.floor(now.getTime() / 1000) % PERIOD_SECONDS);
 }
+
+// The secret split into blocks of four for display. A 32-character run of
+// base32 is miserable to read off one screen and type into another, and losing
+// your place costs you the whole thing.
+//
+// Safe to hand to an authenticator app as-is: RFC 4648 base32 has no meaningful
+// whitespace, and every mainstream app strips it on entry. The copy button
+// still copies the unspaced form, because that is what a machine wants.
+export function groupSecret(secretBase32: string): string {
+  return secretBase32.replace(/(.{4})/g, "$1 ").trim();
+}

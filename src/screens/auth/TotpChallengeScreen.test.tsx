@@ -5,6 +5,7 @@
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 
+import { showsDemoCodeOnChallenge } from "@/features/auth/demoCode";
 import { generateCode } from "@/features/auth/totp";
 import { TotpChallengeScreen } from "@/screens/auth/TotpChallengeScreen";
 import { logout } from "@/services/auth";
@@ -15,9 +16,15 @@ jest.mock("@/services/localdb/totpStorage", () => ({ getTotpSecret: jest.fn() })
 jest.mock("@/hooks/useAuth", () => ({
   useAuth: () => ({ user: { email: "a@b.com" }, initializing: false }),
 }));
+// Mocked rather than driven through __DEV__, so a release build's behaviour can
+// be exercised here without the rest of the suite running as one.
+jest.mock("@/features/auth/demoCode", () => ({
+  showsDemoCodeOnChallenge: jest.fn(),
+}));
 
 const mockGetSecret = getTotpSecret as jest.Mock;
 const mockLogout = logout as jest.Mock;
+const mockShowsDemoCode = showsDemoCodeOnChallenge as jest.Mock;
 
 const SECRET = "JBSWY3DPEHPK3PXP";
 const LABEL = "a@b.com";
@@ -32,6 +39,7 @@ describe("TotpChallengeScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockGetSecret.mockResolvedValue(SECRET);
+    mockShowsDemoCode.mockReturnValue(true);
   });
 
   it("lets the user through on a valid code", async () => {
@@ -90,5 +98,33 @@ describe("TotpChallengeScreen", () => {
     fireEvent.press(screen.getByText("Log out"));
 
     expect(mockLogout).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the on-device code in development, so the factor can be demonstrated", async () => {
+    mockShowsDemoCode.mockReturnValue(true);
+    renderScreen();
+
+    await waitFor(() =>
+      expect(screen.getByTestId("totp-challenge-demo-code")).toBeTruthy()
+    );
+  });
+
+  it("does not print the code on the gate in a release build", async () => {
+    // This is the whole point of the switch. Printing a valid code on the
+    // screen that asks for one leaves the factor stopping nobody, and it fails
+    // silently: the build looks and behaves completely normally.
+    mockShowsDemoCode.mockReturnValue(false);
+    const { onPassed } = renderScreen();
+
+    await waitFor(() => expect(screen.getByTestId("totp-challenge-code")).toBeTruthy());
+    expect(screen.queryByTestId("totp-challenge-demo-code")).toBeNull();
+
+    // And the screen still works: hiding the hint must not break the gate.
+    fireEvent.changeText(
+      screen.getByTestId("totp-challenge-code"),
+      generateCode(SECRET, LABEL)
+    );
+    fireEvent.press(screen.getByText("Continue"));
+    await waitFor(() => expect(onPassed).toHaveBeenCalledTimes(1));
   });
 });

@@ -13,9 +13,11 @@
 // which is what the marking and the panel demo need.
 
 import { useCallback, useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Linking, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import * as Clipboard from "expo-clipboard";
+import QRCode from "react-native-qrcode-svg";
 
 import { AmbientBackground } from "@/components/AmbientBackground";
 import { Button } from "@/components/Button";
@@ -25,6 +27,7 @@ import {
   buildOtpauthUri,
   generateCode,
   generateSecret,
+  groupSecret,
   secondsUntilRotation,
   verifyCode,
 } from "@/features/auth/totp";
@@ -63,6 +66,8 @@ export function TwoFactorSetupScreen({
   const [error, setError] = useState<string | null>(null);
   const [demoCode, setDemoCode] = useState("");
   const [secondsLeft, setSecondsLeft] = useState(0);
+  const [copied, setCopied] = useState(false);
+  const [handoffError, setHandoffError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -96,8 +101,41 @@ export function TwoFactorSetupScreen({
   const handleBegin = useCallback(() => {
     setError(null);
     setTypedCode("");
+    setCopied(false);
+    setHandoffError(null);
     setPendingSecret(generateSecret());
   }, []);
+
+  // Hands the whole enrolment to an authenticator app in one tap. The otpauth
+  // URI is a real URL scheme that authenticator apps register themselves
+  // against, so this is the answer for somebody whose authenticator is on the
+  // same phone as SwiftChoice and therefore cannot photograph its own screen.
+  //
+  // Deliberately not gated behind Linking.canOpenURL. On Android 11 and later
+  // that returns false for any scheme not declared in a <queries> block in the
+  // manifest, even when a handler is installed, so gating on it would hide a
+  // working button on most current phones. Trying and catching gives the right
+  // answer on every platform.
+  async function handleOpenInAuthenticator() {
+    if (!pendingSecret) return;
+    setHandoffError(null);
+    try {
+      await Linking.openURL(buildOtpauthUri(pendingSecret, accountLabel));
+    } catch {
+      setHandoffError(
+        "No authenticator app answered. Scan the square above, or add the key by hand."
+      );
+    }
+  }
+
+  // Copies the unspaced secret. The version on screen is spaced for reading;
+  // authenticator apps ignore whitespace either way, but the bare form is the
+  // one that survives being pasted somewhere stricter.
+  async function handleCopyKey() {
+    if (!pendingSecret) return;
+    await Clipboard.setStringAsync(pendingSecret);
+    setCopied(true);
+  }
 
   async function handleConfirm() {
     if (!pendingSecret) return;
@@ -167,15 +205,53 @@ export function TwoFactorSetupScreen({
               STEP 1, ADD THE KEY
             </Text>
             <Text style={[styles.body, { color: colors.ink2 }]}>
-              In your authenticator app choose to add an account by entering a
-              key, and type this in.
+              Use whichever of these three suits the phone you are on.
+            </Text>
+
+            {/* The square is always black on white, whatever the theme is
+                doing. A scanner needs the contrast and the quiet border around
+                the edge, so this is a functional colour rather than a styling
+                one. */}
+            <View style={styles.qrWrap} testID="totp-qr">
+              <View style={styles.qrPaper}>
+                <QRCode
+                  value={buildOtpauthUri(pendingSecret, accountLabel)}
+                  size={180}
+                  color="#000000"
+                  backgroundColor="#FFFFFF"
+                />
+              </View>
+              <Text style={[styles.qrCaption, { color: colors.ink3 }]}>
+                Scan this with the authenticator app on another phone.
+              </Text>
+            </View>
+
+            <View style={styles.action}>
+              <Button variant="outline" onPress={() => void handleOpenInAuthenticator()}>
+                Open in your authenticator app
+              </Button>
+            </View>
+            <Text style={[styles.hint, { color: colors.ink3 }]}>
+              Use this one if your authenticator app is on this same phone,
+              where the camera cannot reach the screen.
+            </Text>
+            {handoffError ? (
+              <Text style={[styles.hint, { color: colors.ink2 }]} testID="totp-handoff-error">
+                {handoffError}
+              </Text>
+            ) : null}
+
+            <Text style={[styles.body, { color: colors.ink2 }]}>
+              Or add an account by entering a key, and type this in.
             </Text>
             <Text style={[styles.secret, { color: colors.ink }]} testID="totp-secret">
-              {pendingSecret}
+              {groupSecret(pendingSecret)}
             </Text>
-            <Text style={[styles.uri, { color: colors.ink3 }]} testID="totp-uri">
-              {buildOtpauthUri(pendingSecret, accountLabel)}
-            </Text>
+            <View style={styles.actionSecondary}>
+              <Button variant="reroll" onPress={() => void handleCopyKey()}>
+                {copied ? "Key copied" : "Copy key"}
+              </Button>
+            </View>
 
             <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>
               STEP 2, CONFIRM
@@ -288,9 +364,25 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     marginBottom: T.spacing[2],
   },
-  uri: {
+  qrWrap: {
+    alignItems: "center",
+    marginBottom: T.spacing[3],
+  },
+  qrPaper: {
+    backgroundColor: "#FFFFFF",
+    padding: T.spacing[3],
+    borderRadius: T.radii.card,
+  },
+  qrCaption: {
     fontFamily: T.font.regular,
     fontSize: T.fontSize.caption,
+    textAlign: "center",
+    marginTop: T.spacing[2],
+  },
+  hint: {
+    fontFamily: T.font.regular,
+    fontSize: T.fontSize.caption,
+    marginTop: T.spacing[2],
     marginBottom: T.spacing[2],
   },
   demo: {
