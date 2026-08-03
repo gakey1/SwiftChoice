@@ -9,6 +9,7 @@ import {
   buildOtpauthUri,
   generateCode,
   generateSecret,
+  groupSecret,
   secondsUntilRotation,
   verifyCode,
 } from "@/features/auth/totp";
@@ -123,5 +124,37 @@ describe("secondsUntilRotation", () => {
       expect(remaining).toBeGreaterThan(0);
       expect(remaining).toBeLessThanOrEqual(30);
     }
+  });
+});
+
+describe("groupSecret", () => {
+  beforeEach(() => {
+    mockGetRandomBytes.mockReturnValue(new Uint8Array(20).fill(7));
+  });
+
+  it("splits the key into blocks of four for reading", () => {
+    expect(groupSecret("JBSWY3DPEHPK3PXP")).toBe("JBSW Y3DP EHPK 3PXP");
+  });
+
+  it("leaves no trailing space when the length divides evenly", () => {
+    expect(groupSecret("ABCDEFGH")).toBe("ABCD EFGH");
+  });
+
+  it("keeps a short final block rather than padding it", () => {
+    expect(groupSecret("ABCDEF")).toBe("ABCD EF");
+  });
+
+  it("changes nothing but the spacing", () => {
+    const secret = generateSecret();
+    expect(groupSecret(secret).replace(/ /g, "")).toBe(secret);
+  });
+
+  it("produces a key an authenticator still accepts once spaces are stripped", () => {
+    // The whole point of grouping is that it is display-only. If a spaced key
+    // were a different key, everyone who typed it in would enrol against a
+    // secret the app does not hold and be locked out on the next sign-in.
+    const secret = generateSecret();
+    const typedBack = groupSecret(secret).replace(/\s/g, "");
+    expect(verifyCode(typedBack, "a@b.com", generateCode(secret, "a@b.com"))).toBe(true);
   });
 });
