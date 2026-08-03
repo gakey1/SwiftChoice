@@ -68,6 +68,29 @@ Both Fuel and Focus share the same `hasRerolled` flag, so it is the same fix app
 
 **One thing to know before you start, because it will not be obvious.** In `FuelScreen.tsx` the reroll always shows `matchList[1]`, a fixed position, rather than stepping through the list. There is already a `currentIndex` in that file that is set but never read, which is one of the two lint warnings we have been ignoring. That variable is the thing item 2 needs: once reroll moves `currentIndex` instead of hardcoding 1, going back to the previous pick is just moving it the other way. So do that first and the rest gets easier.
 
+**Read the section below first.** I have changed `FuelScreen.tsx` in an open pull request, and this work is in the same file.
+
+## Tracy, I have changed FuelScreen
+
+Raising this because it is your file and I should have said so before it landed rather than after. It is open as PR #79 and not merged, so if any of it is wrong for your slice, say so and I will change it.
+
+**What changed.** Three things in `FuelScreen.tsx`:
+
+1. The area box is now a picker. You type, it suggests real suburbs, and you choose one. The search then runs on that suburb's actual coordinates.
+2. `handleGetRecommendation` is now a thin wrapper around a new `runSearch(chosenArea)`. Both the button and choosing a suburb go through `runSearch`, because choosing one searches straight away.
+3. A separate message when there is no Places API key at all, instead of reporting no matches.
+
+**Why.** Typing an area ran a text search on the name with no coordinates behind it, so it could return somewhere half an hour away and the distance on the card fell back to naming the filter band rather than a real figure. It also had no country set, so a suburb name could match one overseas. Testing it from Belgrave returned a restaurant in Burwood, and nothing on screen suggested that was odd.
+
+**What is not changing.** Your recommendation flow, the reroll, Accept, the filters, the result card layout, and everything in the engine that picks and sorts. The suggestions only affect where the search starts from.
+
+**What this means for your reroll work.** We will both be in this file, so expect a conflict. Two things make it easier:
+
+- Take mine first, then build on top. Rebasing your branch on PR #79 once it merges is much less painful than the reverse, because my change moves the search into `runSearch` and your reroll work sits alongside that rather than inside it.
+- `currentIndex` is still unused and the reroll still hardcodes `matchList[1]`. **I deliberately did not touch either**, even though it would have been easy, because it is the heart of your reroll story and yours to design. So that part of the file is exactly as you left it.
+
+**One trap.** The suggestion list has never talked to the real Google service, only to a stub in the tests. The shapes come from Google's documentation, so the first live run may need adjusting. If you see suggestions behaving oddly, that is mine and not yours.
+
 ### US29, clearer error and empty states
 
 Stretch, only if we are ahead. Related to the above, so if you are already in those files it may be quicker than it looks.
