@@ -17,7 +17,10 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { AmbientBackground } from "@/components/AmbientBackground";
 import { Button } from "@/components/Button";
+import { GameIcon } from "@/components/GameIcon";
 import { Icon } from "@/components/Icon";
+import { levelTitle } from "@/features/progress/progress";
+import { useProgress } from "@/features/progress/ProgressProvider";
 import { HUD_CLEARANCE } from "@/components/XpHud";
 import { AVATARS } from "@/features/profile/avatars";
 import { useAuth } from "@/hooks/useAuth";
@@ -77,6 +80,10 @@ export function SettingsScreen() {
   const [budget, setBudget] = useState(BUDGET_OPTIONS[1]);
   const [hours, setHours] = useState(HOURS_OPTIONS[0]);
   const [avatarIndex, setAvatarIndex] = useState(0);
+  const { progress } = useProgress();
+  // Falls back to the first avatar if a stored index ever points past the end
+  // of the list, which would otherwise crash the screen on a bad read.
+  const currentAvatar = AVATARS[avatarIndex] ?? AVATARS[0];
 
   // Load the saved settings when the screen opens. The active flag stops a late
   // load from updating state after the screen has already gone away.
@@ -227,6 +234,31 @@ export function SettingsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={[styles.title, { color: colors.ink }]}>Settings</Text>
+
+        {/* The profile summary the design puts between the heading and the
+            avatar picker. It shows who you are before offering to change how
+            you look, which is why it sits above the picker rather than below.
+
+            The design's second line reads "N-day streak". We do not track days,
+            so this shows the count we actually hold instead of dressing it up
+            as something we measure. */}
+        <View style={[styles.card, styles.profileCard, cardStyle]} testID="settings-profile">
+          {currentAvatar ? (
+            <Image source={currentAvatar.source} style={styles.profileAvatar} />
+          ) : null}
+          <View style={styles.profileText}>
+            <Text style={[styles.profileName, { color: colors.ink }]} numberOfLines={1}>
+              {levelTitle(progress.level)}, Lv {progress.level}
+            </Text>
+            <View style={styles.profileMetaRow}>
+              <GameIcon glyph="fire" size={13} color={colors.fuel} />
+              <Text style={[styles.profileMeta, { color: colors.teal }]}>
+                {progress.completedCount}{" "}
+                {progress.completedCount === 1 ? "task done" : "tasks done"}
+              </Text>
+            </View>
+          </View>
+        </View>
 
         <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>PROFILE AVATAR</Text>
         <View style={[styles.card, styles.avatarCard, cardStyle]}>
@@ -382,6 +414,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: "hidden",
   },
+  profileCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: T.spacing[4],
+    padding: T.spacing[4],
+    marginBottom: T.spacing[5],
+  },
+  profileAvatar: { width: 56, height: 56, borderRadius: 999 },
+  profileText: { flex: 1, minWidth: 0 },
+  profileName: { fontFamily: T.font.bold, fontSize: T.fontSize.subtitle },
+  profileMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: T.spacing[1],
+    marginTop: 3,
+  },
+  profileMeta: { fontFamily: T.font.semibold, fontSize: T.fontSize.caption },
   avatarCard: { padding: T.spacing[4] },
   avatarRow: { flexDirection: "row", justifyContent: "space-between" },
   avatarBtn: {

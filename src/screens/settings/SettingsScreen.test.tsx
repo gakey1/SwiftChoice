@@ -122,4 +122,35 @@ describe("SettingsScreen", () => {
 
     alertSpy.mockRestore();
   });
+
+  it("shows the profile summary above the avatar picker", async () => {
+    // The design puts a summary of who you are between the heading and the
+    // picker. The app went straight from one to the other, so the screen opened
+    // by offering to change your look before saying whose it was.
+    render(
+      <ThemeProvider>
+        <SettingsScreen />
+      </ThemeProvider>
+    );
+
+    expect(await screen.findByTestId("settings-profile")).toBeTruthy();
+    // Level and title, matching what Home already shows for the same player.
+    expect(screen.getByText(/Lv 1/)).toBeTruthy();
+  });
+
+  it("counts what it can actually count rather than claiming a day streak", async () => {
+    // The design's second line reads "N-day streak". Nothing in the app records
+    // which days anybody used it, so printing that would be inventing a figure,
+    // the same fault as the distance chip that once showed a number nobody had
+    // measured.
+    render(
+      <ThemeProvider>
+        <SettingsScreen />
+      </ThemeProvider>
+    );
+
+    await screen.findByTestId("settings-profile");
+    expect(screen.queryByText(/day streak/i)).toBeNull();
+    expect(screen.getByText(/tasks? done/i)).toBeTruthy();
+  });
 });
