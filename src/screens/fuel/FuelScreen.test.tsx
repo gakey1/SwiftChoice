@@ -36,8 +36,24 @@ jest.mock("@/features/history/historyStorage", () => ({
 // path returns a predictable result instead of failing on a missing key. Without
 // this the engine falls into its catch, the screen shows the empty state, and
 // the result-card assertions below pass without ever seeing a result.
+// No native module under Jest, same as the auth tests. The real randomUUID
+// works on a device; leaving it unmocked here makes the area box throw on the
+// first keystroke, which shows up as a test that times out rather than as
+// anything naming crypto.
+jest.mock("expo-crypto", () => ({
+  randomUUID: () => "test-session-token",
+}));
 jest.mock("@/services/recommendation/googlePlaces", () => ({
   GOOGLE_ATTRIBUTION: "Powered by Google",
+  // The real class, not a stand-in. The engine tells a missing key apart from a
+  // failed call with an instanceof check, so a look-alike defined here would
+  // pass the test while the real screen showed the wrong message.
+  MissingPlacesKeyError: jest.requireActual("@/services/recommendation/googlePlaces")
+    .MissingPlacesKeyError,
+  fetchAreaSuggestions: jest.fn(async () => [
+    { placeId: "belgrave-id", label: "Belgrave VIC 3160, Australia" },
+  ]),
+  fetchAreaCoordinates: jest.fn(async () => ({ latitude: -37.9084, longitude: 145.3554 })),
   fetchNearbyPlaces: jest.fn(async () => [
     {
       displayName: { text: "Test Cafe" },
@@ -166,11 +182,14 @@ describe("FuelScreen", () => {
     const { getCurrentPosition } = jest.requireMock("@/services/location/locationService");
     (getCurrentPosition as jest.Mock).mockResolvedValue({ ok: false, reason: "denied" });
 
-    const { getByText, getByPlaceholderText, findByText } = await renderFuelScreen();
+    const { getByText, getByTestId, findByText } = await renderFuelScreen();
     fireEvent.press(getByText("Decide for Me"));
     await findByText(/could not get your location/i);
 
-    fireEvent.changeText(getByPlaceholderText(/Suburb or city/i), "Southport QLD");
+    // Typed but never chosen from the list, so there are no coordinates and the
+    // looser text search is still the right path. Selected by testID rather
+    // than placeholder text, which is copy and moves.
+    fireEvent.changeText(getByTestId("fuel-area-input"), "Southport QLD");
     fireEvent.press(getByText("Search this area"));
 
     expect(await findByText("Southport Diner", {}, { timeout: 3000 })).toBeTruthy();
@@ -216,6 +235,82 @@ describe("FuelScreen", () => {
 
     // The mocked place sits about 610m north of the mocked position.
     expect(getByText(/^\d+ m$/)).toBeTruthy();
+  });
+
+  it("names the missing key instead of blaming the filters", async () => {
+    // This is the state anyone gets running the project from a fresh copy,
+    // including whoever marks it, because .env is deliberately not committed.
+    // Reporting it as "no exact match, try changing your filters" sends them
+    // hunting through the filters for a fault that is not there, and makes a
+    // working feature look broken.
+    const { fetchNearbyPlaces, MissingPlacesKeyError } = jest.requireMock(
+      "@/services/recommendation/googlePlaces"
+    );
+    (fetchNearbyPlaces as jest.Mock).mockRejectedValueOnce(new MissingPlacesKeyError());
+
+    const { getByText, findByTestId, queryByText } = await renderFuelScreen();
+
+    fireEvent.press(getByText("Decide for Me"));
+
+    await findByTestId("fuel-key-missing", {}, { timeout: 3000 });
+    expect(queryByText(/changing your filters/i)).toBeNull();
+  });
+
+  it("searches around a chosen suburb rather than text-matching its name", async () => {
+    // The Burwood bug. Typing "Belgrave" used to run an unanchored text search,
+    // so Google returned whatever it judged most relevant and the result could
+    // sit half an hour's drive away with nothing to measure it against.
+    // Choosing from the list gives the search a real centre and radius.
+    const { getCurrentPosition } = jest.requireMock("@/services/location/locationService");
+    const { fetchNearbyPlaces, fetchPlacesByArea } = jest.requireMock(
+      "@/services/recommendation/googlePlaces"
+    );
+    (getCurrentPosition as jest.Mock).mockResolvedValue({ ok: false, reason: "unavailable" });
+    // No beforeEach in this suite, so call records carry over from earlier
+    // tests. An earlier one does use the text search, which would make the
+    // "not called" assertion below fail for the wrong reason.
+    (fetchNearbyPlaces as jest.Mock).mockClear();
+    (fetchPlacesByArea as jest.Mock).mockClear();
+
+    const { getByText, getByTestId, findByTestId } = await renderFuelScreen();
+    fireEvent.press(getByText("Decide for Me"));
+    await findByTestId("fuel-area-input", {}, { timeout: 3000 });
+
+    fireEvent.changeText(getByTestId("fuel-area-input"), "Belg");
+    await findByTestId("fuel-area-suggestions", {}, { timeout: 3000 });
+    fireEvent.press(getByText("Belgrave VIC 3160, Australia"));
+
+    await waitFor(() =>
+      expect(fetchNearbyPlaces as jest.Mock).toHaveBeenCalledWith(
+        expect.objectContaining({ latitude: -37.9084, longitude: 145.3554 })
+      )
+    );
+    // The loose text search must not also run: it is the thing being replaced.
+    expect(fetchPlacesByArea as jest.Mock).not.toHaveBeenCalled();
+
+    // This suite has no beforeEach, so each test leaves the mocks as it found
+    // them. Without this the failing position leaks into every test after it.
+    (getCurrentPosition as jest.Mock).mockResolvedValue({
+      ok: true,
+      latitude: -37.8,
+      longitude: 144.9,
+    });
+  });
+
+  it("still blames the filters when the search really did come back empty", async () => {
+    // The other half. If every empty result claimed a missing key, the three of
+    // us with a working .env would be told to go and fix it.
+    const { fetchNearbyPlaces } = jest.requireMock(
+      "@/services/recommendation/googlePlaces"
+    );
+    (fetchNearbyPlaces as jest.Mock).mockResolvedValueOnce([]);
+
+    const { getByText, findByText, queryByTestId } = await renderFuelScreen();
+
+    fireEvent.press(getByText("Decide for Me"));
+
+    await findByText(/changing your filters/i, {}, { timeout: 3000 });
+    expect(queryByTestId("fuel-key-missing")).toBeNull();
   });
 });
 

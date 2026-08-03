@@ -9,7 +9,8 @@
 // Styling only: the filter state, the recommendation call, the one-reroll cap,
 // and the accept-to-history wiring are exactly as written; only the look changed.
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
+import * as Crypto from "expo-crypto";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { StyleSheet, Text, TextInput, View, TouchableOpacity, ScrollView, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -23,7 +24,16 @@ import { moduleAccent, moduleDeep } from "@/theme/themes";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useProgress } from "@/features/progress/ProgressProvider";
 import { XP_PER_DECISION } from "@/features/progress/progress";
-import { getRecommendation, LOCATION_REQUIRED } from "@/services/recommendation/recommendationEngine";
+import {
+  getRecommendation,
+  LOCATION_REQUIRED,
+  PLACES_KEY_MISSING,
+} from "@/services/recommendation/recommendationEngine";
+import {
+  fetchAreaCoordinates,
+  fetchAreaSuggestions,
+  type AreaSuggestion,
+} from "@/services/recommendation/googlePlaces";
 import { GOOGLE_ATTRIBUTION } from "@/services/recommendation/googlePlaces";
 import type { FoodOption } from "@/services/recommendation/recommendationEngine";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -34,6 +44,18 @@ import { loadPreferences } from "@/services/localdb/preferencesStorage";
 
 // Dark ink sits on top of the bright accent fills (buttons), for contrast.
 const ON_ACCENT = "#141026";
+
+// A one-off identifier tying the keystrokes of a single area search to the
+// choice that ends it. Google treats that group as one billable session, and
+// bills only the final lookup, so reusing a token across searches or dropping
+// it entirely turns free keystrokes into charged ones.
+//
+// It only has to be unique, not unguessable, but expo-crypto is already a
+// dependency and costs nothing here. Math.random would do and would be the
+// weaker habit to leave in the codebase.
+function newSessionToken(): string {
+  return Crypto.randomUUID();
+}
 
 type FilterGroupProps = {
   label: string;
@@ -187,15 +209,115 @@ export function FuelScreen() {
   const budgetRanges = getBudgetRanges(userTier);
 
   const [recommendation, setRecommendation] = useState<FoodOption | null>(null);
+  // True when the app has no Places key at all. Kept apart from the ordinary
+  // no-match state so the screen can name the real cause instead of pointing at
+  // the filters, which is what somebody running a fresh copy would otherwise be
+  // sent to check.
+  const [keyMissing, setKeyMissing] = useState(false);
+  // Areas offered while typing, and the coordinates of the one chosen.
+  const [suggestions, setSuggestions] = useState<AreaSuggestion[]>([]);
+  const [areaPosition, setAreaPosition] = useState<
+    { latitude: number; longitude: number } | null
+  >(null);
+
+  // Groups every keystroke and the final choice into one billable session.
+  // Held in a ref rather than state because changing it must not re-render, and
+  // it has to survive between the typing and the choice. Cleared after a choice
+  // so the next search starts a fresh session.
+  const areaSessionToken = useRef<string | null>(null);
+  // Cancels an in-flight suggestion lookup when another keystroke lands, so a
+  // slow earlier response cannot overwrite a newer list.
+  const suggestionSeq = useRef(0);
   const [hasSearched, setHasSearched] = useState(false);
   const [matchList, setMatchList] = useState<FoodOption[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const primaryColor = accent.color;
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
 
-  // Runs when "Decide for Me" is pressed. Asks the engine for matches, keeps the
-  // whole list so a reroll can show the next one, and shows the first result.
+  // Runs on every keystroke in the area box. Asks Google for matching areas and
+  // shows them, so the user picks a real place instead of typing a name we then
+  // have to interpret.
+  //
+  // Typing again after choosing clears the chosen coordinates, otherwise the
+  // search would run against a place the box no longer shows.
+  const handleAreaTyped = (text: string) => {
+    setManualArea(text);
+    setAreaPosition(null);
+
+    const trimmed = text.trim();
+    // Two characters is enough to be worth asking about and short enough not to
+    // fire on a single stray keypress.
+    if (trimmed.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+
+    if (!areaSessionToken.current) {
+      areaSessionToken.current = newSessionToken();
+    }
+
+    const seq = suggestionSeq.current + 1;
+    suggestionSeq.current = seq;
+
+    void (async () => {
+      try {
+        const results = await fetchAreaSuggestions(trimmed, areaSessionToken.current as string);
+        // A slower earlier request must not replace a newer list.
+        if (suggestionSeq.current === seq) {
+          setSuggestions(results);
+        }
+      } catch {
+        // Suggestions are a convenience. If they fail, the typed area still
+        // works through the text search, so this stays quiet rather than
+        // putting an error in front of somebody who can still get a result.
+        if (suggestionSeq.current === seq) {
+          setSuggestions([]);
+        }
+      }
+    })();
+  };
+
+  // Runs when an area is chosen from the list. Resolves it to coordinates and
+  // searches immediately, since choosing is the whole answer to the question
+  // the screen asked.
+  //
+  // This call is also what closes the billing session: the typing requests are
+  // only free because one of these follows them.
+  const handleAreaChosen = async (suggestion: AreaSuggestion) => {
+    setManualArea(suggestion.label);
+    setSuggestions([]);
+    suggestionSeq.current += 1;
+
+    try {
+      const position = await fetchAreaCoordinates(
+        suggestion.placeId,
+        areaSessionToken.current ?? newSessionToken()
+      );
+      setAreaPosition(position);
+      await runSearch(position);
+    } catch {
+      // Could not resolve it. The label is still in the box, so the text search
+      // remains available rather than the choice being a dead end.
+      setAreaPosition(null);
+    } finally {
+      // One session ends here whether or not it worked, so the next search is
+      // billed as its own.
+      areaSessionToken.current = null;
+    }
+  };
+
+  // Runs when "Decide for Me" is pressed.
   const handleGetRecommendation = async () => {
+    await runSearch(areaPosition);
+  };
+
+  // Asks the engine for matches, keeps the whole list so a reroll can show the
+  // next one, and shows the first result.
+  //
+  // Takes the area position as an argument rather than reading state, because
+  // choosing from the list searches straight away and a state update is not
+  // visible to the same tick.
+  const runSearch = async (chosenArea: { latitude: number; longitude: number } | null) => {
     setHasSearched(false);
 
     const result = await getRecommendation({
@@ -204,7 +326,22 @@ export function FuelScreen() {
       prepTime: prepTime,
       distance: mealType === "in" ? undefined : distance,
       manualArea: manualArea.trim() === "" ? undefined : manualArea.trim(),
+      areaLatitude: chosenArea?.latitude,
+      areaLongitude: chosenArea?.longitude,
     });
+
+    // No key configured, so no search was ever made. Say that, rather than
+    // reporting an empty result the filters cannot fix.
+    if (result === PLACES_KEY_MISSING) {
+      setKeyMissing(true);
+      setNeedsArea(false);
+      setMatchList([]);
+      setRecommendation(null);
+      setHasSearched(true);
+      return;
+    }
+
+    setKeyMissing(false);
 
     // The phone gave no position and nothing was typed. Ask where they are
     // instead of guessing, then stop here until they answer.
@@ -519,8 +656,8 @@ export function FuelScreen() {
             </Text>
             <TextInput
               value={manualArea}
-              onChangeText={setManualArea}
-              placeholder="Suburb or city, for example Southport QLD"
+              onChangeText={handleAreaTyped}
+              placeholder="Start typing a suburb, for example Belgrave"
               placeholderTextColor={colors.ink2}
               style={[
                 styles.areaInput,
@@ -529,7 +666,32 @@ export function FuelScreen() {
               autoCorrect={false}
               returnKeyType="search"
               onSubmitEditing={handleGetRecommendation}
+              testID="fuel-area-input"
             />
+
+            {/* Choosing from the list is what makes this exact. It settles which
+                Belgrave was meant, and hands back coordinates so the search runs
+                on a real centre and radius instead of a loose text match. */}
+            {suggestions.length > 0 && (
+              <View
+                style={[styles.suggestionList, { borderColor: colors.cardLine }]}
+                testID="fuel-area-suggestions"
+              >
+                {suggestions.map((suggestion) => (
+                  <TouchableOpacity
+                    key={suggestion.placeId}
+                    style={[styles.suggestionRow, { borderBottomColor: colors.cardLine }]}
+                    onPress={() => void handleAreaChosen(suggestion)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.suggestionText, { color: colors.ink }]}>
+                      {suggestion.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
             <TouchableOpacity
               style={[styles.areaButton, { backgroundColor: primaryColor }]}
               onPress={handleGetRecommendation}
@@ -541,7 +703,20 @@ export function FuelScreen() {
           </View>
         )}
 
-        {recommendation === null && hasSearched && !needsArea && (
+        {keyMissing && (
+          <View style={styles.noResultContainer} testID="fuel-key-missing">
+            <Text style={[styles.noResultText, { color: colors.ink }]}>
+              Live search is not set up on this device.
+            </Text>
+            <Text style={[styles.noResultText, { color: colors.ink2 }]}>
+              Eat Out needs a Google Places key to find real places nearby. Copy
+              .env.example to .env, add EXPO_PUBLIC_GOOGLE_PLACES_KEY, then
+              restart the dev server. The README has the steps.
+            </Text>
+          </View>
+        )}
+
+        {recommendation === null && hasSearched && !needsArea && !keyMissing && (
           <View style={styles.noResultContainer}>
             <Text style={[styles.noResultText, { color: colors.ink2 }]}>
               No exact match found in the pool. Try changing your filters!
@@ -630,6 +805,9 @@ const styles = StyleSheet.create({
   attribution: { fontSize: 11, marginTop: 10, textAlign: "center" },
   locationNotice: { fontSize: 12, marginTop: 12, textAlign: "center", lineHeight: 17 },
   areaInput: { width: "100%", borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, marginTop: 14, fontSize: 15 },
+  suggestionList: { width: "100%", borderWidth: 1, borderRadius: 12, marginTop: 8, overflow: "hidden" },
+  suggestionRow: { paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  suggestionText: { fontFamily: T.font.regular, fontSize: 15 },
   areaButton: { marginTop: 12, paddingVertical: 12, paddingHorizontal: 22, borderRadius: 12, alignSelf: "stretch", alignItems: "center" },
   areaButtonText: { fontSize: 15, fontWeight: "700" },
   statLabel: { fontFamily: T.font.regular, fontSize: T.fontSize.caption },
