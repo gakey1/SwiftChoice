@@ -3,7 +3,14 @@
 // that the field list stays inside the tier we chose, and that real responses
 // with missing fields do not break anything.
 
-import { fetchNearbyPlaces, GOOGLE_ATTRIBUTION } from "./googlePlaces";
+import {
+  fetchAreaCoordinates,
+  fetchAreaSuggestions,
+  fetchNearbyPlaces,
+  fetchPlacesByArea,
+  GOOGLE_ATTRIBUTION,
+  MissingPlacesKeyError,
+} from "./googlePlaces";
 
 const ORIGINAL_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_KEY;
 
@@ -121,6 +128,106 @@ describe("fetchNearbyPlaces", () => {
     await expect(
       fetchNearbyPlaces({ latitude: 0, longitude: 0, radiusMeters: 500 })
     ).rejects.toThrow("EXPO_PUBLIC_GOOGLE_PLACES_KEY");
+  });
+
+  it("throws a distinguishable type when the key is missing", async () => {
+    // The type is what lets the engine tell "nobody set this up" apart from
+    // "the call failed", so the screen can name the real cause instead of
+    // sending the reader to check their filters for a fault that is not there.
+    delete process.env.EXPO_PUBLIC_GOOGLE_PLACES_KEY;
+    mockFetchOnce({ places: [] });
+
+    await expect(
+      fetchNearbyPlaces({ latitude: 0, longitude: 0, radiusMeters: 500 })
+    ).rejects.toBeInstanceOf(MissingPlacesKeyError);
+  });
+
+  it("does not raise the missing-key type when a real call fails", async () => {
+    // Guards the other half. If a network failure were also reported as a
+    // missing key, the screen would tell everyone to edit a .env file that is
+    // already correct.
+    process.env.EXPO_PUBLIC_GOOGLE_PLACES_KEY = "test-key";
+    mockFetchOnce({ error: "boom" }, false, 500);
+
+    await expect(
+      fetchNearbyPlaces({ latitude: 0, longitude: 0, radiusMeters: 500 })
+    ).rejects.not.toBeInstanceOf(MissingPlacesKeyError);
+  });
+
+  it("keeps a typed-area search inside Australia", async () => {
+    // A bare suburb name is otherwise a worldwide search. Plenty of Australian
+    // suburb names also exist in Britain and the United States, so without this
+    // somebody typing their own suburb can be shown results overseas with
+    // nothing on screen suggesting anything went wrong.
+    process.env.EXPO_PUBLIC_GOOGLE_PLACES_KEY = "test-key";
+    const spy = mockFetchOnce({ places: [] });
+
+    await fetchPlacesByArea("Belgrave");
+
+    const body = JSON.parse((spy.mock.calls[0] as unknown as [string, { body: string }])[1].body);
+    expect(body.regionCode).toBe("AU");
+    expect(body.textQuery).toContain("Belgrave");
+  });
+
+  it("asks for areas only, inside Australia, under one session token", async () => {
+    process.env.EXPO_PUBLIC_GOOGLE_PLACES_KEY = "test-key";
+    const spy = mockFetchOnce({ suggestions: [] });
+
+    await fetchAreaSuggestions("Belg", "token-1");
+
+    const body = JSON.parse((spy.mock.calls[0] as unknown as [string, { body: string }])[1].body);
+    expect(body.input).toBe("Belg");
+    // Without this the list fills with cafes and shops rather than places a
+    // person could be standing in.
+    expect(body.includedPrimaryTypes).toEqual(["(regions)"]);
+    expect(body.includedRegionCodes).toEqual(["AU"]);
+    // The token is what keeps these keystrokes free. Dropping it bills each one
+    // separately, which is a cost bug that nothing on screen would reveal.
+    expect(body.sessionToken).toBe("token-1");
+  });
+
+  it("drops suggestions with no place behind them", async () => {
+    // Google mixes in query predictions, which are search phrases rather than
+    // places. They have no id to resolve, so offering one would give the user a
+    // row that does nothing when tapped.
+    process.env.EXPO_PUBLIC_GOOGLE_PLACES_KEY = "test-key";
+    mockFetchOnce({
+      suggestions: [
+        { placePrediction: { placeId: "abc", text: { text: "Belgrave VIC 3160" } } },
+        { queryPrediction: { text: { text: "belgrave restaurants" } } },
+      ],
+    });
+
+    const results = await fetchAreaSuggestions("Belg", "token-1");
+
+    expect(results).toEqual([{ placeId: "abc", label: "Belgrave VIC 3160" }]);
+  });
+
+  it("resolves a chosen area to coordinates, asking for location only", async () => {
+    process.env.EXPO_PUBLIC_GOOGLE_PLACES_KEY = "test-key";
+    const spy = mockFetchOnce({ location: { latitude: -37.9, longitude: 145.35 } });
+
+    const result = await fetchAreaCoordinates("abc", "token-1");
+
+    expect(result).toEqual({ latitude: -37.9, longitude: 145.35 });
+
+    const [url, init] = spy.mock.calls[0] as unknown as [
+      string,
+      { headers: Record<string, string> },
+    ];
+    // The session token has to reach this call, because it is what makes the
+    // typing that led here free rather than billed per keystroke.
+    expect(url).toContain("sessionToken=token-1");
+    // Place Details is billed by the fields asked for. Anything beyond location
+    // moves every one of these calls into a dearer tier.
+    expect(init.headers["X-Goog-FieldMask"]).toBe("location");
+  });
+
+  it("throws rather than returning a half-answer when details have no location", async () => {
+    process.env.EXPO_PUBLIC_GOOGLE_PLACES_KEY = "test-key";
+    mockFetchOnce({});
+
+    await expect(fetchAreaCoordinates("abc", "token-1")).rejects.toThrow("no location");
   });
 
   it("exports the credit line Google requires on screen", () => {

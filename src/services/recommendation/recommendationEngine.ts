@@ -3,7 +3,12 @@
 // return the matches in a shuffled order. Eat Out is routed through a mock of
 // the Google Places API so the real one can be swapped in later.
 
-import { fetchNearbyPlaces, fetchPlacesByArea, type GooglePlaceResult } from "./googlePlaces";
+import {
+  fetchNearbyPlaces,
+  fetchPlacesByArea,
+  MissingPlacesKeyError,
+  type GooglePlaceResult,
+} from "./googlePlaces";
 import { getCurrentPosition } from "@/services/location/locationService";
 import { distanceMeters } from "./openStreetMapPlaces";
 
@@ -66,6 +71,12 @@ export interface FilterCriteria {
   userLongitude?: number;
   // An area the user typed, used only when the phone would not give a position.
   manualArea?: string | undefined;
+  // Where that area actually is, when it was chosen from the suggestion list
+  // rather than typed freehand. Present together or not at all. With them the
+  // search runs on a real centre and radius, which is what stops a suburb
+  // search returning somewhere half an hour's drive away.
+  areaLatitude?: number | undefined;
+  areaLongitude?: number | undefined;
 }
 
 /*
@@ -80,6 +91,13 @@ export interface FilterCriteria {
 // rather than guessing a city, because a guess would show somebody in Queensland
 // a list of Melbourne restaurants and call them nearby.
 export const LOCATION_REQUIRED = "LOCATION_REQUIRED" as const;
+
+// Returned when no Places key is configured, which is not the same thing as a
+// search that found nothing. Anyone running the project from a fresh copy hits
+// this, because the key lives in .env and .env is deliberately not committed.
+// Telling them "no matches found" would send them hunting through the filters
+// for a fault that is really an unfinished setup step.
+export const PLACES_KEY_MISSING = "PLACES_KEY_MISSING" as const;
 
 // How far out to search for each distance choice on the Fuel screen.
 const RADIUS_BY_DISTANCE: Record<"near" | "mid" | "far", number> = {
@@ -118,7 +136,7 @@ function mapTierToSymbol(tierOrSymbol: string): "$" | "$$" | "$$$" {
 }
 export async function getRecommendation(
   criteria: FilterCriteria
-): Promise<FoodOption[] | null | typeof LOCATION_REQUIRED> {
+): Promise<FoodOption[] | null | typeof LOCATION_REQUIRED | typeof PLACES_KEY_MISSING> {
   // Convert whatever came from settings/survey into the symbol format your pool/API expects
   const resolvedBudget = mapTierToSymbol(criteria.budget);
 
@@ -149,8 +167,25 @@ export async function getRecommendation(
       }
     }
 
-    const hasPosition = lat !== undefined && lng !== undefined;
     const typedArea = criteria.manualArea?.trim();
+
+    // An area chosen from the suggestion list arrives with real coordinates, so
+    // it can search exactly like a phone position does: a genuine centre, the
+    // chosen radius, and a real distance on every card. Only a free-typed area
+    // with no choice behind it still falls back to the looser text search.
+    // Whether the position is the phone's own. Recorded before the area
+    // coordinates are folded in, because the card has to keep saying the result
+    // is based on a place the user named rather than on where they are. Losing
+    // that distinction would put an unearned "near you" on a search run from a
+    // suburb they picked off a list.
+    const positionFromDevice = lat !== undefined && lng !== undefined;
+
+    if (lat === undefined && criteria.areaLatitude !== undefined) {
+      lat = criteria.areaLatitude;
+      lng = criteria.areaLongitude;
+    }
+
+    const hasPosition = lat !== undefined && lng !== undefined;
 
     // No position and nothing typed: ask rather than guess. Inventing a city
     // here is what would show a Queensland user Melbourne restaurants.
@@ -192,10 +227,11 @@ export async function getRecommendation(
         // Empty means Google holds no rating for this place. The screen hides
         // the rating chip rather than showing a zero or an invented score.
         rating: place.rating === undefined ? "" : place.rating.toFixed(1),
-        searched_area: hasPosition ? undefined : typedArea,
-        // Measured only when we know where the search ran from and where the
-        // place is. A typed-area search has no user position, so it stays unset
-        // and the card falls back to the band.
+        searched_area: positionFromDevice ? undefined : typedArea,
+        // Measured whenever there is a centre to measure from, which now
+        // includes an area chosen off the list. Only a freehand area with no
+        // coordinates behind it leaves this unset, and that card falls back to
+        // naming the band rather than printing a figure nobody measured.
         distance_meters:
           hasPosition && place.location
             ? distanceMeters(lat as number, lng as number, place.location.latitude, place.location.longitude)
@@ -205,6 +241,14 @@ export async function getRecommendation(
 
     return shuffleOptions(transformedOptions);
   } catch (error) {
+    // A missing key is a setup step, not a failed search, and the screen says so
+    // rather than blaming the filters. Kept separate from the general failure
+    // below so a real network error still reads as a real network error.
+    if (error instanceof MissingPlacesKeyError) {
+      console.warn(error.message);
+      return PLACES_KEY_MISSING;
+    }
+
     console.warn("Live places lookup failed:", error);
 
     return null;
