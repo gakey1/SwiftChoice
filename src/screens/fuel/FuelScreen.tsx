@@ -40,7 +40,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import type { AppStackParamList } from "@/navigation/types";
 import { logDecision } from "@/features/history/historyStorage";
-import { loadPreferences } from "@/services/localdb/preferencesStorage";
+import { loadPreferences, savePreferences } from "@/services/localdb/preferencesStorage";
 
 // Dark ink sits on top of the bright accent fills (buttons), for contrast.
 const ON_ACCENT = "#141026";
@@ -158,6 +158,7 @@ export function getBudgetRanges(tier: string | null): TierRanges {
 }
 
 export function FuelScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { colors } = useTheme();
   const { progress, awardXp } = useProgress();
   const accent = moduleAccent(colors, "fuel");
@@ -172,6 +173,7 @@ export function FuelScreen() {
   // are rather than the app assuming a city they may be nowhere near.
   const [manualArea, setManualArea] = useState<string>("");
   const [needsArea, setNeedsArea] = useState<boolean>(false);
+  const [isCheckingBudget, setIsCheckingBudget] = useState(true);
 
   // Re-loads the saved budget level every time the screen comes into focus, so
   // changing it in Settings shows here without restarting the app.
@@ -182,28 +184,37 @@ export function FuelScreen() {
       async function loadBudgetPreference() {
         try {
           const savedTier = await loadPreferences();
-          if (active && savedTier.defaultBudget) {
-            setUserTier(savedTier.defaultBudget);
+          if (!active) return;
 
-            if (savedTier.defaultBudget === 'budget') {
-              setBudget('$');
-            } else if (savedTier.defaultBudget === 'moderate') {
-              setBudget('$$');
-            } else if (savedTier.defaultBudget === 'premium') {
-              setBudget('$$$');
-            }
+          // Check if the budget is missing, empty, or unconfigured ("None set")
+          if (!savedTier.defaultBudget || savedTier.defaultBudget === "None set") {
+            navigation.replace("BudgetSurvey");
+            return;
           }
+
+          setUserTier(savedTier.defaultBudget);
+          if (savedTier.defaultBudget === 'budget') {
+              setBudget('$');
+          } else if (savedTier.defaultBudget === 'moderate') {
+              setBudget('$$');
+          } else if (savedTier.defaultBudget === 'premium') {
+              setBudget('$$$');
+          }
+
+          // Only show the Fuel screen UI once we know a budget exists
+          setIsCheckingBudget(false);
         } catch (error) {
           console.error("Failed to load user budget tier", error);
+          setIsCheckingBudget(false);
         }
       }
 
-      loadBudgetPreference();
+      void loadBudgetPreference();
 
       return () => {
         active = false;
       };
-    }, [])
+    }, [navigation])
   );
   // Get the dynamic labels based on the tier
   const budgetRanges = getBudgetRanges(userTier);
@@ -232,7 +243,6 @@ export function FuelScreen() {
   const [matchList, setMatchList] = useState<FoodOption[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const primaryColor = accent.color;
-  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
 
   // Runs on every keystroke in the area box. Asks Google for matching areas and
   // shows them, so the user picks a real place instead of typing a name we then
@@ -393,6 +403,14 @@ export function FuelScreen() {
       Alert.alert("No other matching options found in the pool. Try adjusting your filters!");
     }
   };
+
+  if (isCheckingBudget) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.bg }}>
+        <AmbientBackground />
+      </View>
+    );
+  }
 
   // === VIEW 1: SHOW THE RESULT CARD MANUALLY IF MATCH IS FOUND ===
   if (recommendation) {

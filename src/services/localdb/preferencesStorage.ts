@@ -13,7 +13,7 @@ export type UserPreferences = {
 // The values used before a user has set anything of their own.
 export const DEFAULT_PREFERENCES: UserPreferences = {
   dietaryRestrictions: "None set",
-  defaultBudget: "$20 - $50",
+  defaultBudget: "None set",
   workHours: "9am - 5pm",
 };
 

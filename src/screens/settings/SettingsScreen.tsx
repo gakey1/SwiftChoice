@@ -38,12 +38,13 @@ import { T } from "@/theme/tokens";
 import { useTheme } from "@/theme/ThemeProvider";
 
 const DIET_OPTIONS = ["None set", "Vegetarian", "No beef", "Halal"];
-const BUDGET_OPTIONS = ['budget', 'moderate', 'premium'];
+const BUDGET_OPTIONS = ['None set','budget', 'moderate', 'premium'];
 
 const BUDGET_LABELS: Record<string, string> = {
-  budget: 'Under $15 (Budget-friendly)',
-  moderate: '$15 to $35 (Moderate)',
-  premium: 'Over $35 (Premium)',
+  'None set': 'None set',
+  budget: '$10',
+  moderate: '$25',
+  premium: '$45',
 };
 
 const HOURS_OPTIONS = ["9am - 5pm", "7am - 3pm", "Flexible"];
@@ -77,7 +78,7 @@ export function SettingsScreen() {
   );
 
   const [diet, setDiet] = useState(DIET_OPTIONS[0]);
-  const [budget, setBudget] = useState(BUDGET_OPTIONS[1]);
+  const [budget, setBudget] = useState(BUDGET_OPTIONS[0]);
   const [hours, setHours] = useState(HOURS_OPTIONS[0]);
   const [avatarIndex, setAvatarIndex] = useState(0);
   const { progress } = useProgress();
@@ -87,21 +88,26 @@ export function SettingsScreen() {
 
   // Load the saved settings when the screen opens. The active flag stops a late
   // load from updating state after the screen has already gone away.
-  useEffect(() => {
-    let active = true;
-    void loadPreferences().then((stored) => {
-      if (!active) return;
-      setDiet(stored.dietaryRestrictions);
-      setBudget(stored.defaultBudget);
-      setHours(stored.workHours);
-    });
-    void loadAvatarIndex().then((i) => {
-      if (active) setAvatarIndex(i);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+
+      void loadPreferences().then((stored) => {
+        if (!active) return;
+        setDiet(stored.dietaryRestrictions);
+        setBudget(stored.defaultBudget);
+        setHours(stored.workHours);
+      });
+
+      void loadAvatarIndex().then((i) => {
+        if (active) setAvatarIndex(i);
+      });
+
+      return () => {
+        active = false;
+      };
+    }, [])
+  );
 
   // Selects and persists a profile avatar. The choice shows on the Home player
   // card and here.
@@ -137,11 +143,11 @@ export function SettingsScreen() {
   function handleOpenBudgetPicker() {
     Alert.alert(
       "Select Budget",
-      "Choose your preferred budget tier:",
+      "What is your typical meal budget?",
       [
-        { text: "Under $15", onPress: () => updateBudgetPreference('budget') },
-        { text: "$15 to $35", onPress: () => updateBudgetPreference('moderate') },
-        { text: "Over $35", onPress: () => updateBudgetPreference('premium') },
+        { text: " $10 ", onPress: () => updateBudgetPreference('budget') },
+        { text: " $25 ", onPress: () => updateBudgetPreference('moderate') },
+        { text: " $45 ", onPress: () => updateBudgetPreference('premium') },
         { text: "Cancel", style: "cancel" }
       ],
       { cancelable: true }
@@ -193,7 +199,7 @@ export function SettingsScreen() {
               if (result.ok) {
                 // Reset what is on screen so it matches what is now stored.
                 setDiet(DIET_OPTIONS[0]);
-                setBudget(BUDGET_OPTIONS[1]);
+                setBudget(BUDGET_OPTIONS[0]);
                 setHours(HOURS_OPTIONS[0]);
                 setAvatarIndex(0);
                 Alert.alert("Cleared", "The data this app stored on this phone has been removed.");
