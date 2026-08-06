@@ -220,9 +220,7 @@ async function breakTieWithGemini(
   tasks: TieTask[],
   apiKey: string,
 ): Promise<TieBreakResult> {
-  const taskIds = tasks.map((task) => task.taskId);
-
-  const prompt = [
+const prompt = [
     "Rank these tied tasks for the user.",
     "They already received exactly the same urgency and importance score.",
     "",
@@ -271,7 +269,6 @@ async function breakTieWithGemini(
         maxItems: tasks.length,
         items: {
           type: "integer",
-          enum: taskIds,
         },
       },
       reason: {
