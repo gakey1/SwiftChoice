@@ -8,7 +8,8 @@
 // handleRankTasks (Tracy's US22-24 work) - is kept exactly as she wrote it. The
 // gamification is a separate presentation-only layer (awardXp / celebrate) that
 // reacts to those actions; it never changes what her functions do.
-
+// IMPORTANT: Tracy's Priority screen and task-management flow remain intact.
+// The ranking handler now integrates Bikash's assigned tie-breaking feature.
 import React, { useCallback, useState } from "react";
 import {
   Alert,
@@ -37,6 +38,7 @@ import { useProgress } from "@/features/progress/ProgressProvider";
 import { moduleAccent, moduleDeep } from "@/theme/themes";
 import { useTheme } from "@/theme/ThemeProvider";
 import { T } from "@/theme/tokens";
+import { rankTasksWithAI } from "@/features/priority/priorityAIRanking";
 // ---------------------------------------------------------------------------
 // Tracy's decision logic (US22-24). Kept verbatim - do not change.
 // ---------------------------------------------------------------------------
@@ -81,6 +83,8 @@ export function PriorityScreen() {
   const [taskList, setTaskList] = useState<Task[]>([]);
   const [isRanked, setIsRanked] = useState<boolean>(false);
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
+  const [isRanking, setIsRanking] = useState<boolean>(false); // New state to track if ranking is in progress
+  const [rankingReasons, setRankingReasons] = useState<string[]>([]); // New state to hold AI reasons
 
   // ----- Tracy's logic (kept verbatim) -----
   const addTask = () => {
@@ -105,20 +109,20 @@ export function PriorityScreen() {
     // Tracy left a hook here for XP; the gamification layer below supplies it.
   };
 
-  const handleRankTasks = () => {
-    const sorted = [...taskList].sort((a, b) => {
-      const map: Record<"High" | "Medium" | "Low", number> = {
-        High: 3,
-        Medium: 2,
-        Low: 1,
-      };
-      const scoreA = map[a.urgency] + map[a.importance];
-      const scoreB = map[b.urgency] + map[b.importance];
-      return scoreB - scoreA;
-    });
-    setTaskList(sorted);
-    setIsRanked(true);
-  };
+  const handleRankTasks = async () => {
+  const result = await rankTasksWithAI(taskList);
+
+  setTaskList(result.tasks);
+  setIsRanked(true);
+
+  setRankingReasons(
+    result.aiReasons.length > 0
+      ? result.aiReasons
+      : [
+          "Ranked by urgency + importance. Equal scores use deadline, then oldest task.",
+        ]
+  );
+};
 
   // ----- Gamification: shared progress via context, feedback via local state -----
   const { progress, awardXp, bumpCompleted, markRanked } = useProgress();
@@ -249,32 +253,37 @@ export function PriorityScreen() {
   };
 
   const onRank = () => {
-    if (taskList.length < 2) return;
-    
-    Alert.alert(
+  if (taskList.length < 2 || isRanking) return;
+
+  Alert.alert(
     "Lock in Priority?",
     "Once you rank your tasks, you won't be able to edit or delete them. Are you sure?",
     [
       { text: "Not yet", style: "cancel" },
-      { 
-        text: "Rank them", 
-        onPress: () => {
-          handleRankTasks();
-          setIsRanked(true);
-          markRanked();
-          reward(20, "Ranked. Start with #1.");
-          celebrate();
-        } 
-      }
+      {
+        text: "Rank them",
+        onPress: async () => {
+          setIsRanking(true);
+
+          try {
+            await handleRankTasks();
+            markRanked();
+            reward(20, "Ranked. Start with #1.");
+            celebrate();
+          } finally {
+            setIsRanking(false);
+          }
+        },
+      },
     ]
   );
-  };
+};
 
   // The canonical achievements, unlocked ones first, shown the same way here and
   // on Home.
   const badges = earnedFirst(coreAchievements(progress));
 
-  const canRank = taskList.length >= 2 && !isRanked;
+  const canRank = taskList.length >= 2 && !isRanked && !isRanking;
   const xpWidth = xpBar.interpolate({
     inputRange: [0, 1],
     outputRange: ["0%", "100%"],
@@ -446,7 +455,11 @@ export function PriorityScreen() {
                 style={[styles.statusDot, { backgroundColor: isRanked ? primaryColor : colors.ink3 }]}
               />
               <Text style={[styles.statusLabel, { color: colors.ink }]}>
-                {isRanked ? "Ranked by urgency + importance" : "Unsorted"}
+                {isRanking
+                   ? "Ranking tasks..."
+                   : isRanked
+                     ? "Ranked by urgency + importance"
+                     : "Unsorted"}
               </Text>
             </View>
             <Text style={[styles.taskCount, { color: colors.ink2 }]}>
@@ -454,6 +467,26 @@ export function PriorityScreen() {
             </Text>
           </View>
         )}
+
+        {isRanked && rankingReasons.length > 0 && (
+           <View style={{ marginTop: 8 }}>
+           {rankingReasons.map((reason, index) => (
+            <Text
+              key={`${reason}-${index}`}
+              style={[
+                styles.statusLabel,
+                  {
+                    color: colors.ink2,
+                    lineHeight: 18,
+                    marginBottom: 4,
+               },
+        ]}
+      >
+        {reason}
+      </Text>
+    ))}
+  </View>
+)}
 
         {/* Task list */}
         <View style={styles.list}>
@@ -569,7 +602,9 @@ export function PriorityScreen() {
           activeOpacity={0.85}
         >
           <Icon name="bar-chart-2" size={20} color={colors.onAccent} />
-          <Text style={[styles.rankButtonText, { color: colors.onAccent }]}>Rank my tasks</Text>
+          <Text style={[styles.rankButtonText, { color: colors.onAccent }]}>
+            {isRanking ? "Ranking..." : "Rank my tasks"}
+            </Text>
         </TouchableOpacity>
       </View>
 
