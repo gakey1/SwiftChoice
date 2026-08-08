@@ -3,6 +3,7 @@
 // that the field list stays inside the tier we chose, and that real responses
 // with missing fields do not break anything.
 
+import type { GooglePlaceResult } from "./googlePlaces";
 import {
   fetchAreaCoordinates,
   fetchAreaSuggestions,
@@ -10,6 +11,7 @@ import {
   fetchPlacesByArea,
   GOOGLE_ATTRIBUTION,
   MissingPlacesKeyError,
+  readableAddress,
 } from "./googlePlaces";
 
 const ORIGINAL_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_KEY;
@@ -53,9 +55,15 @@ describe("fetchNearbyPlaces", () => {
     expect(body.locationRestriction.circle.radius).toBe(1000);
   });
 
-  it("asks for no field beyond the four we costed", async () => {
+  it("asks for no field beyond the six we costed", async () => {
     // Adding a field here can move every call into a dearer tier with a smaller
     // free allowance, so this is a cost guard, not a formatting check.
+    //
+    // The two address fields were added 2026-08-08 after checking the tiers.
+    // Google bills a request once, at the highest tier any requested field
+    // belongs to. rating and priceLevel are Enterprise and were already here, so
+    // the Pro-tier addresses changed nothing. Adding an Enterprise field is the
+    // change that would cost money.
     const spy = mockFetchOnce({ places: [] });
 
     await fetchNearbyPlaces({ latitude: 0, longitude: 0, radiusMeters: 500 });
@@ -64,9 +72,11 @@ describe("fetchNearbyPlaces", () => {
     const mask = (init.headers as Record<string, string>)["X-Goog-FieldMask"];
     expect(mask?.split(",").sort()).toEqual([
       "places.displayName",
+      "places.formattedAddress",
       "places.location",
       "places.priceLevel",
       "places.rating",
+      "places.shortFormattedAddress",
     ]);
   });
 
@@ -232,5 +242,41 @@ describe("fetchNearbyPlaces", () => {
 
   it("exports the credit line Google requires on screen", () => {
     expect(GOOGLE_ATTRIBUTION).toBe("Powered by Google");
+  });
+});
+
+// The street address, added on Tracy's suggestion 2026-08-08.
+describe("readableAddress", () => {
+  function place(fields: Partial<GooglePlaceResult>): GooglePlaceResult {
+    return { displayName: { text: "Somewhere" }, ...fields };
+  }
+
+  it("prefers the short address, which is the one that fits a card", () => {
+    expect(
+      readableAddress(
+        place({
+          shortFormattedAddress: "120 Swanston St, Melbourne",
+          formattedAddress: "120 Swanston St, Melbourne VIC 3000, Australia",
+        })
+      )
+    ).toBe("120 Swanston St, Melbourne");
+  });
+
+  it("falls back to the long address when Google omits the short one", () => {
+    expect(
+      readableAddress(place({ formattedAddress: "120 Swanston St, Melbourne VIC 3000, Australia" }))
+    ).toBe("120 Swanston St, Melbourne VIC 3000, Australia");
+  });
+
+  it("returns undefined when Google holds neither", () => {
+    // The card then shows nothing. A placeholder like "Address unavailable"
+    // takes the same space as a real address and tells you less than silence.
+    expect(readableAddress(place({}))).toBeUndefined();
+  });
+
+  it("treats a blank address as missing", () => {
+    // An empty string is truthy enough to render, and would put an empty row
+    // with a map pin on the card.
+    expect(readableAddress(place({ shortFormattedAddress: "   ", formattedAddress: "" }))).toBeUndefined();
   });
 });

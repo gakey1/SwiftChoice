@@ -130,5 +130,96 @@ export function computeHistoryStats(decisions: DecisionRecord[], now: number): H
   };
 }
 
+// How long the average decision took, in seconds, or null when nothing can be
+// measured. Not shown on any screen itself; it is the measured half of the
+// saved-time figure below, and is exported separately so US27's dashboard can
+// report the raw decide time without recomputing it. Only decisions that recorded a start are counted, which is why this
+// returns null rather than 0: no data and "instant" are different answers, and
+// showing 0s for the second would be a claim the app cannot support.
+//
+// Decisions saved before started_at existed have none, and are skipped rather
+// than guessed at. A negative or absurd gap is skipped too: those can only come
+// from the device clock moving between the two stamps, and one bad row would
+// otherwise drag the average somewhere meaningless.
+export function averageDecideSeconds(decisions: DecisionRecord[]): number | null {
+  const gaps: number[] = [];
+
+  for (const d of decisions) {
+    const took = decideSeconds(d);
+    if (took !== null) gaps.push(took);
+  }
+
+  if (gaps.length === 0) return null;
+
+  return Math.round(gaps.reduce((sum, g) => sum + g, 0) / gaps.length);
+}
+
+// An hour. Past this the user almost certainly left the screen open rather than
+// spent the time deciding, so counting it would say more about backgrounding an
+// app than about the decision.
+const MAX_PLAUSIBLE_DECISION_MS = 60 * 60 * 1000;
+
+// How long the same decision is assumed to take WITHOUT SwiftChoice. This is the
+// one number here that is not measured, and everything about the saved-time
+// figure rests on it, so it lives alone with its reasoning attached.
+//
+// It is deliberately conservative. The Sem 1 survey (21 respondents) found 38%
+// spend more than 20 minutes deliberating before acting, but that is a threshold
+// for a minority rather than an average, and it covers decisions in general.
+// This app competes for micro-decisions, which research.md's own context-of-use
+// section puts at "seconds to a few minutes". Eight minutes sits well under the
+// survey figure on purpose: the claim understates, which is the safe direction
+// for a number the app makes about itself.
+//
+// Change it here and nowhere else. The basis is written down in the Terms of use
+// screen and in briefs/sprint-4/settings-home-and-priority-history.md, and both
+// should change with it.
+export const ASSUMED_MINUTES_WITHOUT_APP = 8;
+
+// Average time saved per decision this week, in seconds, or null when no
+// decision recorded a start and there is therefore nothing to subtract from.
+//
+// saved = assumed time without the app - measured time with it, floored at zero
+// so a decision somebody laboured over never reports as a negative saving.
+export function averageSavedSeconds(decisions: DecisionRecord[]): number | null {
+  const assumedSeconds = ASSUMED_MINUTES_WITHOUT_APP * 60;
+  const saved: number[] = [];
+
+  for (const d of decisions) {
+    const took = decideSeconds(d);
+    if (took === null) continue;
+    saved.push(Math.max(0, assumedSeconds - took));
+  }
+
+  if (saved.length === 0) return null;
+
+  return Math.round(saved.reduce((sum, v) => sum + v, 0) / saved.length);
+}
+
+// The measured length of one decision, or null when it cannot be trusted: no
+// recorded start, an unparseable stamp, or a gap that is negative or absurd.
+// Shared by both aggregations so they can never disagree about which rows count.
+function decideSeconds(d: DecisionRecord): number | null {
+  if (!d.startedAt) return null;
+
+  const started = new Date(d.startedAt).getTime();
+  const decided = new Date(d.decidedAt).getTime();
+  if (!Number.isFinite(started) || !Number.isFinite(decided)) return null;
+
+  const gap = decided - started;
+  if (gap < 0 || gap > MAX_PLAUSIBLE_DECISION_MS) return null;
+
+  return gap / 1000;
+}
+
+// A duration as it appears on the card. Seconds up to a minute, then whole
+// minutes, because "138s" is not how anybody reads a duration. A dash when there
+// is nothing to show, which is honest and takes the same space as a figure.
+export function formatDuration(seconds: number | null): string {
+  if (seconds === null) return "-";
+  if (seconds < 60) return `${seconds}s`;
+  return `${Math.round(seconds / 60)}min`;
+}
+
 // Re-exported for callers that only need to know if a timestamp is today.
 export { isSameDay };

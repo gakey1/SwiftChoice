@@ -9,10 +9,14 @@
 
 import {
   createUserWithEmailAndPassword,
+  deleteUser,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
   sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
+  updatePassword,
 } from "firebase/auth";
 
 import { auth } from "@/services/firebase";
@@ -76,4 +80,60 @@ export async function logout(): Promise<void> {
 // another door. See passwordResetErrorMessage in features/auth/errorMessages.
 export async function sendPasswordReset(email: string): Promise<void> {
   await sendPasswordResetEmail(auth, email.trim());
+}
+
+// Proves the person holding the phone is the account holder, by asking Firebase
+// to check their password again.
+//
+// Firebase keeps a session alive for weeks, which is what US05 asked for, but it
+// means the session in somebody's hand could have been started a fortnight ago
+// by someone else. So Firebase refuses its destructive actions (deleteUser,
+// changing the email, changing the password) on a session older than a few
+// minutes, throwing auth/requires-recent-login. This is how that is satisfied:
+// the credential is rebuilt from the typed password and handed back, which
+// resets the session's freshness without signing anyone out. Staying signed in
+// matters, because a real sign-out would fire the listener in useAuth and bounce
+// the app back to the login screen halfway through deleting an account.
+//
+// The email is read from the current session rather than passed in, so a screen
+// cannot re-authenticate against an address the session does not belong to.
+export async function reauthenticate(password: string): Promise<void> {
+  const user = auth.currentUser;
+  if (!user?.email) {
+    throw new Error("No signed-in user to re-authenticate.");
+  }
+
+  const credential = EmailAuthProvider.credential(user.email, password);
+  await reauthenticateWithCredential(user, credential);
+}
+
+// Replaces the signed-in user's password. Firebase treats this as a sensitive
+// action, so reauthenticate() has to have run recently or this throws
+// auth/requires-recent-login. The caller in features/auth/passwordChange owns
+// that ordering, along with the D-012 rule about what a password change does to
+// the second factor.
+export async function updateCurrentPassword(newPassword: string): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error("No signed-in user to update.");
+  }
+
+  await updatePassword(user, newPassword);
+}
+
+// Deletes the signed-in user's Firebase account. This is the very last step of
+// US33 and it is deliberately not exported anywhere near the data deletion:
+// the Firestore rule is request.auth.uid == uid, so every permission to delete
+// this user's documents comes from this account existing. Once this runs,
+// anything still in the cloud can never be deleted by anybody (D-011).
+//
+// The order is enforced in features/privacy/accountDeletion, which is the only
+// thing that should call this.
+export async function deleteCurrentUser(): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error("No signed-in user to delete.");
+  }
+
+  await deleteUser(user);
 }

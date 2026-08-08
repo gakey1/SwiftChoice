@@ -13,37 +13,46 @@ import { useCallback, useState } from "react";
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import type { CompositeNavigationProp } from "@react-navigation/native";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { AmbientBackground } from "@/components/AmbientBackground";
+import { DashedOutline } from "@/components/DashedOutline";
 import { GameIcon } from "@/components/GameIcon";
-import { GlassCard } from "@/components/GlassCard";
+import { GLASS_RADIUS, GlassCard } from "@/components/GlassCard";
 import { Icon } from "@/components/Icon";
 import { ModuleGlyph } from "@/components/ModuleGlyph";
 import { HUD_CLEARANCE } from "@/components/XpHud";
 import { getDecisions } from "@/features/history/historyStorage";
+import { averageSavedSeconds, formatDuration } from "@/features/history/historyStats";
+import { greetingFor } from "@/features/home/greeting";
 import { coreAchievements, earnedFirst } from "@/features/progress/achievements";
 import { capFor, levelTitle, xpFraction } from "@/features/progress/progress";
 import { useProgress } from "@/features/progress/ProgressProvider";
 import { avatarAt } from "@/features/profile/avatars";
-import type { AppStackParamList } from "@/navigation/types";
+import type { AppStackParamList, AppTabsParamList } from "@/navigation/types";
 import { loadAvatarIndex } from "@/services/localdb/profileStorage";
 import { moduleAccent } from "@/theme/themes";
 import { useTheme } from "@/theme/ThemeProvider";
 import { T } from "@/theme/tokens";
 
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-
 // Summary of the decision history shown on Home, derived when the data loads so
 // no clock is read during render.
-type WeekStats = {
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+// The THIS WEEK snapshot, scoped to the week to match its heading.
+type DecisionStats = {
   weekCount: number;
   rerollRate: number;
-  allTime: number;
-  distinctModules: number;
+  // Average seconds saved per decision this week, or null when no decision this
+  // week recorded a start and there is nothing to subtract from. See
+  // ASSUMED_MINUTES_WITHOUT_APP for what "saved" is measured against; the basis
+  // is set out in the Terms of use screen.
+  savedSeconds: number | null;
 };
 
-const EMPTY_STATS: WeekStats = { weekCount: 0, rerollRate: 0, allTime: 0, distinctModules: 0 };
+const EMPTY_STATS: DecisionStats = { weekCount: 0, rerollRate: 0, savedSeconds: null };
 
 type ModuleKey = "fuel" | "focus" | "priority";
 
@@ -64,11 +73,25 @@ const MODULE_CARDS: {
 
 export function HomeScreen() {
   const { colors, isDark, toggleDark } = useTheme();
-  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  // Home sits in the tab navigator, which itself sits in the app stack. The
+  // composite type is what makes both legal from here: navigate("Fuel") goes up
+  // to the stack, and navigate("settings") switches tab.
+  const navigation =
+    useNavigation<
+      CompositeNavigationProp<
+        BottomTabNavigationProp<AppTabsParamList>,
+        NativeStackNavigationProp<AppStackParamList>
+      >
+    >();
 
   const { progress } = useProgress();
-  const [stats, setStats] = useState<WeekStats>(EMPTY_STATS);
+  const [stats, setStats] = useState<DecisionStats>(EMPTY_STATS);
   const [avatarIndex, setAvatarIndex] = useState(0);
+  // Worked out when the screen comes into focus rather than during render, the
+  // same rule the week figures follow, so no clock is read while rendering.
+  // Refreshing on focus also means it corrects itself if the app is left open
+  // across a boundary and returned to.
+  const [greeting, setGreeting] = useState(() => greetingFor(new Date().getHours()));
 
   // Reload history and the avatar every time Home comes into focus. Progress
   // (level, XP, streak) comes live from the shared provider, so it needs no
@@ -77,6 +100,7 @@ export function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       let active = true;
+      setGreeting(greetingFor(new Date().getHours()));
       void loadAvatarIndex().then((i) => {
         if (active) setAvatarIndex(i);
       });
@@ -92,8 +116,7 @@ export function HomeScreen() {
               weekCount > 0
                 ? Math.round((week.filter((d) => d.rerolled).length / weekCount) * 100)
                 : 0,
-            allTime: decisions.length,
-            distinctModules: new Set(decisions.map((d) => d.moduleType)).size,
+            savedSeconds: averageSavedSeconds(week),
           });
         })
         .catch(() => {
@@ -137,17 +160,32 @@ export function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={[styles.greeting, { color: colors.ink }]}>
-          Good morning! What decision can I help with today?
-        </Text>
+        <Text style={[styles.greeting, { color: colors.ink }]}>{greeting}</Text>
 
         {/* Player card */}
         <GlassCard style={styles.playerCard}>
           <View style={styles.playerRow}>
-            <Image
-              source={avatarAt(avatarIndex).source}
-              style={[styles.avatar, { borderColor: colors.cardLine }]}
-            />
+            {/* Tapping the avatar opens Settings, which is where it is changed.
+                The design wires the same tap ("Edit profile"), and it is the
+                first place people try. The glow is the avatar's own signature
+                colour, not a module colour, so it is legal on any screen. */}
+            <TouchableOpacity
+              onPress={() => navigation.navigate("settings")}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Edit profile"
+            >
+              <Image
+                source={avatarAt(avatarIndex).source}
+                style={[
+                  styles.avatar,
+                  {
+                    borderColor: colors.cardLine,
+                    shadowColor: avatarAt(avatarIndex).color,
+                  },
+                ]}
+              />
+            </TouchableOpacity>
             <View style={styles.playerBody}>
               <View style={styles.playerTop}>
                 <View style={styles.levelWrap}>
@@ -204,7 +242,10 @@ export function HomeScreen() {
         </GlassCard>
 
         {/* Daily quest */}
-        <GlassCard style={[styles.questCard, { borderColor: colors.teal }]}>
+        {/* The dashed edge is drawn by DashedOutline rather than by borderStyle,
+            which cannot render dashes around a corner. See that component. */}
+        <GlassCard style={styles.questCard}>
+          <DashedOutline color={colors.teal} radius={GLASS_RADIUS} thickness={1.5} />
           <View style={[styles.questIcon, { backgroundColor: colors.tealTint }]}>
             <Icon name="star" size={21} color={colors.teal} />
           </View>
@@ -264,16 +305,16 @@ export function HomeScreen() {
                 inkColor={colors.ink2}
               />
               <Stat
-                value={`${stats.rerollRate}%`}
-                label="Reroll rate"
-                color={colors.fuel}
+                value={formatDuration(stats.savedSeconds)}
+                label="Avg. saved"
+                color={colors.priority}
                 inkColor={colors.ink2}
                 dividerColor={colors.cardLine}
               />
               <Stat
-                value={String(stats.allTime)}
-                label="All time"
-                color={colors.priority}
+                value={`${stats.rerollRate}%`}
+                label="Reroll rate"
+                color={colors.fuel}
                 inkColor={colors.ink2}
                 dividerColor={colors.cardLine}
               />
@@ -350,7 +391,19 @@ const styles = StyleSheet.create({
   // Player card
   playerCard: { padding: T.spacing[4] },
   playerRow: { flexDirection: "row", alignItems: "center", gap: 13 },
-  avatar: { width: 52, height: 52, borderRadius: 999, borderWidth: 2 },
+  avatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 999,
+    borderWidth: 2,
+    // The design's "0 0 18px" glow in the avatar's own colour. shadowColor is
+    // set inline from the avatar. On Android shadowColor is ignored on views
+    // and elevation takes over, so the glow reads as a soft grey lift there.
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 9,
+    elevation: 6,
+  },
   playerBody: { flex: 1, minWidth: 0, gap: 7 },
   playerTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   levelWrap: { flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 1 },
@@ -394,8 +447,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: T.spacing[3],
     padding: T.spacing[3],
-    borderStyle: "dashed",
-    borderWidth: 1.5,
+    // No border here. GlassCard's hairline is replaced by the dashed outline
+    // drawn on top, and keeping both would show a solid line under the dashes.
+    borderWidth: 0,
   },
   questIcon: { width: 40, height: 40, borderRadius: 13, justifyContent: "center", alignItems: "center" },
   questBody: { flex: 1 },

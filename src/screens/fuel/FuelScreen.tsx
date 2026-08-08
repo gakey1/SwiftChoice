@@ -41,6 +41,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import type { AppStackParamList } from "@/navigation/types";
 import { logDecision } from "@/features/history/historyStorage";
+import { useDecisionStart } from "@/features/history/useDecisionStart";
 import { loadPreferences } from "@/services/localdb/preferencesStorage";
 
 // Dark ink sits on top of the bright accent fills (buttons), for contrast.
@@ -160,6 +161,9 @@ export function getBudgetRanges(tier: string | null): TierRanges {
 
 export function FuelScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  // Start of this decision, for the Avg. saved figure on Home. Captured at
+  // first render and deliberately not reset by a reroll.
+  const decisionStartedAt = useDecisionStart();
   const { colors } = useTheme();
   const { progress, awardXp } = useProgress();
   const accent = moduleAccent(colors, "fuel");
@@ -446,10 +450,26 @@ export function FuelScreen() {
                 <ModuleGlyph moduleKey="fuel" size={36} color={primaryColor} />
               </View>
 
-              <Text style={[styles.itemName, { color: colors.ink }]}>{recommendation.item_name}</Text>
-              <Text style={[styles.cuisineType, { color: colors.ink2 }]}>
-                {recommendation.type === "in" ? "Home-cooked Meal" : "Local Restaurant / Eatery"}
-              </Text>
+              {/* Name, what kind of place it is, and where it is. Grouped,
+                  because all three answer "which place is this" and the address
+                  belongs with them rather than down among the statistics.
+                  Live Eat Out results only: a home-cooked meal has no address,
+                  and neither do the places Google holds none for, which show no
+                  row at all rather than a placeholder. */}
+              <View style={styles.identityBlock}>
+                <Text style={[styles.itemName, { color: colors.ink }]}>{recommendation.item_name}</Text>
+                <Text style={[styles.cuisineType, { color: colors.ink2 }]}>
+                  {recommendation.type === "in" ? "Home-cooked Meal" : "Local Restaurant / Eatery"}
+                </Text>
+                {recommendation.address !== undefined && (
+                  <View style={styles.addressRow}>
+                    <Icon name="map-pin" size={13} color={colors.ink2} />
+                    <Text style={[styles.addressText, { color: colors.ink2 }]}>
+                      {recommendation.address}
+                    </Text>
+                  </View>
+                )}
+              </View>
 
               <View style={styles.statsRow}>
                 {recommendation.type === "in" ? (
@@ -530,6 +550,7 @@ export function FuelScreen() {
                           rating: recommendation.rating,
                         },
                       },
+                      startedAt: decisionStartedAt,
                       appliedFilters: {
                         mode: recommendation.type,
                         budget: recommendation.budget_level,
@@ -852,12 +873,29 @@ const styles = StyleSheet.create({
   resultCardCustom: { width: "100%", padding: T.spacing[5], alignItems: "center", marginBottom: T.spacing[4] },
   avatarBadge: { width: 80, height: 80, borderRadius: 22, justifyContent: "center", alignItems: "center", marginBottom: T.spacing[4] },
   itemName: { fontFamily: T.font.bold, fontSize: T.fontSize.title, marginBottom: 4, textAlign: "center" },
-  cuisineType: { fontFamily: T.font.regular, fontSize: T.fontSize.body, marginBottom: T.spacing[5] },
+  identityBlock: { alignItems: "center", marginBottom: T.spacing[5] },
+  cuisineType: { fontFamily: T.font.regular, fontSize: T.fontSize.body },
   statsRow: { flexDirection: "row", width: "100%", gap: T.spacing[3] },
   statChip: { flex: 1, alignItems: "center", gap: 3, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 6 },
   statValue: { fontFamily: T.font.monoMedium, fontSize: T.fontSize.subtitle },
   ratingContainer: { flexDirection: "row", alignItems: "center", gap: 4 },
   attribution: { fontSize: 11, marginTop: 10, textAlign: "center" },
+  addressRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    marginTop: 6,
+  },
+  // Shrinks rather than grows, so a long address wraps inside the card instead
+  // of stretching the centred block to full width.
+  addressText: {
+    flexShrink: 1,
+    fontFamily: T.font.regular,
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: "center",
+  },
   locationNotice: { fontSize: 12, marginTop: 12, textAlign: "center", lineHeight: 17 },
   areaInput: { width: "100%", borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, marginTop: 14, fontSize: 15 },
   suggestionList: { width: "100%", borderWidth: 1, borderRadius: 12, marginTop: 8, overflow: "hidden" },
