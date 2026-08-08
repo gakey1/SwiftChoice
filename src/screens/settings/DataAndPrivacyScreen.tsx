@@ -26,7 +26,7 @@ type DataAndPrivacyScreenProps = NativeStackScreenProps<
 
 // Everything that leaves the device. If a line is added to the app that sends
 // something, it belongs here, and the notice next to that control belongs with
-// it. Three entries is the whole list today.
+// it. Four entries is the whole list today.
 const LEAVES_THE_PHONE: readonly { what: string; where: string; when: string }[] = [
   {
     what: "A decision you accept",
@@ -43,6 +43,11 @@ const LEAVES_THE_PHONE: readonly { what: string; where: string; when: string }[]
     where: "A weather service",
     when: "Each Focus recommendation, to check whether you need a jacket or an umbrella. Nothing identifying you is sent with it.",
   },
+  {
+    what: "The names of tasks that tie",
+    where: "Our own server, then Google",
+    when: "Only when you rank, and only for tasks that scored exactly the same. Their names, deadlines and notes are sent so the order can be explained. Nothing identifying you goes with them, and our server keeps no copy.",
+  },
 ];
 
 // Everything that does not. Worth listing explicitly: without it, a reader has
@@ -52,6 +57,7 @@ const STAYS_ON_THE_PHONE: readonly string[] = [
   "Your food and study preferences",
   "Your Fuel and Focus pools",
   "Your decision history, alongside the copy in your account",
+  "Your Priority tasks, except the tied ones sent to break a draw",
   "Your XP, level and badges",
   "Your theme and avatar",
   "Your two-factor key, which is why it only protects this phone",
@@ -75,7 +81,7 @@ export function DataAndPrivacyScreen({ navigation }: DataAndPrivacyScreenProps) 
 
         <Text style={[styles.title, { color: colors.ink }]}>Your data</Text>
         <Text style={[styles.intro, { color: colors.ink2 }]}>
-          SwiftChoice keeps almost everything on this phone. Three things leave it, and each one
+          SwiftChoice keeps almost everything on this phone. Four things leave it, and each one
           is listed below with the reason.
         </Text>
 
