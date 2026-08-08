@@ -33,7 +33,7 @@ To write the wording you need to know what the app actually does, so here it is 
 Two places also send data out while you are using them:
 
 - **Eat Out** sends your location, or the suburb you typed, to Google so it can find places near you. Nothing about you goes with it.
-- **A Focus spot that is outdoors** sends your location to a weather service to check for rain. Indoor spots send nothing.
+- **A Focus recommendation** sends your location to a weather service. This used to happen only for outdoor spots. It now happens for every Focus result, because you have to travel to an indoor spot as well, and rain on the way there is worth knowing about. What differs is only whether the answer is shown. See `focus-spots-source-change.md`.
 
 So there are four sensible places for a notice: the Eat Out search, the outdoor Focus check, the moment a decision is accepted, and a summary in Settings with the policy links.
 

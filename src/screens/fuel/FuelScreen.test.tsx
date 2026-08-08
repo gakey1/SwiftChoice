@@ -32,6 +32,14 @@ jest.mock("@/features/history/historyStorage", () => ({
   logDecision: jest.fn(),
 }));
 
+// The engine reads the saved Focus pool, which reaches expo-sqlite, and there is
+// no native module for it under Jest. Fuel never touches the Focus pool, so this
+// only exists to stop the import chain failing to load. Same pattern as the
+// history mock above, and the same one that produced MC-007.
+jest.mock("@/features/focus/focusPoolStorage", () => ({
+  getFocusRecommendationPool: jest.fn(async () => []),
+}));
+
 // Stand in for the live Google Places call and the device GPS, so the Eat Out
 // path returns a predictable result instead of failing on a missing key. Without
 // this the engine falls into its catch, the screen shows the empty state, and

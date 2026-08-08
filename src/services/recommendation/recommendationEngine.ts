@@ -10,6 +10,10 @@ import {
   type GooglePlaceResult,
 } from "./googlePlaces";
 import { getCurrentPosition } from "@/services/location/locationService";
+import {
+  getFocusRecommendationPool,
+  type FocusPoolItem,
+} from "@/features/focus/focusPoolStorage";
 import { distanceMeters } from "./openStreetMapPlaces";
 
 // Define what a Food Option choice looks like.
@@ -258,18 +262,26 @@ export async function getRecommendation(
 // Define what a Focus option looks like.
 export interface FocusOption {
   focus_id: string;
-  user_id: string;
+  user_id?: string | undefined;
   spot_name: string;
   energy_level: "low" | "medium" | "high";
   vibe: "silent" | "background" | "collaborative";
-  rating: string;
-  // Whether the spot is outside. Only outdoor spots get the rain warning, since
-  // the forecast is irrelevant to a library desk. The real pool will need this
-  // field too when it replaces the list below.
+  // Optional because the saved pool has no rating column, and the proposal's
+  // FocusSpot never had one either. The figures on the fallback list below were
+  // written by hand, so a spot from the pool shows no rating rather than one we
+  // made up.
+  rating?: string | undefined;
+  // Whether the spot is outside. Only outdoor spots get the conditions strip,
+  // since the weather is irrelevant to a library desk.
   outdoor?: boolean | undefined;
 }
 
-// Temporary Focus pool used until the real pool is connected.
+// Fallback list, used only when the saved pool cannot be read.
+//
+// The saved pool is the real source now. This stays because a database that
+// fails to open would otherwise leave the module with nothing to recommend, and
+// a demo that shows a spot is better than one that shows an error. It is not
+// reached in normal use.
 export const FOCUS_POOL: FocusOption[] = [
   { focus_id: "focus_1", user_id: "user_123", spot_name: "Quiet Library Desk", energy_level: "low", vibe: "silent", rating: "4.8" },
   { focus_id: "focus_2", user_id: "user_123", spot_name: "Home Study Corner", energy_level: "low", vibe: "background", rating: "4.2" },
@@ -290,16 +302,56 @@ export interface FocusCriteria {
   vibe: "silent" | "background" | "collaborative";
 }
 
+// Turns a saved pool row into the shape the Focus screen already renders.
+//
+// The pool stores an integer id, so it is stringified here to match the rest of
+// the app, where a decision's focus_id is a string. No rating is set, because
+// the pool holds none.
+function toFocusOption(item: FocusPoolItem): FocusOption {
+  return {
+    focus_id: String(item.id),
+    spot_name: item.name,
+    energy_level: item.energy,
+    vibe: item.vibe,
+    outdoor: item.outdoor,
+  };
+}
+
 // Filters the Focus pool by energy and vibe, then returns shuffled matches.
-export function getFocusRecommendation(criteria: FocusCriteria): FocusOption[] {
-  const matchingOptions = FOCUS_POOL.filter((spot) => {
-    return (
-      spot.energy_level === criteria.energyLevel &&
-      spot.vibe === criteria.vibe
-    );
+//
+// Reads the saved pool rather than a list written into this file, so a spot
+// somebody adds is a spot the module can recommend. Async for that reason: the
+// pool is on-device SQLite, and the read has to finish before there is anything
+// to filter.
+export async function getFocusRecommendation(
+  criteria: FocusCriteria
+): Promise<FocusOption[]> {
+  const spots = await readFocusSpots();
+
+  const matchingOptions = spots.filter((spot) => {
+    return spot.energy_level === criteria.energyLevel && spot.vibe === criteria.vibe;
   });
 
   return shuffleOptions(matchingOptions);
+}
+
+// Reads the saved pool, falling back to the built-in list if the database will
+// not answer. A failure here is not the user's problem to solve, so it is warned
+// about and worked around rather than surfaced as an error on the screen.
+async function readFocusSpots(): Promise<FocusOption[]> {
+  try {
+    const saved = await getFocusRecommendationPool();
+
+    if (saved.length > 0) {
+      return saved.map(toFocusOption);
+    }
+
+    console.warn("Focus pool came back empty. Using the built-in list.");
+  } catch (error) {
+    console.warn("Could not read the Focus pool. Using the built-in list.", error);
+  }
+
+  return FOCUS_POOL;
 }
 
 // Small shared shuffle helper used by the Fuel and Focus recommendations.

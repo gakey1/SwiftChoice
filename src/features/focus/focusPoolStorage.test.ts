@@ -188,3 +188,82 @@ describe("focusPoolStorage", () => {
     ]);
   });
 });
+
+// The seed is the difference between a fresh install having spots to recommend
+// and having none, so these check the count, the contents, and that it cannot
+// run twice over the same pool.
+describe("seeding the Focus pool", () => {
+  beforeEach(() => {
+    rows = [];
+    nextId = 1;
+    jest.clearAllMocks();
+    mockGetDb.mockResolvedValue(mockDb);
+  });
+
+  it("fills an empty pool the first time the recommendation reads it", async () => {
+    await expect(isFocusPoolEmpty()).resolves.toBe(true);
+
+    const pool = await getFocusRecommendationPool();
+
+    expect(pool.length).toBeGreaterThan(0);
+  });
+
+  it("leaves a pool that already has spots alone", async () => {
+    // Somebody's own saved spots must not be joined by a set of defaults.
+    await addFocusItem("My Own Desk", "low", "silent");
+
+    const pool = await getFocusRecommendationPool();
+
+    expect(pool).toEqual([
+      { id: 1, name: "My Own Desk", energy: "low", vibe: "silent", outdoor: false },
+    ]);
+  });
+
+  it("does not seed a second time on a later read", async () => {
+    const first = await getFocusRecommendationPool();
+    const second = await getFocusRecommendationPool();
+
+    expect(second).toHaveLength(first.length);
+  });
+
+  it("does not double-seed when two reads arrive at once", async () => {
+    // Both would otherwise see an empty pool and both would fill it.
+    const [first, second] = await Promise.all([
+      getFocusRecommendationPool(),
+      getFocusRecommendationPool(),
+    ]);
+
+    expect(second).toHaveLength(first?.length ?? 0);
+    expect(new Set(first?.map((spot) => spot.name)).size).toBe(first?.length);
+  });
+
+  it("includes outdoor spots, without which the conditions strip never appears", async () => {
+    const pool = await getFocusRecommendationPool();
+    const outdoor = pool.filter((spot) => spot.outdoor);
+
+    expect(outdoor.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("spreads the outdoor spots across more than one energy and vibe pairing", async () => {
+    // Clustered in one pairing they would be unreachable from most filters.
+    const pool = await getFocusRecommendationPool();
+    const pairings = new Set(
+      pool.filter((spot) => spot.outdoor).map((spot) => `${spot.energy}/${spot.vibe}`)
+    );
+
+    expect(pairings.size).toBeGreaterThanOrEqual(2);
+  });
+
+  it("keeps medium and collaborative resolving to a single outdoor spot", async () => {
+    // This is the one pairing guaranteed to reach the conditions strip, so it is
+    // how the weather feature gets demonstrated on purpose. A later edit that
+    // adds an indoor spot here would remove the guarantee silently.
+    const pool = await getFocusRecommendationPool();
+    const matches = pool.filter(
+      (spot) => spot.energy === "medium" && spot.vibe === "collaborative"
+    );
+
+    expect(matches).toHaveLength(1);
+    expect(matches[0]?.outdoor).toBe(true);
+  });
+});

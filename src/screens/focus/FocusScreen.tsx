@@ -18,11 +18,18 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { AmbientBackground } from "@/components/AmbientBackground";
 import { GlassCard } from "@/components/GlassCard";
 import { ModuleGlyph } from "@/components/ModuleGlyph";
-import { Icon } from "@/components/Icon";
+import { Icon, type IconName } from "@/components/Icon";
 import { HUD_CLEARANCE } from "@/components/XpHud";
 import type { AppStackParamList } from "@/navigation/types";
 import { getCurrentPosition } from "@/services/location/locationService";
-import { getRainForecast } from "@/services/weather/weatherService";
+import { getOutdoorConditions } from "@/services/weather/weatherService";
+import {
+  conditionsAdvice,
+  conditionsSummary,
+  shouldShowConditions,
+  type Readings,
+  type SpotSetting,
+} from "@/services/weather/weatherAdvice";
 import {
   getFocusRecommendation,
   type FocusOption,
@@ -115,70 +122,84 @@ export function FocusScreen() {
 
   const [recommendation, setRecommendation] = useState<FocusOption | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const [matchList, setMatchList] = useState<FocusOption[]>([]);
-  // Only ever true when the spot is outside and rain is actually likely. Any
-  // failure along the way, no location or no forecast, leaves it false so the
-  // card shows nothing rather than a warning nobody can trust.
-  const [rainLikely, setRainLikely] = useState(false);
+  // The readings for an outdoor spot, or null. Null covers three cases that all
+  // want the same answer of showing nothing: the spot is indoors, the position
+  // is unknown, or the forecast could not be reached. A card that says nothing
+  // is always better than one that says something untrue about the weather.
+  const [conditions, setConditions] = useState<Readings | null>(null);
 
   const primaryColor = accent.color;
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
 
   // Runs when "Find My Spot" is pressed. Asks the engine for matching spots,
   // keeps the whole list so a reroll can show the next one, and shows the first.
-  function handleGetRecommendation() {
-    const randomizedList = getFocusRecommendation({
-      energyLevel,
-      vibe,
-    });
+  //
+  // Async since the engine started reading the saved pool instead of a list
+  // written into its own file. The wait is a local database read, so it is short,
+  // but the button is disabled while it runs rather than left looking dead.
+  async function handleGetRecommendation() {
+    setIsSearching(true);
 
-    if (randomizedList.length > 0) {
-      const firstChoice = randomizedList[0];
+    try {
+      const randomizedList = await getFocusRecommendation({
+        energyLevel,
+        vibe,
+      });
 
-      setMatchList(randomizedList);
+      if (randomizedList.length > 0) {
+        const firstChoice = randomizedList[0];
 
-      if (firstChoice) {
-        setRecommendation(firstChoice);
+        setMatchList(randomizedList);
+
+        if (firstChoice) {
+          setRecommendation(firstChoice);
+        }
+      } else {
+        setMatchList([]);
+        setRecommendation(null);
       }
-    } else {
-      setMatchList([]);
-      setRecommendation(null);
-    }
 
-    setHasRerolled(false);
-    setHasSearched(true);
+      setHasRerolled(false);
+      setHasSearched(true);
+    } finally {
+      setIsSearching(false);
+    }
   }
 
-  // Checks the forecast only when the spot on screen is outdoors. A library desk
-  // does not care about rain, and asking anyway would be a wasted call.
+  // Checks conditions for every spot, indoors included, because you still have
+  // to travel to a library and rain on the walk is worth knowing about. What
+  // differs is whether the answer is worth showing, which shouldShowConditions
+  // decides at render time.
   useEffect(() => {
     let active = true;
 
-    async function checkRain() {
-      if (recommendation?.outdoor !== true) {
-        setRainLikely(false);
+    async function checkConditions() {
+      if (recommendation === null) {
+        setConditions(null);
         return;
       }
 
       const position = await getCurrentPosition();
       if (!position.ok) {
-        // Without a position there is nothing to forecast for. Show no warning
-        // rather than guessing at a city, same rule as the Fuel search.
-        if (active) setRainLikely(false);
+        // Without a position there is nothing to look up. Show nothing rather
+        // than guessing at a city, same rule as the Fuel search.
+        if (active) setConditions(null);
         return;
       }
 
-      const forecast = await getRainForecast({
+      const result = await getOutdoorConditions({
         latitude: position.latitude,
         longitude: position.longitude,
       });
 
       if (active) {
-        setRainLikely(forecast.ok && forecast.rainLikely);
+        setConditions(result.ok ? result : null);
       }
     }
 
-    checkRain();
+    checkConditions();
 
     return () => {
       active = false;
@@ -204,6 +225,11 @@ export function FocusScreen() {
   }
 
   if (recommendation) {
+    // Drives both the wording and whether the strip shows at all. Anything not
+    // explicitly marked outdoor is treated as indoors, which is the safer of the
+    // two defaults: it under-shows rather than promising a forecast for a desk.
+    const spotSetting: SpotSetting = recommendation.outdoor === true ? "outdoor" : "indoor";
+
     return (
       <SafeAreaView style={[styles.frame, { backgroundColor: colors.bg }]} edges={["top", "left", "right"]}>
         <AmbientBackground />
@@ -229,20 +255,29 @@ export function FocusScreen() {
               <ModuleGlyph moduleKey="focus" size={36} color={primaryColor} />
             </View>
 
-            {/* Rain warning for outdoor spots, per the Arcade prototype. Focus
-                green is correct here: this sits on a Focus screen, and the
-                module-colour rule keeps green off the other modules. */}
-            {rainLikely && (
+            {/* Conditions. This used to appear only when rain was likely at an
+                outdoor spot, which meant it was invisible almost every time and
+                could not be shown on purpose. It now appears whenever an outdoor
+                spot's readings arrived, and for an indoor spot when there is
+                something worth carrying on the way. Focus green is correct here:
+                this sits on a Focus screen, and the module-colour rule keeps
+                green off the other modules. */}
+            {conditions !== null && shouldShowConditions(conditions, spotSetting) && (
               <View
                 style={[
                   styles.weatherNotice,
                   { backgroundColor: accent.tint, borderColor: primaryColor },
                 ]}
               >
-                <Icon name="cloud-rain" size={18} color={primaryColor} />
-                <Text style={[styles.weatherNoticeText, { color: colors.ink2 }]}>
-                  Rain likely in the next hour. Consider an indoor spot, or take an umbrella.
-                </Text>
+                <Icon name={weatherIconName(conditions)} size={18} color={primaryColor} />
+                <View style={styles.weatherNoticeBody}>
+                  <Text style={[styles.weatherNoticeSummary, { color: colors.ink }]}>
+                    {conditionsSummary(conditions)}
+                  </Text>
+                  <Text style={[styles.weatherNoticeText, { color: colors.ink2 }]}>
+                    {conditionsAdvice(conditions, spotSetting)}
+                  </Text>
+                </View>
               </View>
             )}
 
@@ -265,12 +300,27 @@ export function FocusScreen() {
                 <Text style={[styles.statLabel, { color: colors.ink2 }]}>Vibe</Text>
               </View>
 
+              {/* This chip used to show a rating. The figures behind it were
+                  typed into the code by hand, and neither the saved pool nor the
+                  proposal's FocusSpot has a rating field at all, so it was a
+                  number we invented.
+
+                  Indoor or outdoor replaces it because it is stored on every
+                  spot, needs nothing from the network, and answers the question
+                  the card otherwise raises: why some spots show the weather and
+                  others do not. */}
               <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
                 <View style={styles.ratingContainer}>
-                  <Text style={[styles.statValue, { color: colors.ink }]}>{recommendation.rating}</Text>
-                  <Icon name="star" size={13} color={primaryColor} />
+                  <Text style={[styles.statValue, { color: colors.ink }]}>
+                    {recommendation.outdoor === true ? "Outdoor" : "Indoor"}
+                  </Text>
+                  <Icon
+                    name={recommendation.outdoor === true ? "sun" : "home"}
+                    size={13}
+                    color={primaryColor}
+                  />
                 </View>
-                <Text style={[styles.statLabel, { color: colors.ink2 }]}>Rating</Text>
+                <Text style={[styles.statLabel, { color: colors.ink2 }]}>Setting</Text>
               </View>
             </View>
           </GlassCard>
@@ -380,11 +430,18 @@ export function FocusScreen() {
         />
 
         <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: primaryColor, shadowColor: primaryColor }]}
+          style={[
+            styles.actionButton,
+            { backgroundColor: primaryColor, shadowColor: primaryColor },
+            isSearching && styles.actionButtonBusy,
+          ]}
           onPress={handleGetRecommendation}
           activeOpacity={0.8}
+          disabled={isSearching}
         >
-          <Text style={styles.actionButtonText}>Find My Spot</Text>
+          <Text style={styles.actionButtonText}>
+            {isSearching ? "Finding your spot" : "Find My Spot"}
+          </Text>
         </TouchableOpacity>
 
         {recommendation === null && hasSearched && (
@@ -405,6 +462,19 @@ function energyLabel(value: EnergyLevel) {
   if (value === "high") return "High";
 
   return "Medium";
+}
+
+// Picks the icon for the conditions strip. Rain outranks the sky code, because
+// the umbrella is the part someone acts on. Anything the map does not cover
+// falls back to the neutral cloud rather than claiming sunshine.
+function weatherIconName(readings: Readings): IconName {
+  if (readings.rainLikely) return "cloud-rain";
+  if (readings.weatherCode === 0 || readings.weatherCode === 1) return "sun";
+  if (readings.weatherCode >= 95) return "cloud-lightning";
+  if (readings.weatherCode >= 71 && readings.weatherCode <= 86) return "cloud-snow";
+  if (readings.weatherCode >= 51) return "cloud-drizzle";
+
+  return "cloud";
 }
 
 // Turns the stored vibe value into a word to show on screen.
@@ -497,6 +567,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   actionButtonText: { color: ON_ACCENT, fontFamily: T.font.bold, fontSize: T.fontSize.subtitle },
+  actionButtonBusy: { opacity: 0.6 },
   headerContainer: { alignItems: "center", marginBottom: T.spacing[4] },
   contextSubtitle: {
     fontFamily: T.font.regular,
@@ -559,7 +630,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 12,
   },
-  weatherNoticeText: { flex: 1, fontSize: 12.5, lineHeight: 17.5 },
+  weatherNoticeBody: { flex: 1, gap: 2 },
+  weatherNoticeSummary: { fontFamily: T.font.bold, fontSize: 13, lineHeight: 18 },
+  weatherNoticeText: { fontSize: 12.5, lineHeight: 17.5 },
   rerollBtn: {
     flex: 1,
     flexDirection: "row",
