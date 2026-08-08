@@ -46,8 +46,7 @@ INSERT INTO fuel_pool (name, budget, prep_time, effort, distance) VALUES (?, ?, 
 
 which is the error above.
 
-You already knew this, which is the frustrating part: three lines below the CREATE you
-wrote exactly the right thing for the other columns.
+The handling for the other columns is already right, three lines below the CREATE:
 
 ```ts
 await ensureColumn(db, "fuel_pool", "budget", "TEXT NOT NULL DEFAULT '$$'");
@@ -55,8 +54,9 @@ await ensureColumn(db, "fuel_pool", "prep_time", "TEXT NOT NULL DEFAULT 'medium'
 await ensureColumn(db, "fuel_pool", "distance", "TEXT NOT NULL DEFAULT 'mid'");
 ```
 
-`effort` just never got its line. That is the whole bug. It is a one-line omission, not a
-misunderstanding.
+`effort` simply never got its line. That is the whole bug, and it is an easy one to make:
+the column is sitting right there in the CREATE statement, which makes it look handled.
+I read the same diff and did not notice either.
 
 ## Why it took the whole app down and not just Eat In
 
@@ -96,7 +96,7 @@ actually catch this by deleting the `effort` line again and watching 3 of them f
 **A migration is two edits, never one.** Changing `CREATE TABLE` only affects people who
 have never run the app. Adding an `ensureColumn` line only affects people who have.
 Almost every real user is in the second group and almost every developer test is in the
-first. If you add a column, do both, every time.
+first. So the rule for all of us: add a column, write both lines.
 
 **Watch for the failure that only happens to people who already have your app.** This is
 the shape to remember. It works perfectly on a fresh install, so it survives every test,
@@ -104,8 +104,8 @@ every simulator you wiped, and every clean checkout. It only appears for people 
 existing data, which at a demo means the phone that has been used to rehearse. That is
 the worst possible time to find it.
 
-That second point is why I am writing this up properly instead of just fixing it quietly.
-It is a genuinely easy trap and none of us caught it.
+That second point is the reason this is worth a brief rather than just a fix. It is a
+genuinely easy trap, and it got past all three of us.
 
 ## Nothing else in #83 is affected
 
