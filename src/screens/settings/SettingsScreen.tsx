@@ -9,12 +9,15 @@
 //   ABOUT             privacy policy, terms of use
 //   DANGER ZONE       delete the account
 //
-// Two rules the grouping follows, both of which it previously broke. A caption
-// belongs under the card it describes, not above the next section: the clear-data
-// explanation used to sit directly beneath the "What we collect" row and read as
-// though it described that. And every action that happens in place rather than
-// opening a screen has no chevron, because a chevron is a promise of somewhere
-// to go.
+// Every action that happens in place rather than opening a screen has no
+// chevron, because a chevron is a promise of somewhere to go.
+//
+// Neither destructive row carries a caption. Both used to, and both said the
+// same thing the user is about to be told anyway: Clear Local Data opens a
+// confirmation, and Delete Account opens a whole screen whose job is to spell
+// out what goes and ask for a password first. A warning printed where it cannot
+// be acted on is read past, and it trains people to read past the one that
+// matters.
 //
 // Deleting the account is kept out of Data and privacy on purpose. Clearing this
 // phone and deleting everything are one tap apart in wording and nothing alike in
@@ -198,7 +201,7 @@ export function SettingsScreen() {
   // thing a privacy action must not do. Deleting everything is US33.
   async function handleClearLocalData(): Promise<void> {
     Alert.alert(
-      "Clear data on this phone?",
+      "Clear Local Data?",
       "This removes your preferences, saved spots, meals, on-device history, progress and avatar from this phone. Your account stays, and history already saved to your account is not affected. This cannot be undone.",
       [
         { text: "Cancel", style: "cancel" },
@@ -404,7 +407,7 @@ export function SettingsScreen() {
             onPress={() => navigation.navigate("DataAndPrivacy")}
           />
           <SettingRow
-            label="Clear data on this phone"
+            label="Clear Local Data"
             value={clearing ? "Clearing..." : ""}
             onPress={handleClearLocalData}
             disabled={clearing}
@@ -412,10 +415,9 @@ export function SettingsScreen() {
             isLast
           />
         </View>
-        <Text style={[styles.caption, { color: colors.ink2 }]}>
-          Clearing removes what this app has saved on this phone. Your account stays, and history
-          already saved to your account is not affected.
-        </Text>
+        {/* No caption under this row on purpose. Tapping it opens a confirmation
+            that says the same thing before anything happens, so a paragraph here
+            is the warning read twice, and the one that cannot be acted on. */}
 
         {/* The documents. They are also reachable from inside Data and privacy,
             and are repeated here because this is where people look for them. */}
@@ -442,17 +444,16 @@ export function SettingsScreen() {
         <Text style={[styles.sectionLabel, { color: colors.ink2 }]}>DANGER ZONE</Text>
         <View style={[styles.card, cardStyle]}>
           <SettingRow
-            label="Delete my account"
+            label="Delete Account"
             value=""
             onPress={() => navigation.navigate("DeleteAccount")}
             tone="danger"
             isLast
           />
         </View>
-        <Text style={[styles.caption, { color: colors.ink2 }]}>
-          Deletes your account and everything in it, on this phone and in the cloud. This cannot
-          be undone.
-        </Text>
+        {/* Likewise no caption. This row opens a whole screen whose job is to
+            spell out what goes and to ask for a password first, so a summary
+            here is the same warning in a place it cannot be acted on. */}
       </ScrollView>
     </SafeAreaView>
   );
@@ -646,10 +647,4 @@ const styles = StyleSheet.create({
   rowDisabled: { opacity: 0.5 },
   // Footer text under a group, describing the card above it rather than the
   // section below. Smaller than a row label so it reads as explanation.
-  caption: {
-    fontFamily: T.font.regular,
-    fontSize: 12.5,
-    lineHeight: 18,
-    marginTop: T.spacing[2],
-  },
 });

@@ -97,11 +97,21 @@ describe("SettingsScreen", () => {
     );
 
     // The wording is the point. Somebody must not read this as deleting
-    // everything, because the cloud copy of their history survives it.
-    expect(await screen.findByText("Clear data on this phone")).toBeTruthy();
+    // everything, because the cloud copy of their history survives it. That
+    // sentence now lives only in the confirmation, which is the copy that is
+    // actually read, so this checks the screen does NOT repeat it inline.
+    expect(await screen.findByText("Clear Local Data")).toBeTruthy();
     expect(
-      screen.getByText(/history already\s+saved to your account is not affected/i)
-    ).toBeTruthy();
+      screen.queryByText(/history already\s+saved to your account is not affected/i)
+    ).toBeNull();
+
+    const alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
+    fireEvent.press(screen.getByText("Clear Local Data"));
+    // The reassurance has to survive somewhere, and the confirmation is where.
+    expect(String(alertSpy.mock.calls[0]?.[1])).toMatch(
+      /history already saved to your account is not affected/i
+    );
+    alertSpy.mockRestore();
   });
 
   it("opens the data and privacy screen from Your data", async () => {
@@ -128,7 +138,7 @@ describe("SettingsScreen", () => {
       </ThemeProvider>
     );
 
-    fireEvent.press(await screen.findByText("Clear data on this phone"));
+    fireEvent.press(await screen.findByText("Clear Local Data"));
 
     expect(alertSpy).toHaveBeenCalled();
     // Nothing is wiped until the confirmation is accepted.
@@ -214,19 +224,21 @@ describe("SettingsScreen grouping", () => {
     expect(at("ABOUT")).toBeLessThan(at("DANGER ZONE"));
   });
 
-  it("keeps the clear-data caption under the control it describes", async () => {
-    // This is the bug the regrouping fixed. The caption used to sit directly
-    // below the "What we collect" row and above the clear button, so it read as
-    // describing the wrong thing entirely: a row that only opens a page was
-    // apparently going to delete your data.
+  it("carries no standing caption under either destructive row", async () => {
+    // These captions used to exist, and one of them was a real bug: it sat
+    // below "What we collect" and above the clear button, so it read as though
+    // a row that only opens a page was going to delete your data. Both are gone
+    // now for a simpler reason. Each row already leads somewhere that states the
+    // consequence and asks, so the caption was the warning printed a second time
+    // in the one place it cannot be acted on, which trains people to read past
+    // the copy that does matter.
     const tree = await renderedOrder();
 
     expect(tree.indexOf("What we collect")).toBeLessThan(
-      tree.indexOf("Clear data on this phone")
+      tree.indexOf("Clear Local Data")
     );
-    expect(tree.indexOf("Clear data on this phone")).toBeLessThan(
-      tree.indexOf("Clearing removes what this app has saved")
-    );
+    expect(tree).not.toContain("Clearing removes what this app has saved");
+    expect(tree).not.toContain("Deletes your account and everything in it");
   });
 
   it("groups the email, two-factor and log out together under Account", async () => {
@@ -275,7 +287,7 @@ describe("SettingsScreen grouping", () => {
       </ThemeProvider>
     );
 
-    fireEvent.press(await screen.findByText("Delete my account"));
+    fireEvent.press(await screen.findByText("Delete Account"));
 
     expect(mockNavigate).toHaveBeenCalledWith("DeleteAccount");
   });

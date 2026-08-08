@@ -37,7 +37,7 @@ const PRIVACY: LegalDocument = {
   title: "Privacy policy",
   updated: "Last updated August 2026",
   intro:
-    "SwiftChoice is a university project built by three students for INT3506 at Victoria University. It is not a commercial service and it is not sold or advertised. This page describes what the app does with your information.",
+    "SwiftChoice is a university project built by three students for INT3506 at the Academy of Interactive Technology (AIT). It is not a commercial service and it is not sold or advertised. This page describes what the app does with your information.",
   sections: [
     {
       heading: "What we collect",
@@ -73,7 +73,7 @@ const PRIVACY: LegalDocument = {
     {
       heading: "Removing your information",
       body: [
-        "Clear data on this phone, in Settings, removes everything held on the device. Decisions already copied to your account are not affected by it.",
+        "Clear Local Data, in Settings, removes everything held on the device. Decisions already copied to your account are not affected by it.",
         "Deleting your account removes the account and the decisions stored against it.",
       ],
     },
@@ -81,6 +81,7 @@ const PRIVACY: LegalDocument = {
       heading: "Getting in touch",
       body: [
         "SwiftChoice is coursework, so there is no support desk. Questions go to the project team through the unit.",
+        "The three of us built it, and the code is public. Yvonne Gitonga, github.com/gakey1. Bikash Adhikari, github.com/beekas-adhikari. Tracy Nguyen, github.com/tracysnowy.",
       ],
     },
   ],
@@ -90,7 +91,7 @@ const TERMS: LegalDocument = {
   title: "Terms of use",
   updated: "Last updated August 2026",
   intro:
-    "SwiftChoice is a university project built for INT3506 at Victoria University. Using it means accepting the short list below.",
+    "SwiftChoice is a university project built for INT3506 at the Academy of Interactive Technology (AIT). Using it means accepting the short list below.",
   sections: [
     {
       heading: "What this is",
