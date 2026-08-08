@@ -168,3 +168,115 @@ describe("SettingsScreen", () => {
     expect(screen.getByText(/tasks? done/i)).toBeTruthy();
   });
 });
+
+// The grouping itself. These are structural rather than behavioural, and they
+// exist because the screen's previous problem was not that anything was broken,
+// it was that related things sat apart and unrelated things sat together. That
+// is invisible to every other kind of test.
+describe("SettingsScreen grouping", () => {
+  // Rendered tree as a string, so the ORDER of things can be checked. Position
+  // is the whole point here and no query can express it.
+  async function renderedOrder(): Promise<string> {
+    render(
+      <ThemeProvider>
+        <SettingsScreen />
+      </ThemeProvider>
+    );
+    await screen.findByText("What we collect");
+    return JSON.stringify(screen.toJSON());
+  }
+
+  it("puts every setting under one of the six section headings", async () => {
+    const tree = await renderedOrder();
+
+    for (const section of [
+      "ACCOUNT",
+      "PREFERENCES",
+      "APPEARANCE",
+      "DATA AND PRIVACY",
+      "ABOUT",
+      "DANGER ZONE",
+    ]) {
+      expect(tree).toContain(section);
+    }
+  });
+
+  it("orders the sections from how it looks down to what cannot be undone", async () => {
+    const tree = await renderedOrder();
+    const at = (text: string) => tree.indexOf(text);
+
+    expect(at("APPEARANCE")).toBeLessThan(at("PREFERENCES"));
+    expect(at("PREFERENCES")).toBeLessThan(at("ACCOUNT"));
+    expect(at("ACCOUNT")).toBeLessThan(at("DATA AND PRIVACY"));
+    expect(at("DATA AND PRIVACY")).toBeLessThan(at("ABOUT"));
+    // Deleting the account is last on purpose, so nobody meets it on the way to
+    // something ordinary.
+    expect(at("ABOUT")).toBeLessThan(at("DANGER ZONE"));
+  });
+
+  it("keeps the clear-data caption under the control it describes", async () => {
+    // This is the bug the regrouping fixed. The caption used to sit directly
+    // below the "What we collect" row and above the clear button, so it read as
+    // describing the wrong thing entirely: a row that only opens a page was
+    // apparently going to delete your data.
+    const tree = await renderedOrder();
+
+    expect(tree.indexOf("What we collect")).toBeLessThan(
+      tree.indexOf("Clear data on this phone")
+    );
+    expect(tree.indexOf("Clear data on this phone")).toBeLessThan(
+      tree.indexOf("Clearing removes what this app has saved")
+    );
+  });
+
+  it("groups the email, two-factor and log out together under Account", async () => {
+    const tree = await renderedOrder();
+
+    expect(tree.indexOf("ACCOUNT")).toBeLessThan(tree.indexOf("a@b.com"));
+    expect(tree.indexOf("a@b.com")).toBeLessThan(tree.indexOf("Two-factor authentication"));
+    expect(tree.indexOf("Two-factor authentication")).toBeLessThan(tree.indexOf("Log out"));
+    // Log out must still be above the next heading, or it has escaped the group.
+    expect(tree.indexOf("Log out")).toBeLessThan(tree.indexOf("DATA AND PRIVACY"));
+  });
+
+  it("shows the email as a fact rather than something to press", async () => {
+    render(
+      <ThemeProvider>
+        <SettingsScreen />
+      </ThemeProvider>
+    );
+
+    expect(await screen.findByText("a@b.com")).toBeTruthy();
+    // Rendering it as a button would have a screen reader offer to activate a
+    // row that does nothing.
+    expect(screen.queryByRole("button", { name: /^Email/ })).toBeNull();
+  });
+
+  it("opens each legal document from About", async () => {
+    render(
+      <ThemeProvider>
+        <SettingsScreen />
+      </ThemeProvider>
+    );
+
+    fireEvent.press(await screen.findByText("Privacy policy"));
+    expect(mockNavigate).toHaveBeenCalledWith("Legal", { document: "privacy" });
+
+    fireEvent.press(screen.getByText("Terms of use"));
+    expect(mockNavigate).toHaveBeenCalledWith("Legal", { document: "terms" });
+  });
+
+  it("opens the delete screen rather than deleting from here", async () => {
+    // Deleting needs a password and a list too long for an alert, so this row
+    // must never grow a confirmation of its own.
+    render(
+      <ThemeProvider>
+        <SettingsScreen />
+      </ThemeProvider>
+    );
+
+    fireEvent.press(await screen.findByText("Delete my account"));
+
+    expect(mockNavigate).toHaveBeenCalledWith("DeleteAccount");
+  });
+});

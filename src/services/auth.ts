@@ -16,6 +16,7 @@ import {
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
+  updatePassword,
 } from "firebase/auth";
 
 import { auth } from "@/services/firebase";
@@ -104,6 +105,20 @@ export async function reauthenticate(password: string): Promise<void> {
 
   const credential = EmailAuthProvider.credential(user.email, password);
   await reauthenticateWithCredential(user, credential);
+}
+
+// Replaces the signed-in user's password. Firebase treats this as a sensitive
+// action, so reauthenticate() has to have run recently or this throws
+// auth/requires-recent-login. The caller in features/auth/passwordChange owns
+// that ordering, along with the D-012 rule about what a password change does to
+// the second factor.
+export async function updateCurrentPassword(newPassword: string): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error("No signed-in user to update.");
+  }
+
+  await updatePassword(user, newPassword);
 }
 
 // Deletes the signed-in user's Firebase account. This is the very last step of

@@ -99,6 +99,28 @@ export function deleteAccountErrorMessage(err: unknown): string {
   }
 }
 
+// Changing a password from inside the app. Specific for the same reason
+// deleting an account is: the person is already signed in, so naming the failure
+// reveals nothing they do not already know.
+export function changePasswordErrorMessage(err: unknown): string {
+  if (!isFirebaseError(err)) return "Something went wrong. Please try again.";
+  switch (err.code) {
+    case "auth/wrong-password":
+    case "auth/invalid-credential":
+      return "That is not your current password.";
+    case "auth/weak-password":
+      return "Use a stronger password.";
+    case "auth/requires-recent-login":
+      return "Your session is too old for this. Log out, log back in, and try again.";
+    case "auth/too-many-requests":
+      return "Too many attempts. Please try again in a few minutes.";
+    case "auth/network-request-failed":
+      return "Network error. Check your connection and try again.";
+    default:
+      return "Could not change your password. Please try again.";
+  }
+}
+
 export function passwordResetErrorMessage(err: unknown): string | null {
   if (!isFirebaseError(err)) return "Something went wrong. Please try again.";
   switch (err.code) {

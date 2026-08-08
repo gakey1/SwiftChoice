@@ -1,13 +1,28 @@
-// Settings screen. Three concerns meet here:
-//  - Appearance hosts the Dark mode toggle, which flips the app between the dark
-//    and light Arcade themes via useTheme().toggleDark.
-//  - Preferences (dietary restrictions, default budget, work hours) persist
-//    locally via preferencesStorage. Tapping a row cycles to the next option
-//    and saves all three.
-//  - Account hosts the Log Out action. Logout flips the auth listener,
-//    which returns RootNavigator to the Login screen; no manual navigation.
-// Settings is a universal screen, so only the teal accent is used here. Colours
-// come from the active theme via useTheme(); section labels use the mono font.
+// Settings screen. Everything here is grouped into labelled cards, ordered from
+// who you are, through how the app behaves, to what it holds about you, and
+// finally the one action that cannot be undone:
+//
+//   ACCOUNT           the email, two-factor, log out
+//   PREFERENCES       diet, budget, work hours, saved via preferencesStorage
+//   APPEARANCE        dark mode, via useTheme().toggleDark
+//   DATA AND PRIVACY  what we collect, clear this phone
+//   ABOUT             privacy policy, terms of use
+//   DANGER ZONE       delete the account
+//
+// Two rules the grouping follows, both of which it previously broke. A caption
+// belongs under the card it describes, not above the next section: the clear-data
+// explanation used to sit directly beneath the "What we collect" row and read as
+// though it described that. And every action that happens in place rather than
+// opening a screen has no chevron, because a chevron is a promise of somewhere
+// to go.
+//
+// Deleting the account is kept out of Data and privacy on purpose. Clearing this
+// phone and deleting everything are one tap apart in wording and nothing alike in
+// consequence, so they do not share a card.
+//
+// Settings is a universal screen, so only the teal accent is used here, with the
+// single exception of the delete row's label. Colours come from the active theme
+// via useTheme(); section labels use the mono font.
 
 import { useCallback, useState } from "react";
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -16,7 +31,6 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { AmbientBackground } from "@/components/AmbientBackground";
-import { Button } from "@/components/Button";
 import { GameIcon } from "@/components/GameIcon";
 import { Icon } from "@/components/Icon";
 import { levelTitle } from "@/features/progress/progress";
@@ -248,9 +262,26 @@ export function SettingsScreen() {
             The design's second line reads "N-day streak". We do not track days,
             so this shows the count we actually hold instead of dressing it up
             as something we measure. */}
-        <View style={[styles.card, styles.profileCard, cardStyle]} testID="settings-profile">
+        {/* The design gives this card the priority purple border and tint, which
+            is a deliberate exception to the module-colour scoping rule since
+            Settings is a universal screen. Kept because it is what sets the card
+            apart from the eight plain ones below it. Logged as a divergence. */}
+        <View
+          style={[
+            styles.card,
+            styles.profileCard,
+            { backgroundColor: colors.priorityTint, borderColor: colors.priority },
+          ]}
+          testID="settings-profile"
+        >
           {currentAvatar ? (
-            <Image source={currentAvatar.source} style={styles.profileAvatar} />
+            <Image
+              source={currentAvatar.source}
+              style={[
+                styles.profileAvatar,
+                { borderColor: colors.cardLine, shadowColor: currentAvatar.color },
+              ]}
+            />
           ) : null}
           <View style={styles.profileText}>
             <Text style={[styles.profileName, { color: colors.ink }]} numberOfLines={1}>
@@ -278,7 +309,9 @@ export function SettingsScreen() {
                   style={[
                     styles.avatarBtn,
                     { borderColor: selected ? colors.teal : colors.cardLine },
-                    selected && styles.avatarBtnSelected,
+                    // The design glows the chosen robot in its own colour, which
+                    // is what makes the selection obvious at a glance.
+                    selected ? [styles.avatarBtnSelected, { shadowColor: a.color }] : null,
                   ]}
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
@@ -291,6 +324,8 @@ export function SettingsScreen() {
           </View>
         </View>
 
+        {/* How it looks. Its own group rather than sitting with preferences,
+            because it changes nothing about the recommendations. */}
         <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>APPEARANCE</Text>
         <View style={[styles.card, cardStyle]}>
           <View style={[styles.row, styles.lastRow]}>
@@ -307,6 +342,7 @@ export function SettingsScreen() {
           </View>
         </View>
 
+        {/* How the app behaves for you. */}
         <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>PREFERENCES</Text>
         <View style={[styles.card, cardStyle]}>
           <SettingRow
@@ -316,9 +352,7 @@ export function SettingsScreen() {
           />
           <SettingRow
             label="Budget"
-            //value={budget ?? ""}
-            value={BUDGET_LABELS[budget ?? 'budget'] ?? 'Not set'}
-            //onPress={() => cycleOption(budget ?? "", BUDGET_OPTIONS, "budget")}
+            value={BUDGET_LABELS[budget ?? "budget"] ?? "Not set"}
             onPress={handleOpenBudgetPicker}
           />
           <SettingRow
@@ -329,60 +363,93 @@ export function SettingsScreen() {
           />
         </View>
 
+        {/* Who you are, and the things that act on the account itself. The email
+            sits at the top as a fact rather than a control, so the two actions
+            below it are unambiguously about that account. Log out lives here
+            rather than floating on its own, because it is an account action, not
+            a preference. */}
         <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>ACCOUNT</Text>
-        {user?.email ? (
-          <Text style={[styles.sub, { color: colors.ink2 }]}>Signed in as {user.email}</Text>
-        ) : null}
-        <View style={styles.action}>
-          <Button variant="reroll" onPress={handleLogout} disabled={signingOut}>
-            {signingOut ? "Logging out..." : "Log out"}
-          </Button>
-        </View>
-
-        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>SECURITY</Text>
         <View style={[styles.card, cardStyle]}>
+          <SettingRow label="Email" value={user?.email ?? "Not signed in"} accessory="none" />
+          <SettingRow
+            label="Change password"
+            value=""
+            onPress={() => navigation.navigate("ChangePassword")}
+          />
           <SettingRow
             label="Two-factor authentication"
             value={twoFactorOn ? "On for this phone" : "Off"}
             onPress={() => navigation.navigate("TwoFactorSetup")}
+          />
+          <SettingRow
+            label="Log out"
+            value={signingOut ? "Logging out..." : ""}
+            onPress={handleLogout}
+            disabled={signingOut}
+            accessory="none"
             isLast
           />
         </View>
 
-        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>YOUR DATA</Text>
+        {/* What is held about you, and the one control that removes some of it.
+            Reading what is collected and clearing it belong together: somebody
+            who has just read the list is exactly the person who wants the
+            control. The caption sits under the card it describes, which is the
+            fix for it previously sitting under the row above the button. */}
+        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>DATA AND PRIVACY</Text>
         <View style={[styles.card, cardStyle]}>
           <SettingRow
             label="What we collect"
             value=""
             onPress={() => navigation.navigate("DataAndPrivacy")}
+          />
+          <SettingRow
+            label="Clear data on this phone"
+            value={clearing ? "Clearing..." : ""}
+            onPress={handleClearLocalData}
+            disabled={clearing}
+            accessory="none"
             isLast
           />
         </View>
-        <Text style={[styles.sub, { color: colors.ink2 }]}>
-          Clears what this app has saved on this phone. Your account stays, and history already
-          saved to your account is not affected.
+        <Text style={[styles.caption, { color: colors.ink2 }]}>
+          Clearing removes what this app has saved on this phone. Your account stays, and history
+          already saved to your account is not affected.
         </Text>
-        <View style={styles.action}>
-          <Button variant="reroll" onPress={handleClearLocalData} disabled={clearing}>
-            {clearing ? "Clearing..." : "Clear data on this phone"}
-          </Button>
+
+        {/* The documents. They are also reachable from inside Data and privacy,
+            and are repeated here because this is where people look for them. */}
+        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>ABOUT</Text>
+        <View style={[styles.card, cardStyle]}>
+          <SettingRow
+            label="Privacy policy"
+            value=""
+            onPress={() => navigation.navigate("Legal", { document: "privacy" })}
+          />
+          <SettingRow
+            label="Terms of use"
+            value=""
+            onPress={() => navigation.navigate("Legal", { document: "terms" })}
+            isLast
+          />
         </View>
 
-        {/* Deleting the account is kept apart from clearing this phone's data,
-            and sits last, because the two are one tap apart and only one of them
-            is reversible by signing in again. It routes to its own screen rather
-            than opening a confirmation here: it needs a password, and the list
-            of what goes is too long to read inside an alert (US33). */}
+        {/* Last, and on its own. Deleting the account and clearing this phone
+            are one tap apart in meaning and worlds apart in consequence, so they
+            are deliberately not in the same group. It routes to its own screen
+            rather than opening a confirmation here: it needs a password, and the
+            list of what goes is too long to read inside an alert (US33). */}
         <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>DANGER ZONE</Text>
         <View style={[styles.card, cardStyle]}>
           <SettingRow
             label="Delete my account"
             value=""
             onPress={() => navigation.navigate("DeleteAccount")}
+            tone="danger"
             isLast
           />
         </View>
-        <Text style={[styles.sub, styles.dangerNote, { color: colors.ink2 }]}>
+        <Text style={[styles.caption, { color: colors.ink2 }]}>
           Deletes your account and everything in it, on this phone and in the cloud. This cannot
           be undone.
         </Text>
@@ -394,26 +461,68 @@ export function SettingsScreen() {
 type SettingRowProps = {
   label: string;
   value: string;
-  onPress: () => void;
+  // Left out for rows that only state a fact, such as the signed-in email. Those
+  // render as plain text rather than a button, so a screen reader does not offer
+  // to activate something that does nothing.
+  onPress?: () => void;
   isLast?: boolean;
+  // A chevron promises another screen. Rows that act in place (Log out, Clear
+  // data) set this to "none", because a chevron on them would be a lie about
+  // what the tap does.
+  accessory?: "chevron" | "none";
+  // Only for Delete my account. The label alone carries it; the row is not
+  // filled red, which would shout on a screen people visit for ordinary reasons.
+  tone?: "default" | "danger";
+  disabled?: boolean;
 };
 
-// One row in the settings list: a label on the left, the current value and a
-// chevron on the right. Tapping anywhere on the row runs onPress.
-function SettingRow({ label, value, onPress, isLast }: SettingRowProps) {
+// One row in the settings list: a label on the left, the current value on the
+// right, and a chevron when tapping it opens another screen.
+function SettingRow({
+  label,
+  value,
+  onPress,
+  isLast,
+  accessory = "chevron",
+  tone = "default",
+  disabled,
+}: SettingRowProps) {
   const { colors } = useTheme();
+  const rowStyle = [
+    styles.row,
+    { borderBottomColor: colors.cardLine },
+    isLast ? styles.lastRow : null,
+  ];
+  const labelColor = tone === "danger" ? colors.fuel : colors.ink;
+
+  const content = (
+    <>
+      <Text style={[styles.rowLabel, { color: labelColor }]}>{label}</Text>
+      <View style={styles.rowRight}>
+        {value ? <Text style={[styles.rowValue, { color: colors.ink2 }]}>{value}</Text> : null}
+        {accessory === "chevron" ? (
+          <Icon name="chevron-right" size={18} color={colors.ink3} />
+        ) : null}
+      </View>
+    </>
+  );
+
+  // A row with nothing to do is not a button. Rendering it as one would have a
+  // screen reader announce the email as activatable.
+  if (!onPress) {
+    return <View style={rowStyle}>{content}</View>;
+  }
+
   return (
     <Pressable
       onPress={onPress}
-      style={[styles.row, { borderBottomColor: colors.cardLine }, isLast ? styles.lastRow : null]}
+      disabled={disabled ?? false}
+      style={[...rowStyle, disabled ? styles.rowDisabled : null]}
       accessibilityRole="button"
-      accessibilityLabel={`${label}, ${value}`}
+      accessibilityState={{ disabled: disabled ?? false }}
+      accessibilityLabel={value ? `${label}, ${value}` : label}
     >
-      <Text style={[styles.rowLabel, { color: colors.ink }]}>{label}</Text>
-      <View style={styles.rowRight}>
-        {value ? <Text style={[styles.rowValue, { color: colors.ink2 }]}>{value}</Text> : null}
-        <Icon name="chevron-right" size={18} color={colors.ink3} />
-      </View>
+      {content}
     </Pressable>
   );
 }
@@ -454,7 +563,19 @@ const styles = StyleSheet.create({
     padding: T.spacing[4],
     marginBottom: T.spacing[5],
   },
-  profileAvatar: { width: 56, height: 56, borderRadius: 999 },
+  profileAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 999,
+    borderWidth: 2,
+    // The design's "0 0 18px" avatar glow. shadowColor is set inline from the
+    // chosen robot. Android ignores shadowColor on views and uses elevation, so
+    // the glow reads as a neutral lift there rather than a coloured one.
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 9,
+    elevation: 6,
+  },
   profileText: { flex: 1, minWidth: 0 },
   profileName: { fontFamily: T.font.bold, fontSize: T.fontSize.subtitle },
   profileMetaRow: {
@@ -473,7 +594,13 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     overflow: "hidden",
   },
-  avatarBtnSelected: { borderWidth: 2.5 },
+  avatarBtnSelected: {
+    borderWidth: 2.5,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 9,
+    elevation: 6,
+  },
   avatarImg: { width: "100%", height: "100%" },
   row: {
     minHeight: 52,
@@ -516,11 +643,13 @@ const styles = StyleSheet.create({
     fontSize: T.fontSize.body,
     marginRight: T.spacing[2],
   },
-  sub: {
+  rowDisabled: { opacity: 0.5 },
+  // Footer text under a group, describing the card above it rather than the
+  // section below. Smaller than a row label so it reads as explanation.
+  caption: {
     fontFamily: T.font.regular,
-    fontSize: T.fontSize.body,
-    marginBottom: T.spacing[3],
+    fontSize: 12.5,
+    lineHeight: 18,
+    marginTop: T.spacing[2],
   },
-  action: { marginTop: T.spacing[2] },
-  dangerNote: { marginTop: T.spacing[2], marginBottom: 0 },
 });
