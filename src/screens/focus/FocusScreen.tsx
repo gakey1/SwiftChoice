@@ -652,9 +652,17 @@ const styles = StyleSheet.create({
   },
   // A circle rather than a rounded square, sized and lit to match the design's
   // result ring: tinted fill, a hairline of the module colour, and a glow of the
-  // same colour behind it. Android has no shadow colour on views, so it takes
-  // elevation instead and loses the tint of the glow; that is the platform's
-  // limit rather than a choice.
+  // same colour behind it.
+  //
+  // The glow is iOS only, deliberately. Android ignores the shadow properties
+  // and takes `elevation` instead, but it draws an elevation shadow from a
+  // polygon approximation of the view's outline, which on a circle this size is
+  // a visible octagon sitting around the icon. It read as a different shape on
+  // the two platforms rather than as a softer glow. Dropping `elevation` costs
+  // Android the halo and gives back the circle, which is the better trade: the
+  // halo was already untinted there, since Android has no shadow colour on
+  // views, so it was the least faithful part of the design on that platform
+  // even before the octagon.
   avatarBadge: {
     width: 112,
     height: 112,
@@ -666,7 +674,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.45,
     shadowRadius: 17,
-    elevation: 8,
   },
   itemName: {
     fontFamily: T.font.bold,
