@@ -451,26 +451,45 @@ export function FuelScreen() {
               </Text>
 
               <View style={styles.statsRow}>
-                <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
-                  <Text style={[styles.statValue, { color: primaryColor }]}>{recommendation.budget_level}</Text>
-                  <Text style={[styles.statLabel, { color: colors.ink2 }]}>Budget</Text>
-                </View>
-
-                <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
-                  <Text style={[styles.statValue, { color: colors.ink }]}>{distanceText}</Text>
-                  <Text style={[styles.statLabel, { color: colors.ink2 }]}>Distance</Text>
-                </View>
-
-                {/* Google holds no rating for some real places. Show nothing
-                    rather than a zero or an invented score. */}
-                {recommendation.rating !== "" && (
+                {recommendation.type === "in" ? (
+                  <>
                   <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
-                    <View style={styles.ratingContainer}>
-                      <Text style={[styles.statValue, { color: colors.ink }]}>{recommendation.rating}</Text>
-                      <Icon name="star" size={13} color={primaryColor} />
+                      <Text style={[styles.statValue, { color: primaryColor }]}>{recommendation.budget_level}</Text>
+                      <Text style={[styles.statLabel, { color: colors.ink2 }]}>Budget</Text>
                     </View>
-                    <Text style={[styles.statLabel, { color: colors.ink2 }]}>Rating</Text>
+                    <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
+                      <Text style={[styles.statValue, { color: colors.ink }]}>15 min</Text>
+                      <Text style={[styles.statLabel, { color: colors.ink2 }]}>Prep</Text>
+                    </View>
+                    <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
+                      <Text style={[styles.statValue, { color: colors.ink }]}>Easy</Text>
+                      <Text style={[styles.statLabel, { color: colors.ink2 }]}>Effort</Text>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
+                      <Text style={[styles.statValue, { color: primaryColor }]}>{recommendation.budget_level}</Text>
+                      <Text style={[styles.statLabel, { color: colors.ink2 }]}>Budget</Text>
+                    </View>
+
+                  <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
+                    <Text style={[styles.statValue, { color: colors.ink }]}>{distanceText}</Text>
+                    <Text style={[styles.statLabel, { color: colors.ink2 }]}>Distance</Text>
                   </View>
+
+                  {/* Google holds no rating for some real places. Show nothing
+                    rather than a zero or an invented score. */}
+                  {recommendation.rating !== "" && (
+                    <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
+                      <View style={styles.ratingContainer}>
+                        <Text style={[styles.statValue, { color: colors.ink }]}>{recommendation.rating}</Text>
+                        <Icon name="star" size={13} color={primaryColor} />
+                      </View>
+                      <Text style={[styles.statLabel, { color: colors.ink2 }]}>Rating</Text>
+                    </View>
+                  )}
+                  </>
                 )}
               </View>
 
