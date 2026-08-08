@@ -367,6 +367,25 @@ export function SettingsScreen() {
             {clearing ? "Clearing..." : "Clear data on this phone"}
           </Button>
         </View>
+
+        {/* Deleting the account is kept apart from clearing this phone's data,
+            and sits last, because the two are one tap apart and only one of them
+            is reversible by signing in again. It routes to its own screen rather
+            than opening a confirmation here: it needs a password, and the list
+            of what goes is too long to read inside an alert (US33). */}
+        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>DANGER ZONE</Text>
+        <View style={[styles.card, cardStyle]}>
+          <SettingRow
+            label="Delete my account"
+            value=""
+            onPress={() => navigation.navigate("DeleteAccount")}
+            isLast
+          />
+        </View>
+        <Text style={[styles.sub, styles.dangerNote, { color: colors.ink2 }]}>
+          Deletes your account and everything in it, on this phone and in the cloud. This cannot
+          be undone.
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -503,4 +522,5 @@ const styles = StyleSheet.create({
     marginBottom: T.spacing[3],
   },
   action: { marginTop: T.spacing[2] },
+  dangerNote: { marginTop: T.spacing[2], marginBottom: 0 },
 });
