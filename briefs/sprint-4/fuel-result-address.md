@@ -6,17 +6,23 @@ would have been easy to get wrong.
 
 ## What changed
 
-The Eat Out result card now shows the street address under the stat chips.
+The Eat Out result card now shows the street address directly under the place name.
 
 ```
-Corner Cafe
+              Corner Cafe
+        Local Restaurant / Eatery
+     (pin) 120 Swanston St, Melbourne
+
 [ $$ Budget ] [ 400m Distance ] [ 4.2 Rating ]
-(pin) 120 Swanston St, Melbourne
 ```
 
 Why it earns the space: a distance tells you how far, not which way. "400m" is
 useless on its own if you do not know whether to turn left or right, and it was the
 one thing on the card you could not act on.
+
+It sits with the name rather than below the chips because all three lines answer the
+same question, which place is this. The chips below are measurements of it. A test
+pins that order, since nothing else would catch it drifting back down.
 
 ## It cost nothing to add, and that was checked first
 
@@ -71,5 +77,5 @@ empty state, and **every existing assertion still passes** while no card ever re
 an address. The mock now uses the real function via `jest.requireActual`. Worth
 remembering whenever a mocked module gains an export.
 
-Gates green: types clean, lint 0 errors, 432 tests over 42 suites. On a branch, not
+Gates green: types clean, lint 0 errors, 433 tests over 42 suites. On a branch, not
 merged, and not yet seen on a phone.
