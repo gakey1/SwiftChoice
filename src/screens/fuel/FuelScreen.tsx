@@ -20,6 +20,8 @@ import { AmbientBackground } from "@/components/AmbientBackground";
 import { GlassCard } from "@/components/GlassCard";
 import { ModuleGlyph } from "@/components/ModuleGlyph";
 import { HUD_CLEARANCE } from "@/components/XpHud";
+import { RewardToast, useRewardToast } from "@/components/RewardToast";
+import { useCelebration } from "@/components/Celebration";
 import { T } from "@/theme/tokens";
 import { moduleAccent, moduleDeep } from "@/theme/themes";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -166,6 +168,10 @@ export function FuelScreen() {
   const decisionStartedAt = useDecisionStart();
   const { colors } = useTheme();
   const { progress, awardXp } = useProgress();
+  // The reroll acknowledgement, and the confetti for an accepted decision. Both
+  // match Focus, which had them first; this screen was missing them.
+  const { toastText, toastProgress, showToast } = useRewardToast();
+  const { celebrate } = useCelebration();
   const accent = moduleAccent(colors, "fuel");
   const [userTier, setUserTier] = useState<string | null>(null);
 
@@ -402,6 +408,9 @@ export function FuelScreen() {
         setCurrentIndex(1);
         setRecommendation(nextItem);
         setHasRerolled(true);
+        // Says the reroll was spent, since it is the only one and the card
+        // changing does not by itself tell you that.
+        showToast("Reroll used");
       }
     } else {
       //If there are no other options, let the user look for something else
@@ -564,6 +573,12 @@ export function FuelScreen() {
                     // advertise, so the label and the running total agree.
                     awardXp(XP_PER_DECISION);
 
+                    // Confetti for the decision, the same as Priority gives a
+                    // completed task. The burst is owned above the navigator, so
+                    // it survives the goBack() below rather than being unmounted
+                    // with this screen.
+                    celebrate();
+
                     //Clear the active choice view states
                     setRecommendation(null);
 
@@ -612,6 +627,15 @@ export function FuelScreen() {
             </DataNotice>
           </View>
         </View>
+
+        {/* Outside the content so it floats over the card rather than pushing
+            it, and last so it draws above everything. Same placement as Focus. */}
+        <RewardToast
+          text={toastText}
+          progress={toastProgress}
+          color={primaryColor}
+          textColor={ON_ACCENT}
+        />
       </SafeAreaView>
     );
   }

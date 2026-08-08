@@ -22,6 +22,7 @@ import { Icon, type IconName } from "@/components/Icon";
 import { DataNotice } from "@/components/DataNotice";
 import { spotIcon } from "@/features/focus/spotIcons";
 import { RewardToast, useRewardToast } from "@/components/RewardToast";
+import { useCelebration } from "@/components/Celebration";
 import { HUD_CLEARANCE } from "@/components/XpHud";
 import type { AppStackParamList } from "@/navigation/types";
 import { getCurrentPosition } from "@/services/location/locationService";
@@ -138,6 +139,7 @@ export function FocusScreen() {
   const [conditions, setConditions] = useState<Readings | null>(null);
 
   const { toastText, toastProgress, showToast } = useRewardToast();
+  const { celebrate } = useCelebration();
 
   const primaryColor = accent.color;
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
@@ -405,6 +407,12 @@ export function FocusScreen() {
                 // Award the XP the History row and the Home quest pill both
                 // advertise, so the label and the running total agree.
                 awardXp(XP_PER_DECISION);
+
+                // Confetti for the decision, the same as Priority gives a
+                // completed task. The burst is owned above the navigator, so it
+                // survives the goBack() below rather than being unmounted with
+                // this screen.
+                celebrate();
 
                 setRecommendation(null);
                 navigation.goBack();

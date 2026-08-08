@@ -38,6 +38,10 @@ import { ThemeProvider } from "@/theme/ThemeProvider";
 import { ProgressProvider } from "@/features/progress/ProgressProvider";
 
 import { BlurTargetProvider } from "@/components/BlurTarget";
+// CelebrationProvider owns the confetti burst that acknowledges a decision. It
+// wraps the navigator because accepting a decision navigates away in the same
+// handler, so a burst belonging to the screen would unmount before it was seen.
+import { CelebrationProvider } from "@/components/Celebration";
 
 export default function App() {
   // Load the four DM Sans weights the design system uses. useFonts returns
@@ -76,9 +80,14 @@ export default function App() {
                 Wraps the navigator because the two ends sit on opposite
                 branches of each screen's tree. */}
             <BlurTargetProvider>
-              <NavigationContainer ref={globalNavigationRef}>
-                <RootNavigator />
-              </NavigationContainer>
+              {/* Outside the navigator on purpose. A decision is accepted and
+                  the screen navigates away in the same handler, so the burst
+                  has to outlive the screen that asked for it. */}
+              <CelebrationProvider>
+                <NavigationContainer ref={globalNavigationRef}>
+                  <RootNavigator />
+                </NavigationContainer>
+              </CelebrationProvider>
             </BlurTargetProvider>
           </ProgressProvider>
         </AuthProvider>
