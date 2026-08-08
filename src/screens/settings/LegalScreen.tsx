@@ -37,13 +37,14 @@ const PRIVACY: LegalDocument = {
   title: "Privacy policy",
   updated: "Last updated August 2026",
   intro:
-    "SwiftChoice is a university project built by three students for INT3506 at Victoria University. It is not a commercial service and it is not sold or advertised. This page describes what the app does with your information.",
+    "SwiftChoice is a university project built by three students for INT3506 at the Academy of Interactive Technology (AIT). It is not a commercial service and it is not sold or advertised. This page describes what the app does with your information.",
   sections: [
     {
       heading: "What we collect",
       body: [
         "An email address and password, so you can sign in. The password is handled by Firebase Authentication and the app never sees it.",
         "The decisions you accept, with the option you chose and the filters you set.",
+        "The tasks you add to Priority, with any deadline and note you give them.",
         "Your location, when you search for somewhere to eat or ask for a study spot.",
       ],
     },
@@ -53,13 +54,16 @@ const PRIVACY: LegalDocument = {
         "Accepted decisions are copied to your account, which is held in Google Firebase in Sydney.",
         "When you search in Eat Out, your location or the area you type is sent to Google so it can return places nearby.",
         "When you ask for a study spot, your location is sent to a weather service so the app can tell you whether to take a jacket or an umbrella.",
-        "Nothing identifying you is sent to Google or to the weather service. They receive a position, not a person.",
+        "When two or more Priority tasks score exactly the same and you rank them, those tasks are sent to a small server we run, which passes them to Google's Gemini service to break the tie and explain the order. Only the tied tasks go, never the whole list.",
+        "Nothing identifying you is sent to Google or to the weather service. The location services receive a position, not a person, and the tie-break receives task text with no account, name or device attached to it.",
+        "Our server keeps no copy of what passes through it. It holds the key that talks to Google, which is the reason it exists at all: without it that key would have to ship inside the app, where anyone could read it.",
       ],
     },
     {
       heading: "What stays on your phone",
       body: [
-        "Your preferences, your Fuel and Focus pools, your decision history, your XP and level, your theme, your avatar, and your two-factor key.",
+        "Your preferences, your Fuel and Focus pools, your decision history, your XP and level, your theme, your avatar, your two-factor key, and your Priority tasks.",
+        "Priority tasks stay here with the one exception described above, which is the tied ones sent to break a draw. A task you never rank against an equal never leaves.",
         "The two-factor key never leaves the device, which is why it protects this phone rather than your account.",
       ],
     },
@@ -73,7 +77,7 @@ const PRIVACY: LegalDocument = {
     {
       heading: "Removing your information",
       body: [
-        "Clear data on this phone, in Settings, removes everything held on the device. Decisions already copied to your account are not affected by it.",
+        "Clear Local Data, in Settings, removes everything held on the device. Decisions already copied to your account are not affected by it.",
         "Deleting your account removes the account and the decisions stored against it.",
       ],
     },
@@ -81,6 +85,7 @@ const PRIVACY: LegalDocument = {
       heading: "Getting in touch",
       body: [
         "SwiftChoice is coursework, so there is no support desk. Questions go to the project team through the unit.",
+        "The three of us built it, and the code is public. Yvonne Gitonga, github.com/gakey1. Bikash Adhikari, github.com/beekas-adhikari. Tracy Nguyen, github.com/tracysnowy.",
       ],
     },
   ],
@@ -90,7 +95,7 @@ const TERMS: LegalDocument = {
   title: "Terms of use",
   updated: "Last updated August 2026",
   intro:
-    "SwiftChoice is a university project built for INT3506 at Victoria University. Using it means accepting the short list below.",
+    "SwiftChoice is a university project built for INT3506 at the Academy of Interactive Technology (AIT). Using it means accepting the short list below.",
   sections: [
     {
       heading: "What this is",

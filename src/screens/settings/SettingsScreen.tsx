@@ -9,12 +9,15 @@
 //   ABOUT             privacy policy, terms of use
 //   DANGER ZONE       delete the account
 //
-// Two rules the grouping follows, both of which it previously broke. A caption
-// belongs under the card it describes, not above the next section: the clear-data
-// explanation used to sit directly beneath the "What we collect" row and read as
-// though it described that. And every action that happens in place rather than
-// opening a screen has no chevron, because a chevron is a promise of somewhere
-// to go.
+// Every action that happens in place rather than opening a screen has no
+// chevron, because a chevron is a promise of somewhere to go.
+//
+// Neither destructive row carries a caption. Both used to, and both said the
+// same thing the user is about to be told anyway: Clear Local Data opens a
+// confirmation, and Delete Account opens a whole screen whose job is to spell
+// out what goes and ask for a password first. A warning printed where it cannot
+// be acted on is read past, and it trains people to read past the one that
+// matters.
 //
 // Deleting the account is kept out of Data and privacy on purpose. Clearing this
 // phone and deleting everything are one tap apart in wording and nothing alike in
@@ -198,7 +201,7 @@ export function SettingsScreen() {
   // thing a privacy action must not do. Deleting everything is US33.
   async function handleClearLocalData(): Promise<void> {
     Alert.alert(
-      "Clear data on this phone?",
+      "Clear Local Data?",
       "This removes your preferences, saved spots, meals, on-device history, progress and avatar from this phone. Your account stays, and history already saved to your account is not affected. This cannot be undone.",
       [
         { text: "Cancel", style: "cancel" },
@@ -297,7 +300,7 @@ export function SettingsScreen() {
           </View>
         </View>
 
-        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>PROFILE AVATAR</Text>
+        <Text style={[styles.sectionLabel, { color: colors.ink2 }]}>PROFILE AVATAR</Text>
         <View style={[styles.card, styles.avatarCard, cardStyle]}>
           <View style={styles.avatarRow}>
             {AVATARS.map((a, i) => {
@@ -326,7 +329,7 @@ export function SettingsScreen() {
 
         {/* How it looks. Its own group rather than sitting with preferences,
             because it changes nothing about the recommendations. */}
-        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>APPEARANCE</Text>
+        <Text style={[styles.sectionLabel, { color: colors.ink2 }]}>APPEARANCE</Text>
         <View style={[styles.card, cardStyle]}>
           <View style={[styles.row, styles.lastRow]}>
             <Text style={[styles.rowLabel, styles.rowLabelFlex, { color: colors.ink }]}>Dark mode</Text>
@@ -343,7 +346,7 @@ export function SettingsScreen() {
         </View>
 
         {/* How the app behaves for you. */}
-        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>PREFERENCES</Text>
+        <Text style={[styles.sectionLabel, { color: colors.ink2 }]}>PREFERENCES</Text>
         <View style={[styles.card, cardStyle]}>
           <SettingRow
             label="Dietary Restrictions"
@@ -368,7 +371,7 @@ export function SettingsScreen() {
             below it are unambiguously about that account. Log out lives here
             rather than floating on its own, because it is an account action, not
             a preference. */}
-        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>ACCOUNT</Text>
+        <Text style={[styles.sectionLabel, { color: colors.ink2 }]}>ACCOUNT</Text>
         <View style={[styles.card, cardStyle]}>
           <SettingRow label="Email" value={user?.email ?? "Not signed in"} accessory="none" />
           <SettingRow
@@ -396,7 +399,7 @@ export function SettingsScreen() {
             who has just read the list is exactly the person who wants the
             control. The caption sits under the card it describes, which is the
             fix for it previously sitting under the row above the button. */}
-        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>DATA AND PRIVACY</Text>
+        <Text style={[styles.sectionLabel, { color: colors.ink2 }]}>DATA AND PRIVACY</Text>
         <View style={[styles.card, cardStyle]}>
           <SettingRow
             label="What we collect"
@@ -404,7 +407,7 @@ export function SettingsScreen() {
             onPress={() => navigation.navigate("DataAndPrivacy")}
           />
           <SettingRow
-            label="Clear data on this phone"
+            label="Clear Local Data"
             value={clearing ? "Clearing..." : ""}
             onPress={handleClearLocalData}
             disabled={clearing}
@@ -412,14 +415,13 @@ export function SettingsScreen() {
             isLast
           />
         </View>
-        <Text style={[styles.caption, { color: colors.ink2 }]}>
-          Clearing removes what this app has saved on this phone. Your account stays, and history
-          already saved to your account is not affected.
-        </Text>
+        {/* No caption under this row on purpose. Tapping it opens a confirmation
+            that says the same thing before anything happens, so a paragraph here
+            is the warning read twice, and the one that cannot be acted on. */}
 
         {/* The documents. They are also reachable from inside Data and privacy,
             and are repeated here because this is where people look for them. */}
-        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>ABOUT</Text>
+        <Text style={[styles.sectionLabel, { color: colors.ink2 }]}>ABOUT</Text>
         <View style={[styles.card, cardStyle]}>
           <SettingRow
             label="Privacy policy"
@@ -439,20 +441,19 @@ export function SettingsScreen() {
             are deliberately not in the same group. It routes to its own screen
             rather than opening a confirmation here: it needs a password, and the
             list of what goes is too long to read inside an alert (US33). */}
-        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>DANGER ZONE</Text>
+        <Text style={[styles.sectionLabel, { color: colors.ink2 }]}>DANGER ZONE</Text>
         <View style={[styles.card, cardStyle]}>
           <SettingRow
-            label="Delete my account"
+            label="Delete Account"
             value=""
             onPress={() => navigation.navigate("DeleteAccount")}
             tone="danger"
             isLast
           />
         </View>
-        <Text style={[styles.caption, { color: colors.ink2 }]}>
-          Deletes your account and everything in it, on this phone and in the cloud. This cannot
-          be undone.
-        </Text>
+        {/* Likewise no caption. This row opens a whole screen whose job is to
+            spell out what goes and to ask for a password first, so a summary
+            here is the same warning in a place it cannot be acted on. */}
       </ScrollView>
     </SafeAreaView>
   );
@@ -545,7 +546,7 @@ const styles = StyleSheet.create({
     marginBottom: T.spacing[4],
   },
   sectionLabel: {
-    fontFamily: T.font.mono,
+    fontFamily: T.font.monoMedium,
     fontSize: T.fontSize.caption,
     letterSpacing: 0.5,
     marginTop: T.spacing[4],
@@ -646,10 +647,4 @@ const styles = StyleSheet.create({
   rowDisabled: { opacity: 0.5 },
   // Footer text under a group, describing the card above it rather than the
   // section below. Smaller than a row label so it reads as explanation.
-  caption: {
-    fontFamily: T.font.regular,
-    fontSize: 12.5,
-    lineHeight: 18,
-    marginTop: T.spacing[2],
-  },
 });

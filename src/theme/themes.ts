@@ -46,15 +46,26 @@ export type ThemeColors = {
 
 export const arcadeDark: ThemeColors = {
   bg: "#141026",
-  card: "rgba(40, 32, 72, 0.72)",
-  cardSolid: "#241C46",
+  // Cards sit on an opaque bg (see GlassCard), so what reaches the eye is this
+  // alpha composited over bg: rgb(43,33,82). Deepened from rgba(40,32,72,0.72),
+  // which composited to rgb(35,27,63) and read closer to charcoal than purple.
+  // Most of the change is chroma rather than lightness: the blue-to-green gap
+  // goes from 36 to 49, so the card is more purple without being paler, and it
+  // separates further from a near-black background.
+  card: "rgba(46, 35, 88, 0.88)",
+  cardSolid: "#2C2259", // the nav and solid pills, kept just above the card composite
   chip: "rgba(255, 255, 255, 0.07)",
   cardLine: "rgba(180, 150, 255, 0.22)",
   track: "rgba(255, 255, 255, 0.12)",
 
   ink: "#F4F1FF",
-  ink2: "#C7C0E4", // secondary text; brightened so small labels stay legible
-  ink3: "#A29AC7", // section headers, hints; brightened well past WCAG AA for small text
+  // Secondary and tertiary text, brightened. Both already cleared AA against the
+  // old card; the reason to lift them is that small text at 8.6:1 on a dark
+  // surface still reads as greyed-out rather than as text, which is a
+  // legibility problem the ratio does not describe. ink2 now runs about 10.4:1
+  // on the new card.
+  ink2: "#DBD5F2", // secondary text
+  ink3: "#B9B2DC", // section headers, hints
 
   teal: "#22E0C4",
   fuel: "#FFB23E",

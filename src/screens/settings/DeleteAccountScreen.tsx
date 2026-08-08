@@ -137,7 +137,7 @@ export function DeleteAccountScreen({ navigation }: DeleteAccountScreenProps) {
           cannot be undone, and it cannot be partly undone.
         </Text>
 
-        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>WHAT GETS DELETED</Text>
+        <Text style={[styles.sectionLabel, { color: colors.ink2 }]}>WHAT GETS DELETED</Text>
         <View style={[styles.card, cardStyle]}>
           {WHAT_GOES.map((item) => (
             <View key={item} style={styles.listRow}>
@@ -147,7 +147,7 @@ export function DeleteAccountScreen({ navigation }: DeleteAccountScreenProps) {
           ))}
         </View>
 
-        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>WHAT THIS CANNOT REACH</Text>
+        <Text style={[styles.sectionLabel, { color: colors.ink2 }]}>WHAT THIS CANNOT REACH</Text>
         <View style={[styles.card, cardStyle]}>
           {WHAT_STAYS.map((item) => (
             <View key={item} style={styles.listRow}>
@@ -157,7 +157,7 @@ export function DeleteAccountScreen({ navigation }: DeleteAccountScreenProps) {
           ))}
         </View>
 
-        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>CONFIRM IT IS YOU</Text>
+        <Text style={[styles.sectionLabel, { color: colors.ink2 }]}>CONFIRM IT IS YOU</Text>
         <Text style={[styles.fieldHint, { color: colors.ink2 }]}>
           {user?.email
             ? `Enter the password for ${user.email}.`
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
   title: { fontFamily: T.font.bold, fontSize: T.fontSize.title, marginBottom: T.spacing[2] },
   intro: { fontSize: T.fontSize.body, lineHeight: 21, marginBottom: T.spacing[5] },
   sectionLabel: {
-    fontFamily: T.font.mono,
+    fontFamily: T.font.monoMedium,
     fontSize: 11,
     letterSpacing: 1,
     marginBottom: T.spacing[2],

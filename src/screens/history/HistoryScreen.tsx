@@ -150,7 +150,7 @@ export function HistoryScreen() {
 
         {/* 2 + 3. This week + seven-day bars */}
         <GlassCard style={styles.weekCard}>
-          <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>THIS WEEK</Text>
+          <Text style={[styles.sectionLabel, { color: colors.ink2 }]}>THIS WEEK</Text>
           <View style={styles.statsRow}>
             <Stat value={String(stats.weekCount)} label="Decisions" color={colors.teal} inkColor={colors.ink2} />
             <Stat value={`${stats.rerollRate}%`} label="Reroll rate" color={colors.fuel} inkColor={colors.ink2} />
@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
 
   // This week + bars
   weekCard: { padding: T.spacing[4], marginTop: T.spacing[3] },
-  sectionLabel: { fontFamily: T.font.mono, fontSize: T.fontSize.caption, letterSpacing: 0.5 },
+  sectionLabel: { fontFamily: T.font.monoMedium, fontSize: T.fontSize.caption, letterSpacing: 0.5 },
   blockLabel: { marginTop: T.spacing[4], marginBottom: T.spacing[3] },
   statsRow: { flexDirection: "row", marginTop: T.spacing[3], marginBottom: T.spacing[4] },
   stat: { flex: 1, gap: 3 },

@@ -37,7 +37,6 @@ import { ThemeProvider } from "@/theme/ThemeProvider";
 // the global XP HUD all read one in-sync source.
 import { ProgressProvider } from "@/features/progress/ProgressProvider";
 
-import { BlurTargetProvider } from "@/components/BlurTarget";
 // CelebrationProvider owns the confetti burst that acknowledges a decision. It
 // wraps the navigator because accepting a decision navigates away in the same
 // handler, so a burst belonging to the screen would unmount before it was seen.
@@ -75,20 +74,14 @@ export default function App() {
       <ThemeProvider>
         <AuthProvider>
           <ProgressProvider>
-            {/* Lets the glass cards on a screen blur that screen's background
-                on Android, where a BlurView has to be told what to blur.
-                Wraps the navigator because the two ends sit on opposite
-                branches of each screen's tree. */}
-            <BlurTargetProvider>
-              {/* Outside the navigator on purpose. A decision is accepted and
-                  the screen navigates away in the same handler, so the burst
-                  has to outlive the screen that asked for it. */}
-              <CelebrationProvider>
-                <NavigationContainer ref={globalNavigationRef}>
-                  <RootNavigator />
-                </NavigationContainer>
-              </CelebrationProvider>
-            </BlurTargetProvider>
+            {/* Outside the navigator on purpose. A decision is accepted and
+                the screen navigates away in the same handler, so the burst
+                has to outlive the screen that asked for it. */}
+            <CelebrationProvider>
+              <NavigationContainer ref={globalNavigationRef}>
+                <RootNavigator />
+              </NavigationContainer>
+            </CelebrationProvider>
           </ProgressProvider>
         </AuthProvider>
         {/* Controls the OS status bar tint; "auto" picks light or dark to suit
