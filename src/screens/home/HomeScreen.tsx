@@ -49,7 +49,11 @@ type ModuleKey = "fuel" | "focus" | "priority";
 
 const MODULE_CARDS: {
   key: ModuleKey;
-  route: keyof AppStackParamList;
+  // Only the three module routes, rather than any key of the stack. The wider
+  // type happened to compile while every route took no parameters, and stopped
+  // the moment one of them needed some, which is the right time to find out: a
+  // card here can only ever open a module.
+  route: "Fuel" | "Focus" | "Priority";
   name: string;
   sub: string;
 }[] = [

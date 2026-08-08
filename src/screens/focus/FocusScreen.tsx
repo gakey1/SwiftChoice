@@ -19,6 +19,7 @@ import { AmbientBackground } from "@/components/AmbientBackground";
 import { GlassCard } from "@/components/GlassCard";
 import { ModuleGlyph } from "@/components/ModuleGlyph";
 import { Icon, type IconName } from "@/components/Icon";
+import { DataNotice } from "@/components/DataNotice";
 import { HUD_CLEARANCE } from "@/components/XpHud";
 import type { AppStackParamList } from "@/navigation/types";
 import { getCurrentPosition } from "@/services/location/locationService";
@@ -372,6 +373,13 @@ export function FocusScreen() {
               <Text style={[styles.rerollBtnText, { color: colors.ink }]}>Reroll</Text>
             </TouchableOpacity>
           </View>
+
+          {/* US34. Sits under Accept rather than after it, so it is read before
+              the copy is made and not as an announcement afterwards. */}
+          <DataNotice>
+            Accepting saves this to your history and copies it to your account, so it is there
+            when you sign in again.
+          </DataNotice>
         </View>
       </SafeAreaView>
     );
@@ -443,6 +451,13 @@ export function FocusScreen() {
             {isSearching ? "Finding your spot" : "Find My Spot"}
           </Text>
         </TouchableOpacity>
+
+        {/* US34. Every recommendation, not only outdoor ones: the check runs
+            each time, and what changes is whether the answer is worth showing. */}
+        <DataNotice>
+          Checks the weather where you are, so we can say if you need a jacket or an umbrella.
+          Your location goes to a weather service. Nothing identifying you goes with it.
+        </DataNotice>
 
         {recommendation === null && hasSearched && (
           <View style={styles.noResultContainer}>

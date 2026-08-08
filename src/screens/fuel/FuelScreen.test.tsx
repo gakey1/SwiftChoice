@@ -136,6 +136,23 @@ describe("FuelScreen", () => {
     expect(eatInButton).toBeTruthy();
   });
 
+  it("says a location goes to Google on Eat Out", async () => {
+    // US34. Eat Out is the default mode, so this is visible on arrival.
+    const { getByText } = await renderFuelScreen();
+
+    expect(getByText(/sends your location, or the area you type, to Google/i)).toBeTruthy();
+  });
+
+  it("shows no such notice on Eat In, where nothing leaves the phone", async () => {
+    // A notice where nothing is collected teaches people that the notices mean
+    // nothing, which costs us the ones that matter.
+    const { getByText, queryByText } = await renderFuelScreen();
+
+    fireEvent.press(getByText("Eat In"));
+
+    expect(queryByText(/to Google/i)).toBeNull();
+  });
+
   it("starts from the budget saved in settings", async () => {
     // The survey and the Settings picker both write the level here, so arriving
     // on Fuel shows that person's own ranges rather than the neutral default.

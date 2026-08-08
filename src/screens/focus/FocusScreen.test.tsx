@@ -148,6 +148,22 @@ describe("FocusScreen", () => {
     await waitFor(() => expect(utils.getByText("Indoor")).toBeTruthy());
   });
 
+  it("says a location goes to a weather service, before anything is searched", async () => {
+    // US34. The notice has to be readable before the control is used, not after
+    // the collection has already happened.
+    const { getByText } = render(<FocusScreen />);
+
+    expect(getByText(/Your location goes to a weather service/i)).toBeTruthy();
+  });
+
+  it("does not limit that notice to outdoor spots, because the check is not limited either", async () => {
+    // Wording left over from the outdoor-only version would understate what the
+    // app collects, which is the wrong direction to be wrong in.
+    const { queryByText } = render(<FocusScreen />);
+
+    expect(queryByText(/outdoor spots only/i)).toBeNull();
+  });
+
   it("warns about rain on an outdoor spot when rain is likely", async () => {
     (getOutdoorConditions as jest.Mock).mockResolvedValue(
       conditions({ rainLikely: true, rainChancePercent: 80, weatherCode: 61 })

@@ -104,6 +104,20 @@ describe("SettingsScreen", () => {
     ).toBeTruthy();
   });
 
+  it("opens the data and privacy screen from Your data", async () => {
+    // US34 asks for the collection notices to be reachable in one place, not
+    // only scattered next to the controls that cause them.
+    render(
+      <ThemeProvider>
+        <SettingsScreen />
+      </ThemeProvider>
+    );
+
+    fireEvent.press(await screen.findByText("What we collect"));
+
+    expect(mockNavigate).toHaveBeenCalledWith("DataAndPrivacy");
+  });
+
   it("asks before clearing rather than doing it on the first tap", async () => {
     const alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
     const { clearLocalData } = jest.requireMock("@/features/privacy/localData");
