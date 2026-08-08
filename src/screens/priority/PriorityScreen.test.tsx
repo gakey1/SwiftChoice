@@ -65,7 +65,7 @@ describe("PriorityScreen", () => {
     expect(getByText(/All clear/i)).toBeTruthy();
   });
 
-  it("ranks tasks and shows the ranked status", () => {
+  it("ranks tasks and shows the ranked status", async () => {
     const { getByPlaceholderText, getByLabelText, getByText } = render(<PriorityScreen />);
 
     const input = getByPlaceholderText("Add a new task");
@@ -87,8 +87,13 @@ describe("PriorityScreen", () => {
 
     const buttons = alertSpy.mock.calls[0]?.[2];
     const confirm = buttons?.find((button) => button.text === "Rank them");
-    act(() => {
-      confirm?.onPress?.();
+    // Ranking is asynchronous now: it asks the tie-break Worker first and falls
+    // back to the deterministic order. The awaited act is what lets the state
+    // land before the label is read, and without it this asserts on the frame
+    // before the ranking finishes. No network happens here, because with no
+    // EXPO_PUBLIC_PRIORITY_AI_URL set the request is skipped outright.
+    await act(async () => {
+      await confirm?.onPress?.();
     });
 
     expect(getByText("Ranked by urgency + importance")).toBeTruthy();
