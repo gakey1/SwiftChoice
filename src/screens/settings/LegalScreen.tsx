@@ -62,8 +62,8 @@ const PRIVACY: LegalDocument = {
     {
       heading: "What stays on your phone",
       body: [
-        "Your preferences, your Fuel and Focus pools, your decision history, your XP and level, your theme, your avatar, your two-factor key, and your Priority tasks.",
-        "Priority tasks stay here with the one exception described above, which is the tied ones sent to break a draw. A task you never rank against an equal never leaves.",
+        "Your preferences, your Fuel and Focus pools, your decision history, your XP and level, your theme, your avatar, and your two-factor key.",
+        "Your Priority tasks, which are held on this phone and nowhere else. The one exception is the tie-break described above: a task you never rank against an equal never leaves this device.",
         "The two-factor key never leaves the device, which is why it protects this phone rather than your account.",
       ],
     },
