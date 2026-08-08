@@ -380,6 +380,20 @@ describe("FuelScreen address", () => {
     expect(await findByText("120 Swanston St, Melbourne")).toBeTruthy();
   });
 
+  it("puts the address with the place name, above the stat chips", async () => {
+    // Position is the point: the address answers "which place is this", so it
+    // belongs with the name rather than down among the numbers. Nothing else
+    // would catch it drifting back below them.
+    const { getByText, findByText, toJSON } = await renderFuelScreen();
+
+    fireEvent.press(getByText("Decide for Me"));
+    await findByText("Test Cafe", {}, { timeout: 3000 });
+
+    const tree = JSON.stringify(toJSON());
+    expect(tree.indexOf("Test Cafe")).toBeLessThan(tree.indexOf("120 Swanston St"));
+    expect(tree.indexOf("120 Swanston St")).toBeLessThan(tree.indexOf("Budget"));
+  });
+
   it("shows no address row when Google holds none", async () => {
     // Real records genuinely lack one. A placeholder would take the same space
     // as a real address and tell you less than showing nothing.
