@@ -68,6 +68,10 @@ jest.mock("@/services/recommendation/googlePlaces", () => ({
   // pass the test while the real screen showed the wrong message.
   MissingPlacesKeyError: jest.requireActual("@/services/recommendation/googlePlaces")
     .MissingPlacesKeyError,
+  // Also the real one. It is pure, and the engine calls it on every live place,
+  // so a stand-in returning undefined would quietly drop the address off every
+  // card while every other assertion still passed.
+  readableAddress: jest.requireActual("@/services/recommendation/googlePlaces").readableAddress,
   fetchAreaSuggestions: jest.fn(async () => [
     { placeId: "belgrave-id", label: "Belgrave VIC 3160, Australia" },
   ]),
@@ -78,6 +82,8 @@ jest.mock("@/services/recommendation/googlePlaces", () => ({
       rating: 4.4,
       priceLevel: "PRICE_LEVEL_MODERATE",
       location: { latitude: -37.8045, longitude: 144.9 },
+      shortFormattedAddress: "120 Swanston St, Melbourne",
+      formattedAddress: "120 Swanston St, Melbourne VIC 3000, Australia",
     },
   ]),
   fetchPlacesByArea: jest.fn(async () => [
@@ -357,5 +363,41 @@ describe("formatDistance", () => {
 
   it("names the band rather than inventing a figure when nothing was measured", () => {
     expect(formatDistance({ distance_meters: undefined, distance_range: "mid" })).toBe("Mid");
+  });
+});
+
+// The street address on the result card, added on Tracy's suggestion. A distance
+// tells you how far but not which way, so this is what makes an Eat Out result
+// something you can act on.
+describe("FuelScreen address", () => {
+  it("shows the street address on a live place", async () => {
+    const { getByText, findByText } = await renderFuelScreen();
+
+    fireEvent.press(getByText("Decide for Me"));
+    await findByText("Test Cafe", {}, { timeout: 3000 });
+
+    // The short form, which is the one that fits the card.
+    expect(await findByText("120 Swanston St, Melbourne")).toBeTruthy();
+  });
+
+  it("shows no address row when Google holds none", async () => {
+    // Real records genuinely lack one. A placeholder would take the same space
+    // as a real address and tell you less than showing nothing.
+    const { fetchNearbyPlaces } = jest.requireMock("@/services/recommendation/googlePlaces");
+    fetchNearbyPlaces.mockResolvedValueOnce([
+      {
+        displayName: { text: "Nameless Diner" },
+        rating: 4.1,
+        priceLevel: "PRICE_LEVEL_MODERATE",
+        location: { latitude: -37.8045, longitude: 144.9 },
+      },
+    ]);
+
+    const { getByText, findByText, queryByText } = await renderFuelScreen();
+
+    fireEvent.press(getByText("Decide for Me"));
+    await findByText("Nameless Diner", {}, { timeout: 3000 });
+
+    expect(queryByText(/Swanston/)).toBeNull();
   });
 });

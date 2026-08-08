@@ -38,11 +38,24 @@ const INCLUDED_TYPES = ["restaurant", "cafe", "meal_takeaway"];
 
 // Only these fields are requested. Adding to this list can move every call into
 // a more expensive tier, so treat it as a deliberate decision, not a detail.
+//
+// Checked before the address fields were added, 2026-08-08. Google bills a
+// request once, at the highest tier any requested field belongs to: "You are
+// then billed at the highest SKU applicable to your request." displayName,
+// location and both address fields are Pro; rating and priceLevel are
+// Enterprise. This call already asked for rating and priceLevel, so it was
+// already billed at Enterprise and the addresses cost nothing extra. Adding an
+// Enterprise field would be the expensive mistake, not a Pro one.
+//
+// Both address forms are requested because the short one is the readable one and
+// Google omits it on some records, so the long one is the fallback.
 const FIELD_MASK = [
   "places.displayName",
   "places.location",
   "places.rating",
   "places.priceLevel",
+  "places.shortFormattedAddress",
+  "places.formattedAddress",
 ].join(",");
 
 // Google's price bands. A place can come back with none of these set, which is
@@ -62,7 +75,24 @@ export type GooglePlaceResult = {
   rating?: number;
   priceLevel?: GooglePriceLevel;
   location?: { latitude: number; longitude: number };
+  // The street address, short form ("120 Swanston St, Melbourne") and long form
+  // ("120 Swanston St, Melbourne VIC 3000, Australia"). Both optional: Google
+  // genuinely omits them on some records.
+  shortFormattedAddress?: string;
+  formattedAddress?: string;
 };
+
+// The address to show, preferring the short form because a card has one line to
+// spare and the state, postcode and country are noise to somebody standing in
+// the city it names. Undefined when Google holds neither, which the card treats
+// as "show nothing" rather than printing a placeholder.
+export function readableAddress(place: GooglePlaceResult): string | undefined {
+  const short = place.shortFormattedAddress?.trim();
+  if (short) return short;
+
+  const full = place.formattedAddress?.trim();
+  return full ? full : undefined;
+}
 
 export type NearbyPlacesParams = {
   latitude: number;

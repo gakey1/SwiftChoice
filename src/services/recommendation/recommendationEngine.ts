@@ -5,6 +5,7 @@
 
 import {
   fetchNearbyPlaces,
+  readableAddress,
   fetchPlacesByArea,
   MissingPlacesKeyError,
   type GooglePlaceResult,
@@ -37,6 +38,11 @@ export interface FoodOption {
   // phone's position. The screen shows it, so a result is never presented as
   // nearby when it came from a typed area rather than real location.
   searched_area?: string | undefined;
+  // The street address, for live Eat Out results only. A distance alone tells
+  // you how far but not which way, so this is what makes a result actionable.
+  // Undefined for pool items, which have no address, and for places Google holds
+  // no address for.
+  address?: string | undefined;
 }
 
 // The mock Fuel pool used by the Eat In recommendation flow.
@@ -271,6 +277,9 @@ export async function getRecommendation(
         // the rating chip rather than showing a zero or an invented score.
         rating: place.rating === undefined ? "" : place.rating.toFixed(1),
         searched_area: positionFromDevice ? undefined : typedArea,
+        // Straight from Google, never assembled by us. An address we composed
+        // could send somebody to the wrong building.
+        address: readableAddress(place),
         // Measured whenever there is a centre to measure from, which now
         // includes an area chosen off the list. Only a freehand area with no
         // coordinates behind it leaves this unset, and that card falls back to

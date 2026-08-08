@@ -498,6 +498,20 @@ export function FuelScreen() {
                 )}
               </View>
 
+              {/* The street address, live Eat Out results only. A distance says
+                  how far but not which way, so this is what makes the result
+                  something you can act on. Straight from Google rather than
+                  assembled here, and absent for the places Google holds no
+                  address for, since a partial address is worse than none. */}
+              {recommendation.address !== undefined && (
+                <View style={styles.addressRow}>
+                  <Icon name="map-pin" size={13} color={colors.ink2} />
+                  <Text style={[styles.addressText, { color: colors.ink2 }]}>
+                    {recommendation.address}
+                  </Text>
+                </View>
+              )}
+
               {/* Google requires visible credit wherever their place data is
                   shown outside a map. Eat Out results come from them; Eat In
                   comes from our own pool, so it does not apply there. */}
@@ -863,6 +877,18 @@ const styles = StyleSheet.create({
   statValue: { fontFamily: T.font.monoMedium, fontSize: T.fontSize.subtitle },
   ratingContainer: { flexDirection: "row", alignItems: "center", gap: 4 },
   attribution: { fontSize: 11, marginTop: 10, textAlign: "center" },
+  addressRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+    marginTop: T.spacing[3],
+  },
+  addressText: {
+    flex: 1,
+    fontFamily: T.font.regular,
+    fontSize: 13,
+    lineHeight: 18,
+  },
   locationNotice: { fontSize: 12, marginTop: 12, textAlign: "center", lineHeight: 17 },
   areaInput: { width: "100%", borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, marginTop: 14, fontSize: 15 },
   suggestionList: { width: "100%", borderWidth: 1, borderRadius: 12, marginTop: 8, overflow: "hidden" },
