@@ -40,7 +40,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import type { AppStackParamList } from "@/navigation/types";
 import { logDecision } from "@/features/history/historyStorage";
-import { loadPreferences, savePreferences } from "@/services/localdb/preferencesStorage";
+import { loadPreferences } from "@/services/localdb/preferencesStorage";
 
 // Dark ink sits on top of the bright accent fills (buttons), for contrast.
 const ON_ACCENT = "#141026";

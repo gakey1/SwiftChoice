@@ -9,7 +9,7 @@
 // Settings is a universal screen, so only the teal accent is used here. Colours
 // come from the active theme via useTheme(); section labels use the mono font.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";

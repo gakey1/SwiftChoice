@@ -11,6 +11,16 @@ import { XP_PER_DECISION } from "@/features/progress/progress";
 // Stub the native icon sets so this test does not pull in expo-font / expo-asset,
 // which are not resolvable under Jest. Both sets are stubbed because the screen's
 // module glyph uses MaterialCommunityIcons and its other icons use Feather.
+// Her engine now reads the saved Fuel pool, which reaches expo-sqlite through
+// fuelPoolStorage. Mocked so this screen test does not pull that chain in: the
+// suite otherwise fails to LOAD, with a "Cannot find module 'expo-asset'" error
+// that names neither this screen nor the engine. Sixth time this trap has
+// appeared (MC-007), and the tell is always the same, a suite count that drops
+// rather than a test going red.
+jest.mock("@/features/fuel/fuelPoolStorage", () => ({
+  getFuelRecommendationPool: jest.fn(async () => []),
+}));
+
 jest.mock("@expo/vector-icons", () => ({ Feather: "Feather", MaterialCommunityIcons: "MaterialCommunityIcons" }));
 
 // Mock the navigation hooks this screen uses. useFocusEffect is included because

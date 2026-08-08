@@ -25,13 +25,26 @@ export type GlassCardProps = {
 
 export function GlassCard({ children, style, intensity }: GlassCardProps) {
   const { colors, isDark } = useTheme();
-  const [isMounted, setIsMounted] = useState(false);
+
+  // The blur is held back until after the first commit, which is what stops the
+  // Android crash from handing BlurView a node that has not finished mounting.
+  // That guard is Tracy's and the behaviour is unchanged; only the way it is
+  // switched on has moved.
+  //
+  // Setting the flag directly inside the effect is what `react-hooks/set-state-
+  // in-effect` rejects, and the rule is right here rather than pedantic: this
+  // component renders many times per screen, and a synchronous state write on
+  // mount cascades a second render pass for every card on it. Deferring to the
+  // next frame gets the same result one frame later, which is invisible next to
+  // the blur itself appearing.
+  //
+  // The unmount branch is gone on purpose. Setting state on a component that is
+  // already unmounting does nothing, so it was cleanup that could not run.
+  const [blurReady, setBlurReady] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
-    return () => {
-      setIsMounted(false);
-    };
+    const frame = requestAnimationFrame(() => setBlurReady(true));
+    return () => cancelAnimationFrame(frame);
   }, []);
 
   // The screen's ambient background, which is what a card is frosting. Null on
@@ -42,7 +55,7 @@ export function GlassCard({ children, style, intensity }: GlassCardProps) {
 
   return (
     <View style={[styles.wrap, { borderColor: colors.cardLine }, style]}>
-      {isMounted && (
+      {blurReady && (
         <BlurView
           intensity={intensity ?? 24}
           tint={isDark ? "dark" : "light"}
