@@ -18,6 +18,15 @@ jest.mock("@/features/history/historyStorage", () => ({
   logDecision: jest.fn().mockResolvedValue(undefined),
 }));
 
+// The board is persisted now, so the screen reaches the task store on mount and
+// on every change. Real AsyncStorage is already mocked globally; this spies on
+// the store itself so a test can say what was on the device when the screen
+// opened, which is the only way to exercise the hydration guard.
+jest.mock("@/services/localdb/taskStorage", () => ({
+  loadTaskBoard: jest.fn().mockResolvedValue({ tasks: [], isRanked: false, reasons: [] }),
+  saveTaskBoard: jest.fn().mockResolvedValue(undefined),
+}));
+
 jest.mock("@expo/vector-icons", () => ({
   Feather: "Feather",
   MaterialCommunityIcons: "MaterialCommunityIcons",
@@ -237,5 +246,78 @@ describe("PriorityScreen decision history", () => {
     const { queryByText } = addAndComplete("Read chapter 4");
 
     expect(queryByText("Read chapter 4")).toBeNull();
+  });
+});
+
+// The board surviving the screen is the whole point of the store, and the guard
+// against wiping it is the part that fails silently if it is wrong.
+describe("PriorityScreen persistence", () => {
+  const store = jest.requireMock("@/services/localdb/taskStorage") as {
+    loadTaskBoard: jest.Mock;
+    saveTaskBoard: jest.Mock;
+  };
+
+  const SAVED = {
+    tasks: [
+      {
+        taskId: 7,
+        userId: 1,
+        taskName: "Finish the slides",
+        urgency: "High" as const,
+        importance: "High" as const,
+        status: "Pending" as const,
+      },
+    ],
+    isRanked: false,
+    reasons: [],
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    store.loadTaskBoard.mockResolvedValue({ tasks: [], isRanked: false, reasons: [] });
+  });
+
+  it("shows a task that was on the device when the screen opened", async () => {
+    store.loadTaskBoard.mockResolvedValue(SAVED);
+
+    const view = render(<PriorityScreen />);
+    await act(async () => {});
+
+    expect(view.getByText("Finish the slides")).toBeTruthy();
+  });
+
+  it("does not overwrite the stored board before the load comes back", async () => {
+    // The failure this guards against does not throw and does not look broken.
+    // Without it the save fires on mount with the empty initial state, so the
+    // screen erases the list every time it opens while appearing to work.
+    let release: (board: typeof SAVED) => void = () => {};
+    store.loadTaskBoard.mockReturnValue(
+      new Promise((resolve) => {
+        release = resolve;
+      })
+    );
+
+    render(<PriorityScreen />);
+    await act(async () => {});
+
+    expect(store.saveTaskBoard).not.toHaveBeenCalled();
+
+    await act(async () => {
+      release(SAVED);
+    });
+  });
+
+  it("saves the board once a task is added", async () => {
+    const view = render(<PriorityScreen />);
+    await act(async () => {});
+    store.saveTaskBoard.mockClear();
+
+    fireEvent.changeText(view.getByPlaceholderText("Add a new task"), "Book the room");
+    fireEvent.press(view.getByLabelText("Add task"));
+    await act(async () => {});
+
+    expect(store.saveTaskBoard).toHaveBeenCalled();
+    const board = store.saveTaskBoard.mock.calls.at(-1)?.[0] as typeof SAVED;
+    expect(board.tasks.map((t) => t.taskName)).toContain("Book the room");
   });
 });
