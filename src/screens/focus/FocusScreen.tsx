@@ -252,17 +252,17 @@ export function FocusScreen() {
           </View>
 
           <GlassCard style={styles.resultCardCustom}>
-            <View style={[styles.avatarBadge, { backgroundColor: accent.tint }]}>
-              <ModuleGlyph moduleKey="focus" size={36} color={primaryColor} />
-            </View>
-
             {/* Conditions. This used to appear only when rain was likely at an
                 outdoor spot, which meant it was invisible almost every time and
                 could not be shown on purpose. It now appears whenever an outdoor
                 spot's readings arrived, and for an indoor spot when there is
                 something worth carrying on the way. Focus green is correct here:
                 this sits on a Focus screen, and the module-colour rule keeps
-                green off the other modules. */}
+                green off the other modules.
+
+                Sits above the glyph rather than below it: it is the thing that
+                changes whether you go, so it should be read before the spot is,
+                not as a footnote after it. */}
             {conditions !== null && shouldShowConditions(conditions, spotSetting) && (
               <View
                 style={[
@@ -281,6 +281,31 @@ export function FocusScreen() {
                 </View>
               </View>
             )}
+
+            {/* The vibe the spot was matched on, rather than the Focus module
+                glyph that used to sit here.
+
+                The glyph was saying nothing: the header above already reads
+                "Your Focus recommendation" and the whole screen is Focus green,
+                so it was the third statement of the module in one view, and
+                every spot looked identical as a result. The vibe is one of the
+                two things the search was actually built from, so this badge now
+                carries information rather than repeating the branding.
+
+                It pairs with the Setting chip below rather than duplicating it:
+                this says how loud the spot is, that says whether it is outside.
+                Drawn in Focus green like the glyph was, so the module reading of
+                the card is unchanged. */}
+            <View
+              style={[styles.avatarBadge, { backgroundColor: accent.tint }]}
+              accessible
+              accessibilityRole="image"
+              // The icon now carries meaning, so it needs saying out loud. A
+              // decorative glyph would have been better left unlabelled.
+              accessibilityLabel={`${vibeLabel(recommendation.vibe)} spot`}
+            >
+              <Icon name={vibeIconName(recommendation.vibe)} size={32} color={primaryColor} />
+            </View>
 
             <Text style={[styles.itemName, { color: colors.ink }]}>{recommendation.spot_name}</Text>
             <Text style={[styles.cuisineType, { color: colors.ink2 }]}>
@@ -490,6 +515,20 @@ function weatherIconName(readings: Readings): IconName {
   if (readings.weatherCode >= 51) return "cloud-drizzle";
 
   return "cloud";
+}
+
+// The icon on the result card, chosen by the vibe the spot was matched on.
+//
+// All three are Feather, the set the rest of the app already uses, so they share
+// a stroke weight and read as one family rather than three borrowed pictures.
+// Every name here is checked against the Feather glyph map: an unknown name
+// renders nothing at all rather than failing, which is how a missing icon once
+// reached a merged screen.
+function vibeIconName(vibe: FocusVibe): IconName {
+  if (vibe === "silent") return "volume-x";
+  if (vibe === "collaborative") return "users";
+
+  return "headphones";
 }
 
 // Turns the stored vibe value into a word to show on screen.

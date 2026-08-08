@@ -130,6 +130,33 @@ describe("FocusScreen", () => {
     expect(utils.queryByText("Rating")).toBeNull();
   });
 
+  it("shows an icon for the vibe rather than the same one on every spot", async () => {
+    // The card used to show the Focus module glyph, which made every result look
+    // identical while telling you something the header and the colour already
+    // said twice.
+    //
+    // Asserting the icon name, not the spoken label. The label comes from
+    // vibeLabel and would still read correctly if every spot drew the same
+    // picture, so a label-only test passes against exactly the bug this fixes.
+    const utils = render(<FocusScreen />);
+    await findOutdoorSpot(utils);
+
+    expect(utils.UNSAFE_getByProps({ name: "users" })).toBeTruthy();
+    expect(utils.getByLabelText("Collaborative spot")).toBeTruthy();
+  });
+
+  it("uses a different icon for a different vibe", async () => {
+    // One icon proves an icon. Two prove it follows the search.
+    const utils = render(<FocusScreen />);
+    fireEvent.press(utils.getByText("High"));
+    fireEvent.press(utils.getByText("Silent"));
+    fireEvent.press(utils.getByText("Find My Spot"));
+
+    await waitFor(() => expect(utils.getByLabelText("Silent spot")).toBeTruthy());
+    expect(utils.UNSAFE_getByProps({ name: "volume-x" })).toBeTruthy();
+    expect(utils.UNSAFE_queryByProps({ name: "users" })).toBeNull();
+  });
+
   it("says whether the spot is indoors or outdoors, which is stored on every spot", async () => {
     const utils = render(<FocusScreen />);
     await findOutdoorSpot(utils);
