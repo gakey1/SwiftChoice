@@ -20,6 +20,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { AmbientBackground } from "@/components/AmbientBackground";
 import { DashedOutline } from "@/components/DashedOutline";
 import { GameIcon } from "@/components/GameIcon";
+import { Glow } from "@/components/Glow";
 import { GLASS_RADIUS, GlassCard } from "@/components/GlassCard";
 import { Icon } from "@/components/Icon";
 import { ModuleGlyph } from "@/components/ModuleGlyph";
@@ -37,11 +38,16 @@ import { moduleAccent } from "@/theme/themes";
 import { useTheme } from "@/theme/ThemeProvider";
 import { T } from "@/theme/tokens";
 
-// Summary of the decision history shown on Home, derived when the data loads so
-// no clock is read during render.
+// The avatar, and the halo drawn behind it. The design specifies a "0 0 18px"
+// glow, so the glow box is the avatar plus that radius on every side.
+const AVATAR_SIZE = 52;
+const AVATAR_GLOW = AVATAR_SIZE + 18 * 2;
+
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
-// The THIS WEEK snapshot, scoped to the week to match its heading.
+// Summary of the decision history shown on Home, derived when the data loads so
+// no clock is read during render. The THIS WEEK snapshot is scoped to the week
+// to match its heading.
 type DecisionStats = {
   weekCount: number;
   rerollRate: number;
@@ -175,16 +181,13 @@ export function HomeScreen() {
               accessibilityRole="button"
               accessibilityLabel="Edit profile"
             >
-              <Image
-                source={avatarAt(avatarIndex).source}
-                style={[
-                  styles.avatar,
-                  {
-                    borderColor: colors.cardLine,
-                    shadowColor: avatarAt(avatarIndex).color,
-                  },
-                ]}
-              />
+              <View style={styles.avatarWrap}>
+                <Glow color={avatarAt(avatarIndex).color} size={AVATAR_GLOW} />
+                <Image
+                  source={avatarAt(avatarIndex).source}
+                  style={[styles.avatar, { borderColor: colors.cardLine }]}
+                />
+              </View>
             </TouchableOpacity>
             <View style={styles.playerBody}>
               <View style={styles.playerTop}>
@@ -261,7 +264,7 @@ export function HomeScreen() {
         </GlassCard>
 
         {/* Module cards */}
-        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>CHOOSE A DECISION</Text>
+        <Text style={[styles.sectionLabel, { color: colors.ink2 }]}>CHOOSE A DECISION</Text>
         <View style={styles.moduleList}>
           {MODULE_CARDS.map((m) => {
             const accent = moduleAccent(colors, m.key);
@@ -287,7 +290,7 @@ export function HomeScreen() {
         </View>
 
         {/* This week */}
-        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>THIS WEEK</Text>
+        <Text style={[styles.sectionLabel, { color: colors.ink2 }]}>THIS WEEK</Text>
         <GlassCard style={styles.weekCard}>
           {stats.weekCount === 0 ? (
             <View style={styles.emptyState}>
@@ -391,18 +394,24 @@ const styles = StyleSheet.create({
   // Player card
   playerCard: { padding: T.spacing[4] },
   playerRow: { flexDirection: "row", alignItems: "center", gap: 13 },
+  // The glow is drawn larger than the avatar and pulled back in by a negative
+  // margin, so it occupies the avatar's 52 points in layout while painting the
+  // full 80. Without that the player row would shift by the halo's width.
+  avatarWrap: {
+    width: AVATAR_GLOW,
+    height: AVATAR_GLOW,
+    margin: (AVATAR_SIZE - AVATAR_GLOW) / 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   avatar: {
-    width: 52,
-    height: 52,
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
     borderRadius: 999,
     borderWidth: 2,
-    // The design's "0 0 18px" glow in the avatar's own colour. shadowColor is
-    // set inline from the avatar. On Android shadowColor is ignored on views
-    // and elevation takes over, so the glow reads as a soft grey lift there.
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 9,
-    elevation: 6,
+    // No shadow or elevation here. The design's "0 0 18px" halo is a real view
+    // now (see Glow): shadowColor is ignored on Android, and elevation on a
+    // circle draws an octagon there rather than a ring.
   },
   playerBody: { flex: 1, minWidth: 0, gap: 7 },
   playerTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
@@ -459,7 +468,7 @@ const styles = StyleSheet.create({
   questPillText: { fontFamily: T.font.monoMedium, fontSize: T.fontSize.caption },
 
   sectionLabel: {
-    fontFamily: T.font.mono,
+    fontFamily: T.font.monoMedium,
     fontSize: T.fontSize.caption,
     letterSpacing: 0.5,
     marginTop: T.spacing[3],

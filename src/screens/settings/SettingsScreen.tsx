@@ -297,7 +297,7 @@ export function SettingsScreen() {
           </View>
         </View>
 
-        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>PROFILE AVATAR</Text>
+        <Text style={[styles.sectionLabel, { color: colors.ink2 }]}>PROFILE AVATAR</Text>
         <View style={[styles.card, styles.avatarCard, cardStyle]}>
           <View style={styles.avatarRow}>
             {AVATARS.map((a, i) => {
@@ -326,7 +326,7 @@ export function SettingsScreen() {
 
         {/* How it looks. Its own group rather than sitting with preferences,
             because it changes nothing about the recommendations. */}
-        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>APPEARANCE</Text>
+        <Text style={[styles.sectionLabel, { color: colors.ink2 }]}>APPEARANCE</Text>
         <View style={[styles.card, cardStyle]}>
           <View style={[styles.row, styles.lastRow]}>
             <Text style={[styles.rowLabel, styles.rowLabelFlex, { color: colors.ink }]}>Dark mode</Text>
@@ -343,7 +343,7 @@ export function SettingsScreen() {
         </View>
 
         {/* How the app behaves for you. */}
-        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>PREFERENCES</Text>
+        <Text style={[styles.sectionLabel, { color: colors.ink2 }]}>PREFERENCES</Text>
         <View style={[styles.card, cardStyle]}>
           <SettingRow
             label="Dietary Restrictions"
@@ -368,7 +368,7 @@ export function SettingsScreen() {
             below it are unambiguously about that account. Log out lives here
             rather than floating on its own, because it is an account action, not
             a preference. */}
-        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>ACCOUNT</Text>
+        <Text style={[styles.sectionLabel, { color: colors.ink2 }]}>ACCOUNT</Text>
         <View style={[styles.card, cardStyle]}>
           <SettingRow label="Email" value={user?.email ?? "Not signed in"} accessory="none" />
           <SettingRow
@@ -396,7 +396,7 @@ export function SettingsScreen() {
             who has just read the list is exactly the person who wants the
             control. The caption sits under the card it describes, which is the
             fix for it previously sitting under the row above the button. */}
-        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>DATA AND PRIVACY</Text>
+        <Text style={[styles.sectionLabel, { color: colors.ink2 }]}>DATA AND PRIVACY</Text>
         <View style={[styles.card, cardStyle]}>
           <SettingRow
             label="What we collect"
@@ -419,7 +419,7 @@ export function SettingsScreen() {
 
         {/* The documents. They are also reachable from inside Data and privacy,
             and are repeated here because this is where people look for them. */}
-        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>ABOUT</Text>
+        <Text style={[styles.sectionLabel, { color: colors.ink2 }]}>ABOUT</Text>
         <View style={[styles.card, cardStyle]}>
           <SettingRow
             label="Privacy policy"
@@ -439,7 +439,7 @@ export function SettingsScreen() {
             are deliberately not in the same group. It routes to its own screen
             rather than opening a confirmation here: it needs a password, and the
             list of what goes is too long to read inside an alert (US33). */}
-        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>DANGER ZONE</Text>
+        <Text style={[styles.sectionLabel, { color: colors.ink2 }]}>DANGER ZONE</Text>
         <View style={[styles.card, cardStyle]}>
           <SettingRow
             label="Delete my account"
@@ -545,7 +545,7 @@ const styles = StyleSheet.create({
     marginBottom: T.spacing[4],
   },
   sectionLabel: {
-    fontFamily: T.font.mono,
+    fontFamily: T.font.monoMedium,
     fontSize: T.fontSize.caption,
     letterSpacing: 0.5,
     marginTop: T.spacing[4],

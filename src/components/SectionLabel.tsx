@@ -17,12 +17,12 @@ export type SectionLabelProps = {
 // font for the coded Arcade look. Its colour comes from the active theme.
 export function SectionLabel({ children, style }: SectionLabelProps) {
   const { colors } = useTheme();
-  return <Text style={[styles.label, { color: colors.ink3 }, style]}>{children}</Text>;
+  return <Text style={[styles.label, { color: colors.ink2 }, style]}>{children}</Text>;
 }
 
 const styles = StyleSheet.create({
   label: {
-    fontFamily: T.font.mono,
+    fontFamily: T.font.monoMedium,
     fontSize: 13,
     letterSpacing: 0.5,
     marginBottom: T.spacing[3],

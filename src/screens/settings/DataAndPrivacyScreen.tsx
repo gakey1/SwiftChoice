@@ -79,7 +79,7 @@ export function DataAndPrivacyScreen({ navigation }: DataAndPrivacyScreenProps) 
           is listed below with the reason.
         </Text>
 
-        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>WHAT LEAVES THIS PHONE</Text>
+        <Text style={[styles.sectionLabel, { color: colors.ink2 }]}>WHAT LEAVES THIS PHONE</Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardLine }]}>
           {LEAVES_THE_PHONE.map((entry, index) => (
             <View
@@ -100,7 +100,7 @@ export function DataAndPrivacyScreen({ navigation }: DataAndPrivacyScreenProps) 
           ))}
         </View>
 
-        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>WHAT STAYS ON THIS PHONE</Text>
+        <Text style={[styles.sectionLabel, { color: colors.ink2 }]}>WHAT STAYS ON THIS PHONE</Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardLine }]}>
           {STAYS_ON_THE_PHONE.map((item) => (
             <View key={item} style={styles.stayRow}>
@@ -110,7 +110,7 @@ export function DataAndPrivacyScreen({ navigation }: DataAndPrivacyScreenProps) 
           ))}
         </View>
 
-        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>WORTH KNOWING</Text>
+        <Text style={[styles.sectionLabel, { color: colors.ink2 }]}>WORTH KNOWING</Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardLine }]}>
           <Text style={[styles.noteText, { color: colors.ink2 }]}>
             A study spot has a name but no map position, so the weather we show is for where your
@@ -123,7 +123,7 @@ export function DataAndPrivacyScreen({ navigation }: DataAndPrivacyScreenProps) 
           </Text>
         </View>
 
-        <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>THE FULL DOCUMENTS</Text>
+        <Text style={[styles.sectionLabel, { color: colors.ink2 }]}>THE FULL DOCUMENTS</Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardLine }]}>
           <LegalLink
             label="Privacy policy"
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
   title: { fontFamily: T.font.bold, fontSize: T.fontSize.title, marginBottom: T.spacing[2] },
   intro: { fontSize: T.fontSize.body, lineHeight: 21, marginBottom: T.spacing[5] },
   sectionLabel: {
-    fontFamily: T.font.mono,
+    fontFamily: T.font.monoMedium,
     fontSize: 11,
     letterSpacing: 1,
     marginBottom: T.spacing[2],

@@ -201,7 +201,7 @@ export function TwoFactorSetupScreen({
           </>
         ) : pendingSecret ? (
           <>
-            <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>
+            <Text style={[styles.sectionLabel, { color: colors.ink2 }]}>
               STEP 1, ADD THE KEY
             </Text>
             {/* The three options are separated by an explicit "or" because
@@ -264,7 +264,7 @@ export function TwoFactorSetupScreen({
               </Button>
             </View>
 
-            <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>
+            <Text style={[styles.sectionLabel, { color: colors.ink2 }]}>
               STEP 2, CONFIRM
             </Text>
             <Text style={[styles.body, { color: colors.ink2 }]}>
@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
     marginBottom: T.spacing[3],
   },
   sectionLabel: {
-    fontFamily: T.font.semibold,
+    fontFamily: T.font.bold,
     fontSize: T.fontSize.caption,
     marginTop: T.spacing[4],
     marginBottom: T.spacing[2],
