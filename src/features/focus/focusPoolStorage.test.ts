@@ -44,6 +44,20 @@ const mockDb = {
       return;
     }
 
+    // The icon backfill is a narrower update than the general one below, and
+    // has to be matched first or it falls into it and is read as a full row
+    // update with the wrong parameters.
+    if (sql.startsWith("UPDATE focus_pool SET icon")) {
+      const icon = params?.[0] as string;
+      const name = params?.[1] as string;
+      const onlyWhenIcon = params?.[2] as string;
+
+      rows = rows.map((row) =>
+        row.name === name && row.icon === onlyWhenIcon ? { ...row, icon } : row
+      );
+      return;
+    }
+
     if (sql.startsWith("UPDATE focus_pool")) {
       const name = params?.[0] as string;
       const energy = params?.[1] as string;
@@ -255,6 +269,30 @@ describe("seeding the Focus pool", () => {
     );
 
     expect(pairings.size).toBeGreaterThanOrEqual(2);
+  });
+
+  it("backfills icons on a pool seeded before the icon column existed", async () => {
+    // The case that actually reached a device. Seeding only runs on an empty
+    // pool, so anyone who opened Focus between the seed landing and the icons
+    // landing keeps 14 rows carrying nothing but the default, and every spot
+    // draws the fallback pin.
+    await addFocusItem("Campus Common Area", "medium", "collaborative", true);
+    await addFocusItem("Busy Coffee Shop", "high", "background", false);
+
+    const pool = await getFocusRecommendationPool();
+
+    expect(pool.find((spot) => spot.name === "Campus Common Area")?.icon).toBe("users");
+    expect(pool.find((spot) => spot.name === "Busy Coffee Shop")?.icon).toBe("coffee");
+  });
+
+  it("leaves a spot alone if its name is not one of the defaults", async () => {
+    // Somebody's own spot has no default icon to restore, so it keeps the pin
+    // rather than being given one that means nothing.
+    await addFocusItem("My Own Desk", "low", "silent");
+
+    const pool = await getFocusRecommendationPool();
+
+    expect(pool[0]?.icon).toBe("map-pin");
   });
 
   it("gives the seeded spots more than one icon between them", async () => {

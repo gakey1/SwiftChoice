@@ -181,14 +181,39 @@ export async function seedFocusPoolIfEmpty(): Promise<void> {
   return seeding;
 }
 
+// Gives the starting spots their icons on a device that was seeded before the
+// icon column existed.
+//
+// Needed because seeding only ever runs on an empty pool. Anyone who opened
+// Focus between the seed landing and the icons landing has 14 rows already, so
+// the seed will never run again for them, and the new column arrives on those
+// rows carrying nothing but its default. Every spot then draws the fallback pin,
+// which is exactly what the icons were added to stop.
+//
+// Only touches rows still holding the default, so a spot somebody has chosen an
+// icon for is left alone once that is possible.
+async function applyDefaultIcons(): Promise<void> {
+  const db = await getDb();
+
+  for (const spot of DEFAULT_FOCUS_SPOTS) {
+    await db.runAsync("UPDATE focus_pool SET icon = ? WHERE name = ? AND icon = ?", [
+      spot.icon,
+      spot.name,
+      DEFAULT_SPOT_ICON,
+    ]);
+  }
+}
+
 // Returns Focus items in the format needed by the Focus recommendation logic.
 //
-// Seeds first, so the recommendation always has something to choose from. The
-// seeding sits here rather than in getFocusPool because that one is the plain
-// CRUD read behind the manage-pool screens, and a read that quietly writes would
-// make its own tests lie.
+// Seeds first, so the recommendation always has something to choose from, then
+// backfills icons for anyone seeded before that column existed. Both sit here
+// rather than in getFocusPool because that one is the plain CRUD read behind the
+// manage-pool screens, and a read that quietly writes would make its own tests
+// lie.
 export async function getFocusRecommendationPool(): Promise<FocusPoolItem[]> {
   await seedFocusPoolIfEmpty();
+  await applyDefaultIcons();
 
   return getFocusPool();
 }

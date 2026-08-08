@@ -43,6 +43,20 @@ const mockDb = {
       return;
     }
 
+    // The icon backfill is a narrower update than the general one below, and
+    // has to be matched first or it falls into it and is read as a full row
+    // update with the wrong parameters.
+    if (sql.startsWith("UPDATE focus_pool SET icon")) {
+      const icon = params?.[0] as string;
+      const name = params?.[1] as string;
+      const onlyWhenIcon = params?.[2] as string;
+
+      rows = rows.map((row) =>
+        row.name === name && row.icon === onlyWhenIcon ? { ...row, icon } : row
+      );
+      return;
+    }
+
     if (sql.startsWith("UPDATE focus_pool")) {
       const name = params?.[0] as string;
       const energy = params?.[1] as string;
