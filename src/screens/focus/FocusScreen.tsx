@@ -20,6 +20,7 @@ import { GlassCard } from "@/components/GlassCard";
 import { ModuleGlyph } from "@/components/ModuleGlyph";
 import { Icon, type IconName } from "@/components/Icon";
 import { DataNotice } from "@/components/DataNotice";
+import { spotIcon } from "@/features/focus/spotIcons";
 import { HUD_CLEARANCE } from "@/components/XpHud";
 import type { AppStackParamList } from "@/navigation/types";
 import { getCurrentPosition } from "@/services/location/locationService";
@@ -282,29 +283,27 @@ export function FocusScreen() {
               </View>
             )}
 
-            {/* The vibe the spot was matched on, rather than the Focus module
-                glyph that used to sit here.
+            {/* The spot's own picture, rather than the Focus module glyph that
+                used to sit here.
 
                 The glyph was saying nothing: the header above already reads
                 "Your Focus recommendation" and the whole screen is Focus green,
                 so it was the third statement of the module in one view, and
-                every spot looked identical as a result. The vibe is one of the
-                two things the search was actually built from, so this badge now
-                carries information rather than repeating the branding.
+                every spot arrived looking identical.
 
-                It pairs with the Setting chip below rather than duplicating it:
-                this says how loud the spot is, that says whether it is outside.
-                Drawn in Focus green like the glyph was, so the module reading of
-                the card is unchanged. */}
+                Per spot rather than per vibe, because the design has two silent
+                spots that look different, a library and a park bench, which no
+                rule based on vibe can produce. Drawn in Focus green as the glyph
+                was, so the module reading of the card is unchanged. */}
             <View
               style={[styles.avatarBadge, { backgroundColor: accent.tint }]}
               accessible
               accessibilityRole="image"
               // The icon now carries meaning, so it needs saying out loud. A
               // decorative glyph would have been better left unlabelled.
-              accessibilityLabel={`${vibeLabel(recommendation.vibe)} spot`}
+              accessibilityLabel={`${recommendation.spot_name}, ${vibeLabel(recommendation.vibe)}`}
             >
-              <Icon name={vibeIconName(recommendation.vibe)} size={32} color={primaryColor} />
+              <Icon name={spotIcon(recommendation.icon)} size={32} color={primaryColor} />
             </View>
 
             <Text style={[styles.itemName, { color: colors.ink }]}>{recommendation.spot_name}</Text>
@@ -515,20 +514,6 @@ function weatherIconName(readings: Readings): IconName {
   if (readings.weatherCode >= 51) return "cloud-drizzle";
 
   return "cloud";
-}
-
-// The icon on the result card, chosen by the vibe the spot was matched on.
-//
-// All three are Feather, the set the rest of the app already uses, so they share
-// a stroke weight and read as one family rather than three borrowed pictures.
-// Every name here is checked against the Feather glyph map: an unknown name
-// renders nothing at all rather than failing, which is how a missing icon once
-// reached a merged screen.
-function vibeIconName(vibe: FocusVibe): IconName {
-  if (vibe === "silent") return "volume-x";
-  if (vibe === "collaborative") return "users";
-
-  return "headphones";
 }
 
 // Turns the stored vibe value into a word to show on screen.

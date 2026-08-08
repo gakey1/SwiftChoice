@@ -33,9 +33,9 @@ jest.mock("@/features/history/historyStorage", () => ({
 // exactly the bug the pool wiring was meant to remove.
 jest.mock("@/features/focus/focusPoolStorage", () => ({
   getFocusRecommendationPool: jest.fn(async () => [
-    { id: 1, name: "Saved Courtyard Table", energy: "medium", vibe: "collaborative", outdoor: true },
-    { id: 2, name: "Saved Basement Carrel", energy: "high", vibe: "silent", outdoor: false },
-    { id: 3, name: "Saved Corner Cafe", energy: "medium", vibe: "background", outdoor: false },
+    { id: 1, name: "Saved Courtyard Table", energy: "medium", vibe: "collaborative", outdoor: true, icon: "wind" },
+    { id: 2, name: "Saved Basement Carrel", energy: "high", vibe: "silent", outdoor: false, icon: "book-open" },
+    { id: 3, name: "Saved Corner Cafe", energy: "medium", vibe: "background", outdoor: false, icon: "coffee" },
   ]),
 }));
 
@@ -130,31 +130,32 @@ describe("FocusScreen", () => {
     expect(utils.queryByText("Rating")).toBeNull();
   });
 
-  it("shows an icon for the vibe rather than the same one on every spot", async () => {
+  it("draws the icon stored on the spot, not one icon for the whole module", async () => {
     // The card used to show the Focus module glyph, which made every result look
     // identical while telling you something the header and the colour already
     // said twice.
     //
-    // Asserting the icon name, not the spoken label. The label comes from
-    // vibeLabel and would still read correctly if every spot drew the same
-    // picture, so a label-only test passes against exactly the bug this fixes.
+    // Asserting the icon name, not the spoken label. The label reads correctly
+    // even if every spot draws the same picture, so a label-only test passes
+    // against exactly the bug this fixes.
+    //
+    // The stub uses icons nothing else on the card draws. "sun" would match
+    // three nodes here, since the weather strip and the Setting chip use it too.
     const utils = render(<FocusScreen />);
     await findOutdoorSpot(utils);
 
-    expect(utils.UNSAFE_getByProps({ name: "users" })).toBeTruthy();
-    expect(utils.getByLabelText("Collaborative spot")).toBeTruthy();
+    expect(utils.UNSAFE_getByProps({ name: "wind" })).toBeTruthy();
   });
 
-  it("uses a different icon for a different vibe", async () => {
-    // One icon proves an icon. Two prove it follows the search.
+  it("draws a different icon for a different spot", async () => {
+    // One icon proves an icon. Two prove it follows the spot.
     const utils = render(<FocusScreen />);
     fireEvent.press(utils.getByText("High"));
     fireEvent.press(utils.getByText("Silent"));
     fireEvent.press(utils.getByText("Find My Spot"));
 
-    await waitFor(() => expect(utils.getByLabelText("Silent spot")).toBeTruthy());
-    expect(utils.UNSAFE_getByProps({ name: "volume-x" })).toBeTruthy();
-    expect(utils.UNSAFE_queryByProps({ name: "users" })).toBeNull();
+    await waitFor(() => expect(utils.UNSAFE_getByProps({ name: "book-open" })).toBeTruthy());
+    expect(utils.UNSAFE_queryByProps({ name: "wind" })).toBeNull();
   });
 
   it("says whether the spot is indoors or outdoors, which is stored on every spot", async () => {

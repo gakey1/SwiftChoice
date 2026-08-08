@@ -274,6 +274,9 @@ export interface FocusOption {
   // Whether the spot is outside. Only outdoor spots get the conditions strip,
   // since the weather is irrelevant to a library desk.
   outdoor?: boolean | undefined;
+  // The picture the result card shows, stored on the spot. Optional because the
+  // fallback list below carries none, and validated by spotIcon() before use.
+  icon?: string | undefined;
 }
 
 // Fallback list, used only when the saved pool cannot be read.
@@ -314,6 +317,7 @@ function toFocusOption(item: FocusPoolItem): FocusOption {
     energy_level: item.energy,
     vibe: item.vibe,
     outdoor: item.outdoor,
+    icon: item.icon,
   };
 }
 

@@ -19,7 +19,7 @@ jest.mock("@/services/localdb/db", () => ({
 
 const mockGetDb = getDb as jest.Mock;
 
-let rows: { id: number; name: string; energy: string; vibe: string; outdoor: number }[] = [];
+let rows: { id: number; name: string; energy: string; vibe: string; outdoor: number; icon: string }[] = [];
 let nextId = 1;
 
 // A stand-in for the real database: it keeps the pool items in an array and
@@ -38,6 +38,7 @@ const mockDb = {
         vibe: params?.[2] as string,
         // SQLite stores this as 0 or 1, not a boolean, so the fake does too.
         outdoor: params?.[3] as number,
+        icon: params?.[4] as string,
       });
       nextId += 1;
       return;
@@ -48,10 +49,11 @@ const mockDb = {
       const energy = params?.[1] as string;
       const vibe = params?.[2] as string;
       const outdoor = params?.[3] as number;
-      const id = params?.[4] as number;
+      const icon = params?.[4] as string;
+      const id = params?.[5] as number;
 
       rows = rows.map((row) =>
-        row.id === id ? { ...row, name, energy, vibe, outdoor } : row
+        row.id === id ? { ...row, name, energy, vibe, outdoor, icon } : row
       );
       return;
     }
@@ -81,8 +83,8 @@ describe("focusPoolStorage", () => {
     await addFocusItem("Cafe", "medium", "background");
 
     await expect(getFocusPool()).resolves.toEqual([
-      { id: 2, name: "Cafe", energy: "medium", vibe: "background", outdoor: false },
-      { id: 1, name: "Library", energy: "low", vibe: "silent", outdoor: false },
+      { id: 2, name: "Cafe", energy: "medium", vibe: "background", outdoor: false, icon: "map-pin" },
+      { id: 1, name: "Library", energy: "low", vibe: "silent", outdoor: false, icon: "map-pin" },
     ]);
   });
 
@@ -90,7 +92,7 @@ describe("focusPoolStorage", () => {
     await addFocusItem("Library");
 
     await expect(getFocusPool()).resolves.toEqual([
-      { id: 1, name: "Library", energy: "medium", vibe: "background", outdoor: false },
+      { id: 1, name: "Library", energy: "medium", vibe: "background", outdoor: false, icon: "map-pin" },
     ]);
   });
 
@@ -98,7 +100,7 @@ describe("focusPoolStorage", () => {
     await addFocusItem("Library", "low", "silent");
 
     await expect(getFocusRecommendationPool()).resolves.toEqual([
-      { id: 1, name: "Library", energy: "low", vibe: "silent", outdoor: false },
+      { id: 1, name: "Library", energy: "low", vibe: "silent", outdoor: false, icon: "map-pin" },
     ]);
   });
 
@@ -114,7 +116,7 @@ describe("focusPoolStorage", () => {
     await addFocusItem("  Library  ", "low", "silent");
 
     await expect(getFocusPool()).resolves.toEqual([
-      { id: 1, name: "Library", energy: "low", vibe: "silent", outdoor: false },
+      { id: 1, name: "Library", energy: "low", vibe: "silent", outdoor: false, icon: "map-pin" },
     ]);
   });
 
@@ -138,6 +140,7 @@ describe("focusPoolStorage", () => {
         energy: "high",
         vibe: "collaborative",
         outdoor: false,
+        icon: "map-pin",
       },
     ]);
   });
@@ -149,7 +152,7 @@ describe("focusPoolStorage", () => {
     await deleteFocusItem(1);
 
     await expect(getFocusPool()).resolves.toEqual([
-      { id: 2, name: "Cafe", energy: "medium", vibe: "background", outdoor: false },
+      { id: 2, name: "Cafe", energy: "medium", vibe: "background", outdoor: false, icon: "map-pin" },
     ]);
   });
 
@@ -168,7 +171,7 @@ describe("focusPoolStorage", () => {
     await addFocusItem("Park Bench", "low", "silent", true);
 
     await expect(getFocusPool()).resolves.toEqual([
-      { id: 1, name: "Park Bench", energy: "low", vibe: "silent", outdoor: true },
+      { id: 1, name: "Park Bench", energy: "low", vibe: "silent", outdoor: true, icon: "map-pin" },
     ]);
   });
 
@@ -184,7 +187,7 @@ describe("focusPoolStorage", () => {
     await updateFocusItem(1, "Courtyard Cafe", "medium", "background", false);
 
     await expect(getFocusPool()).resolves.toEqual([
-      { id: 1, name: "Courtyard Cafe", energy: "medium", vibe: "background", outdoor: false },
+      { id: 1, name: "Courtyard Cafe", energy: "medium", vibe: "background", outdoor: false, icon: "map-pin" },
     ]);
   });
 });
@@ -215,7 +218,7 @@ describe("seeding the Focus pool", () => {
     const pool = await getFocusRecommendationPool();
 
     expect(pool).toEqual([
-      { id: 1, name: "My Own Desk", energy: "low", vibe: "silent", outdoor: false },
+      { id: 1, name: "My Own Desk", energy: "low", vibe: "silent", outdoor: false, icon: "map-pin" },
     ]);
   });
 
@@ -252,6 +255,28 @@ describe("seeding the Focus pool", () => {
     );
 
     expect(pairings.size).toBeGreaterThanOrEqual(2);
+  });
+
+  it("gives the seeded spots more than one icon between them", async () => {
+    // The whole point of storing an icon per spot is that a library and a park
+    // bench do not arrive looking identical. One icon across the seed would meet
+    // every other test here and defeat that entirely.
+    const pool = await getFocusRecommendationPool();
+    const icons = new Set(pool.map((spot) => spot.icon));
+
+    expect(icons.size).toBeGreaterThanOrEqual(5);
+  });
+
+  it("gives the two silent low-energy spots different icons", async () => {
+    // This is the case vibe alone cannot serve, and the reason the icon is
+    // stored rather than derived: in the design a library and a park bench are
+    // both silent and look nothing alike.
+    const pool = await getFocusRecommendationPool();
+    const silent = pool.filter((spot) => spot.vibe === "silent" && spot.energy === "low");
+    const icons = new Set(silent.map((spot) => spot.icon));
+
+    expect(silent.length).toBeGreaterThan(1);
+    expect(icons.size).toBeGreaterThan(1);
   });
 
   it("keeps medium and collaborative resolving to a single outdoor spot", async () => {

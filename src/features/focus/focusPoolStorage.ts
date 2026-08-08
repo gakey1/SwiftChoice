@@ -2,6 +2,7 @@
 // Handles CRUD operations for user study/work locations stored in SQLite.
 
 import { getDb } from "@/services/localdb/db";
+import { DEFAULT_SPOT_ICON, type SpotIcon } from "@/features/focus/spotIcons";
 
 export type FocusEnergy = "low" | "medium" | "high";
 export type FocusVibe = "silent" | "background" | "collaborative";
@@ -14,6 +15,9 @@ export interface FocusPoolItem {
   // Whether the spot is outside. Only outdoor spots get the rain warning on the
   // Focus result card, since a forecast is irrelevant to a library desk.
   outdoor: boolean;
+  // The picture the result card shows. Validated by spotIcon() before use, never
+  // read straight from here.
+  icon: string;
 }
 
 // The shape SQLite actually returns. It has no boolean type, so outdoor comes
@@ -24,6 +28,7 @@ interface FocusPoolRow {
   energy: FocusEnergy;
   vibe: FocusVibe;
   outdoor: number;
+  icon: string;
 }
 
 // Returns all saved Focus pool items ordered alphabetically.
@@ -36,7 +41,8 @@ export async function getFocusPool(): Promise<FocusPoolItem[]> {
       name,
       energy,
       vibe,
-      outdoor
+      outdoor,
+      icon
     FROM focus_pool
     ORDER BY name`
   );
@@ -49,7 +55,8 @@ export async function addFocusItem(
   name: string,
   energy: FocusEnergy = "medium",
   vibe: FocusVibe = "background",
-  outdoor = false
+  outdoor = false,
+  icon: string = DEFAULT_SPOT_ICON
 ): Promise<void> {
   const trimmedName = name.trim();
 
@@ -60,8 +67,8 @@ export async function addFocusItem(
   const db = await getDb();
 
   await db.runAsync(
-    "INSERT INTO focus_pool (name, energy, vibe, outdoor) VALUES (?, ?, ?, ?)",
-    [trimmedName, energy, vibe, outdoor ? 1 : 0]
+    "INSERT INTO focus_pool (name, energy, vibe, outdoor, icon) VALUES (?, ?, ?, ?, ?)",
+    [trimmedName, energy, vibe, outdoor ? 1 : 0, icon]
   );
 }
 
@@ -71,7 +78,8 @@ export async function updateFocusItem(
   name: string,
   energy: FocusEnergy = "medium",
   vibe: FocusVibe = "background",
-  outdoor = false
+  outdoor = false,
+  icon: string = DEFAULT_SPOT_ICON
 ): Promise<void> {
   const trimmedName = name.trim();
 
@@ -82,8 +90,8 @@ export async function updateFocusItem(
   const db = await getDb();
 
   await db.runAsync(
-    "UPDATE focus_pool SET name = ?, energy = ?, vibe = ?, outdoor = ? WHERE id = ?",
-    [trimmedName, energy, vibe, outdoor ? 1 : 0, id]
+    "UPDATE focus_pool SET name = ?, energy = ?, vibe = ?, outdoor = ?, icon = ? WHERE id = ?",
+    [trimmedName, energy, vibe, outdoor ? 1 : 0, icon, id]
   );
 }
 
@@ -119,21 +127,22 @@ const DEFAULT_FOCUS_SPOTS: readonly {
   energy: FocusEnergy;
   vibe: FocusVibe;
   outdoor: boolean;
+  icon: SpotIcon;
 }[] = [
-  { name: "Quiet Library Desk", energy: "low", vibe: "silent", outdoor: false },
-  { name: "Library Quiet Corner", energy: "low", vibe: "silent", outdoor: false },
-  { name: "Calm Desk Near Window", energy: "low", vibe: "silent", outdoor: false },
-  { name: "Park Bench, Fresh Air", energy: "low", vibe: "silent", outdoor: true },
-  { name: "Home Study Corner", energy: "low", vibe: "background", outdoor: false },
-  { name: "Small Group Study Room", energy: "low", vibe: "collaborative", outdoor: false },
-  { name: "University Library Floor", energy: "medium", vibe: "silent", outdoor: false },
-  { name: "Cafe With Soft Music", energy: "medium", vibe: "background", outdoor: false },
-  { name: "Courtyard Table", energy: "medium", vibe: "background", outdoor: true },
-  { name: "Campus Common Area", energy: "medium", vibe: "collaborative", outdoor: true },
-  { name: "Silent Study Zone", energy: "high", vibe: "silent", outdoor: false },
-  { name: "Busy Coffee Shop", energy: "high", vibe: "background", outdoor: false },
-  { name: "Rooftop Terrace", energy: "high", vibe: "background", outdoor: true },
-  { name: "Group Project Room", energy: "high", vibe: "collaborative", outdoor: false },
+  { name: "Quiet Library Desk", energy: "low", vibe: "silent", outdoor: false, icon: "book-open" },
+  { name: "Library Quiet Corner", energy: "low", vibe: "silent", outdoor: false, icon: "book" },
+  { name: "Calm Desk Near Window", energy: "low", vibe: "silent", outdoor: false, icon: "monitor" },
+  { name: "Park Bench, Fresh Air", energy: "low", vibe: "silent", outdoor: true, icon: "wind" },
+  { name: "Home Study Corner", energy: "low", vibe: "background", outdoor: false, icon: "home" },
+  { name: "Small Group Study Room", energy: "low", vibe: "collaborative", outdoor: false, icon: "users" },
+  { name: "University Library Floor", energy: "medium", vibe: "silent", outdoor: false, icon: "book-open" },
+  { name: "Cafe With Soft Music", energy: "medium", vibe: "background", outdoor: false, icon: "coffee" },
+  { name: "Courtyard Table", energy: "medium", vibe: "background", outdoor: true, icon: "sun" },
+  { name: "Campus Common Area", energy: "medium", vibe: "collaborative", outdoor: true, icon: "users" },
+  { name: "Silent Study Zone", energy: "high", vibe: "silent", outdoor: false, icon: "volume-x" },
+  { name: "Busy Coffee Shop", energy: "high", vibe: "background", outdoor: false, icon: "coffee" },
+  { name: "Rooftop Terrace", energy: "high", vibe: "background", outdoor: true, icon: "sun" },
+  { name: "Group Project Room", energy: "high", vibe: "collaborative", outdoor: false, icon: "briefcase" },
 ];
 
 // Held so two callers arriving at once cannot both decide the pool is empty and
@@ -160,7 +169,7 @@ export async function seedFocusPoolIfEmpty(): Promise<void> {
       }
 
       for (const spot of DEFAULT_FOCUS_SPOTS) {
-        await addFocusItem(spot.name, spot.energy, spot.vibe, spot.outdoor);
+        await addFocusItem(spot.name, spot.energy, spot.vibe, spot.outdoor, spot.icon);
       }
     } finally {
       // Cleared either way, so a failed seed can be retried on the next read
