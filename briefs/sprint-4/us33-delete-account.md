@@ -26,11 +26,17 @@ drifted would be the delete, quietly leaving data behind.
 ## What is NOT changing
 
 - No change to `fuelPoolStorage`, `focusPoolStorage`, `preferencesStorage`, the engine, or
-  any module screen. I added a section to the bottom of `SettingsScreen.tsx` and touched
-  nothing else in it, including the budget picker.
+  any module screen.
 - No new dependency. No Cloud Function. Firebase stays on the free plan.
 - No schema change, no migration, nothing to rerun.
 - The theme is still deliberately left alone by the local wipe, same as US31.
+
+## Settings has also been regrouped
+
+Separate from the delete work, and large enough that it has its own brief:
+`briefs/sprint-4/settings-home-and-priority-history.md`. Short version, Settings is now
+six labelled cards (Appearance, Preferences, Account, Data and privacy, About, Danger
+zone), no control changed what it does, and Delete my account sits last on its own.
 
 ## The two things worth knowing
 
@@ -61,7 +67,7 @@ the button again. Every step is safe to repeat.
 
 ## What I have already done
 
-- Built and tested it: 42 new tests, gates green (types clean, lint 0 errors, 372 tests
+- Built and tested it: 49 new tests, gates green (types clean, lint 0 errors, 379 tests
   over 39 suites, iOS bundle exports).
 - Proved the ordering test actually bites, by moving the account deletion to the front and
   confirming five tests go red rather than assuming they would.
@@ -74,7 +80,6 @@ the button again. Every step is safe to repeat.
 Nothing to build. Two things to say if you disagree:
 
 - Bikash, whether you want the US12 pool-seeding flag folded into your story or left to me.
-- Tracy, whether the DANGER ZONE row sitting at the very bottom of Settings works for you,
-  since Settings is your screen's territory even though I have been adding to it.
+- Tracy, whether the new grouping and its order work for you (see the other brief).
 
-It is on a branch, not committed and not merged. Say so before it lands if either of the above is wrong.
+It is on a branch and not merged. Say so before it lands if any of the above is wrong.
