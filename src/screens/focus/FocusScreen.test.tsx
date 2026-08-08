@@ -36,6 +36,9 @@ jest.mock("@/features/focus/focusPoolStorage", () => ({
     { id: 1, name: "Saved Courtyard Table", energy: "medium", vibe: "collaborative", outdoor: true, icon: "wind" },
     { id: 2, name: "Saved Basement Carrel", energy: "high", vibe: "silent", outdoor: false, icon: "book-open" },
     { id: 3, name: "Saved Corner Cafe", energy: "medium", vibe: "background", outdoor: false, icon: "coffee" },
+    // A second medium and background spot, so that pairing has something to
+    // reroll to. With one match the reroll button does nothing by design.
+    { id: 4, name: "Saved Reading Nook", energy: "medium", vibe: "background", outdoor: false, icon: "book" },
   ]),
 }));
 
@@ -156,6 +159,21 @@ describe("FocusScreen", () => {
 
     await waitFor(() => expect(utils.UNSAFE_getByProps({ name: "book-open" })).toBeTruthy());
     expect(utils.UNSAFE_queryByProps({ name: "wind" })).toBeNull();
+  });
+
+  it("acknowledges a reroll, since the card swaps in place", async () => {
+    // Without it the only sign anything happened is that the name changed,
+    // which is easy to miss on a card that does not otherwise move.
+    // Medium and Background are the defaults, so no filter press is needed.
+    const utils = render(<FocusScreen />);
+    fireEvent.press(utils.getByText("Find My Spot"));
+    await waitFor(() => expect(utils.getByText("Reroll")).toBeTruthy());
+
+    expect(utils.queryByText("Reroll used")).toBeNull();
+
+    fireEvent.press(utils.getByText("Reroll"));
+
+    expect(utils.getByText("Reroll used")).toBeTruthy();
   });
 
   it("says whether the spot is indoors or outdoors, which is stored on every spot", async () => {

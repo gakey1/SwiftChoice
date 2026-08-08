@@ -21,6 +21,7 @@ import { ModuleGlyph } from "@/components/ModuleGlyph";
 import { Icon, type IconName } from "@/components/Icon";
 import { DataNotice } from "@/components/DataNotice";
 import { spotIcon } from "@/features/focus/spotIcons";
+import { RewardToast, useRewardToast } from "@/components/RewardToast";
 import { HUD_CLEARANCE } from "@/components/XpHud";
 import type { AppStackParamList } from "@/navigation/types";
 import { getCurrentPosition } from "@/services/location/locationService";
@@ -132,6 +133,8 @@ export function FocusScreen() {
   // is always better than one that says something untrue about the weather.
   const [conditions, setConditions] = useState<Readings | null>(null);
 
+  const { toastText, toastProgress, showToast } = useRewardToast();
+
   const primaryColor = accent.color;
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
 
@@ -222,6 +225,10 @@ export function FocusScreen() {
       if (nextItem) {
         setRecommendation(nextItem);
         setHasRerolled(true);
+        // Acknowledges the reroll, per the design. It matters here more than it
+        // looks: the card swaps in place, so without this the only sign anything
+        // happened is that the name changed, which is easy to miss.
+        showToast("Reroll used");
       }
     }
   }
@@ -296,14 +303,17 @@ export function FocusScreen() {
                 rule based on vibe can produce. Drawn in Focus green as the glyph
                 was, so the module reading of the card is unchanged. */}
             <View
-              style={[styles.avatarBadge, { backgroundColor: accent.tint }]}
+              style={[
+                styles.avatarBadge,
+                { backgroundColor: accent.tint, borderColor: primaryColor, shadowColor: primaryColor },
+              ]}
               accessible
               accessibilityRole="image"
               // The icon now carries meaning, so it needs saying out loud. A
               // decorative glyph would have been better left unlabelled.
               accessibilityLabel={`${recommendation.spot_name}, ${vibeLabel(recommendation.vibe)}`}
             >
-              <Icon name={spotIcon(recommendation.icon)} size={32} color={primaryColor} />
+              <Icon name={spotIcon(recommendation.icon)} size={46} color={primaryColor} />
             </View>
 
             <Text style={[styles.itemName, { color: colors.ink }]}>{recommendation.spot_name}</Text>
@@ -314,14 +324,24 @@ export function FocusScreen() {
 
             <View style={styles.statsRow}>
               <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
-                <Text style={[styles.statValue, { color: primaryColor }]}>
+                <Text
+                  style={[styles.statValue, { color: primaryColor }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
                   {energyLabel(recommendation.energy_level)}
                 </Text>
                 <Text style={[styles.statLabel, { color: colors.ink2 }]}>Energy</Text>
               </View>
 
               <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
-                <Text style={[styles.statValue, { color: colors.ink }]}>{vibeLabel(recommendation.vibe)}</Text>
+                <Text
+                  style={[styles.statValue, { color: primaryColor }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
+                  {vibeLabel(recommendation.vibe)}
+                </Text>
                 <Text style={[styles.statLabel, { color: colors.ink2 }]}>Vibe</Text>
               </View>
 
@@ -335,16 +355,13 @@ export function FocusScreen() {
                   the card otherwise raises: why some spots show the weather and
                   others do not. */}
               <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
-                <View style={styles.ratingContainer}>
-                  <Text style={[styles.statValue, { color: colors.ink }]}>
-                    {recommendation.outdoor === true ? "Outdoor" : "Indoor"}
-                  </Text>
-                  <Icon
-                    name={recommendation.outdoor === true ? "sun" : "home"}
-                    size={13}
-                    color={primaryColor}
-                  />
-                </View>
+                <Text
+                  style={[styles.statValue, { color: primaryColor }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
+                  {recommendation.outdoor === true ? "Outdoor" : "Indoor"}
+                </Text>
                 <Text style={[styles.statLabel, { color: colors.ink2 }]}>Setting</Text>
               </View>
             </View>
@@ -405,6 +422,15 @@ export function FocusScreen() {
             when you sign in again.
           </DataNotice>
         </View>
+
+        {/* Outside the scrolling content so it floats over the card rather than
+            pushing it, and last so it draws above everything. */}
+        <RewardToast
+          text={toastText}
+          progress={toastProgress}
+          color={primaryColor}
+          textColor={ON_ACCENT}
+        />
       </SafeAreaView>
     );
   }
@@ -619,13 +645,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: T.spacing[4],
   },
+  // A circle rather than a rounded square, sized and lit to match the design's
+  // result ring: tinted fill, a hairline of the module colour, and a glow of the
+  // same colour behind it. Android has no shadow colour on views, so it takes
+  // elevation instead and loses the tint of the glow; that is the platform's
+  // limit rather than a choice.
   avatarBadge: {
-    width: 80,
-    height: 80,
-    borderRadius: 22,
+    width: 112,
+    height: 112,
+    borderRadius: 56,
+    borderWidth: 2,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: T.spacing[4],
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.45,
+    shadowRadius: 17,
+    elevation: 8,
   },
   itemName: {
     fontFamily: T.font.bold,
