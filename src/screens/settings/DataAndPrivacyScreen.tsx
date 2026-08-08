@@ -57,10 +57,10 @@ const STAYS_ON_THE_PHONE: readonly string[] = [
   "Your food and study preferences",
   "Your Fuel and Focus pools",
   "Your decision history, alongside the copy in your account",
-  "Your Priority tasks, except the tied ones sent to break a draw",
   "Your XP, level and badges",
   "Your theme and avatar",
   "Your two-factor key, which is why it only protects this phone",
+  "Your Priority tasks, except the tied ones sent to break a draw",
 ];
 
 export function DataAndPrivacyScreen({ navigation }: DataAndPrivacyScreenProps) {

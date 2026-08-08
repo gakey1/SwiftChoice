@@ -10,7 +10,7 @@
 // reacts to those actions; it never changes what her functions do.
 // IMPORTANT: Tracy's Priority screen and task-management flow remain intact.
 // The ranking handler now integrates Bikash's assigned tie-breaking feature.
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
@@ -42,6 +42,7 @@ import { moduleAccent, moduleDeep } from "@/theme/themes";
 import { useTheme } from "@/theme/ThemeProvider";
 import { T } from "@/theme/tokens";
 import { rankTasksWithAI } from "@/features/priority/priorityAIRanking";
+import { loadTaskBoard, saveTaskBoard } from "@/services/localdb/taskStorage";
 // ---------------------------------------------------------------------------
 // Tracy's decision logic (US22-24). Kept verbatim - do not change.
 // ---------------------------------------------------------------------------
@@ -86,6 +87,35 @@ export function PriorityScreen() {
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
   const [isRanking, setIsRanking] = useState<boolean>(false); // New state to track if ranking is in progress
   const [rankingReasons, setRankingReasons] = useState<string[]>([]); // New state to hold AI reasons
+
+  // The board is held on the device, so leaving the screen no longer loses it.
+  // Priority kept its tasks in component state and nothing else until now.
+  //
+  // The guard is the point. Without it the first save fires on mount with the
+  // empty initial state and wipes the stored board before the load that would
+  // have filled it has come back, so the feature would appear to work and
+  // silently erase the list every time the screen opened. Same shape as the
+  // hydration guard on the gamification progress.
+  const hydrated = useRef(false);
+
+  useEffect(() => {
+    let active = true;
+    void loadTaskBoard().then((board) => {
+      if (!active) return;
+      setTaskList(board.tasks);
+      setIsRanked(board.isRanked);
+      setRankingReasons(board.reasons);
+      hydrated.current = true;
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated.current) return;
+    void saveTaskBoard({ tasks: taskList, isRanked, reasons: rankingReasons });
+  }, [taskList, isRanked, rankingReasons]);
 
   // Start of this decision, for the Avg. decide figure on Home.
   const decisionStartedAt = useDecisionStart();

@@ -15,6 +15,7 @@ import { clearDecisions } from "@/features/history/historyStorage";
 import { clearPreferences } from "@/services/localdb/preferencesStorage";
 import { clearAvatarIndex } from "@/services/localdb/profileStorage";
 import { clearProgress } from "@/services/localdb/progressStorage";
+import { clearTaskBoard } from "@/services/localdb/taskStorage";
 
 // What was cleared, and what was left behind on purpose. Returned rather than
 // thrown so the caller can tell the user the truth either way.
@@ -36,6 +37,7 @@ const STEPS: { name: string; run: () => Promise<void> }[] = [
   { name: "focus pool", run: clearFocusPool },
   { name: "decision history on this device", run: clearDecisions },
   { name: "progress", run: clearProgress },
+  { name: "priority tasks", run: clearTaskBoard },
   { name: "avatar", run: clearAvatarIndex },
 ];
 
