@@ -41,6 +41,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import type { AppStackParamList } from "@/navigation/types";
 import { logDecision } from "@/features/history/historyStorage";
+import { useDecisionStart } from "@/features/history/useDecisionStart";
 import { loadPreferences } from "@/services/localdb/preferencesStorage";
 
 // Dark ink sits on top of the bright accent fills (buttons), for contrast.
@@ -160,6 +161,9 @@ export function getBudgetRanges(tier: string | null): TierRanges {
 
 export function FuelScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  // Start of this decision, for the Avg. saved figure on Home. Captured at
+  // first render and deliberately not reset by a reroll.
+  const decisionStartedAt = useDecisionStart();
   const { colors } = useTheme();
   const { progress, awardXp } = useProgress();
   const accent = moduleAccent(colors, "fuel");
@@ -530,6 +534,7 @@ export function FuelScreen() {
                           rating: recommendation.rating,
                         },
                       },
+                      startedAt: decisionStartedAt,
                       appliedFilters: {
                         mode: recommendation.type,
                         budget: recommendation.budget_level,

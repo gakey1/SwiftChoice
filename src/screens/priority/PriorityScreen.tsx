@@ -31,6 +31,8 @@ import { GlassCard } from "@/components/GlassCard";
 import { Icon } from "@/components/Icon";
 import { HUD_CLEARANCE } from "@/components/XpHud";
 import type { AppStackParamList } from "@/navigation/types";
+import { logDecision } from "@/features/history/historyStorage";
+import { useDecisionStart } from "@/features/history/useDecisionStart";
 import { coreAchievements, earnedFirst } from "@/features/progress/achievements";
 import { capFor, levelTitle, xpFraction } from "@/features/progress/progress";
 import { useProgress } from "@/features/progress/ProgressProvider";
@@ -81,6 +83,9 @@ export function PriorityScreen() {
   const [taskList, setTaskList] = useState<Task[]>([]);
   const [isRanked, setIsRanked] = useState<boolean>(false);
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
+
+  // Start of this decision, for the Avg. decide figure on Home.
+  const decisionStartedAt = useDecisionStart();
 
   // ----- Tracy's logic (kept verbatim) -----
   const addTask = () => {
@@ -219,6 +224,7 @@ export function PriorityScreen() {
   };
 
   const onComplete = (taskId: number) => {
+    const task = taskList.find((t) => t.taskId === taskId);
     const updatedList = taskList.filter((t) => t.taskId !== taskId);
 
     setTaskList(updatedList);
@@ -226,6 +232,33 @@ export function PriorityScreen() {
     bumpCompleted();
     reward(30, "Done. One less decision.");
     celebrate();
+
+    // Record it in the decision history, the same as accepting a meal or a
+    // study spot. Priority was the only module that never did this, so finishing
+    // a task earned XP but left no trace on the History screen and was missing
+    // from the Home count, which made the totals disagree with each other.
+    //
+    // Completing the top task is this module's version of accepting a
+    // recommendation: the ranking is the recommendation, and doing the task is
+    // the acceptance. Not awaited, and failure is swallowed, because losing the
+    // history row must never cost somebody the XP and the animation they have
+    // already been shown.
+    if (task) {
+      void logDecision({
+        moduleType: "priority",
+        taskId: String(task.taskId),
+        itemSnapshot: {
+          name: task.taskName,
+          details: { urgency: task.urgency, importance: task.importance },
+        },
+        appliedFilters: { ranked: isRanked },
+        startedAt: decisionStartedAt,
+        // Priority has no reroll, so this is always false rather than unknown.
+        rerolled: false,
+      }).catch(() => {
+        // History unavailable is not a reason to fail a completed task.
+      });
+    }
   };
 
   // Deleting a task cannot be undone and the delete button sits right next to

@@ -63,9 +63,16 @@ async function initialiseDatabase(): Promise<SQLite.SQLiteDatabase> {
       item_snapshot TEXT NOT NULL,
       applied_filters TEXT NOT NULL,
       rerolled INTEGER NOT NULL,
-      decided_at TEXT NOT NULL
+      decided_at TEXT NOT NULL,
+      started_at TEXT
     );
   `);
+
+  // When the user opened the module, so the gap to decided_at is how long the
+  // decision actually took. Nullable on purpose: every decision saved before
+  // this existed has no start, and guessing one would invent the very number
+  // the Home screen reports. Those rows are skipped in the average instead.
+  await ensureColumn(db, "decisions", "started_at", "TEXT");
 
   await ensureColumn(db, "fuel_pool", "budget", "TEXT NOT NULL DEFAULT '$$'");
   await ensureColumn(db, "fuel_pool", "prep_time", "TEXT NOT NULL DEFAULT 'medium'");

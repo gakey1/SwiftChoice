@@ -34,6 +34,10 @@ export interface DecisionInput {
   itemSnapshot: ItemSnapshot;
   appliedFilters: Record<string, unknown>;
   rerolled: boolean;
+  // When the user opened the module. Optional because not every caller can know
+  // it, and because a wrong value here would corrupt the only timing figure the
+  // app reports. Left out means this decision is not counted in that average.
+  startedAt?: string | null;
 }
 
 // A stored decision, including the fields the writer stamps.
@@ -49,6 +53,9 @@ export interface DecisionRecord {
   // The moment the decision was accepted, saved as a standard date string so the
   // list can be sorted by time.
   decidedAt: string;
+  // When the module was opened, or null for decisions saved before this was
+  // recorded. decidedAt minus this is how long the decision took.
+  startedAt: string | null;
 }
 
 const MODULE_TYPES: readonly DecisionModuleType[] = ["fuel", "focus", "priority"];
@@ -65,6 +72,7 @@ interface DecisionRow {
   applied_filters: string;
   rerolled: number;
   decided_at: string;
+  started_at: string | null;
 }
 
 // Records an accepted or completed decision. Returns the stored record, with the
@@ -88,14 +96,15 @@ export async function logDecision(input: DecisionInput): Promise<DecisionRecord>
     appliedFilters: input.appliedFilters,
     rerolled: input.rerolled,
     decidedAt: new Date().toISOString(),
+    startedAt: input.startedAt ?? null,
   };
 
   const db = await getDb();
 
   await db.runAsync(
     `INSERT INTO decisions
-       (history_id, module_type, fuel_id, focus_id, task_id, item_snapshot, applied_filters, rerolled, decided_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (history_id, module_type, fuel_id, focus_id, task_id, item_snapshot, applied_filters, rerolled, decided_at, started_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       record.historyId,
       record.moduleType,
@@ -106,6 +115,7 @@ export async function logDecision(input: DecisionInput): Promise<DecisionRecord>
       JSON.stringify(record.appliedFilters),
       record.rerolled ? 1 : 0,
       record.decidedAt,
+      record.startedAt,
     ]
   );
 
@@ -169,6 +179,7 @@ function rowToRecord(row: DecisionRow): DecisionRecord {
     appliedFilters: JSON.parse(row.applied_filters) as Record<string, unknown>,
     rerolled: row.rerolled === 1,
     decidedAt: row.decided_at,
+    startedAt: row.started_at,
   };
 }
 

@@ -106,6 +106,17 @@ const TERMS: LegalDocument = {
       ],
     },
     {
+      // The one number in the app that is not counted, so the basis for it is
+      // written down where a user can find it. Keep this in step with
+      // ASSUMED_MINUTES_WITHOUT_APP in features/history/historyStats.
+      heading: "How the time saved figure works",
+      body: [
+        "The Avg. saved figure on the home screen is an estimate, not a measurement of your actual saving.",
+        "It assumes a decision like this would take about 8 minutes without the app, and subtracts how long you actually took, which we do measure. Decisions made before we started recording that are left out rather than guessed at.",
+        "The 8 minutes is a deliberately cautious estimate. In our own survey of 21 students, 38% said they spend more than 20 minutes deliberating before acting, so the figure we use is well below what our research found.",
+      ],
+    },
+    {
       heading: "No guarantees",
       body: [
         "The app is provided as it is. It may contain faults, it may be unavailable, and information you store in it may be lost.",

@@ -9,6 +9,15 @@ import { Alert } from "react-native";
 import { PriorityScreen } from "./PriorityScreen";
 
 // Stub the native icon set so this test does not pull in expo-font / expo-asset.
+// Completing a task now writes to the decision history, which reaches Firestore
+// and expo-sqlite through this module. Mocked so the screen test does not pull
+// that chain in. This is the fourth time this exact trap has appeared (MC-007):
+// any screen that gains a storage import needs its test mocked in the same move,
+// or the suite fails to load with a Firebase syntax error that names none of it.
+jest.mock("@/features/history/historyStorage", () => ({
+  logDecision: jest.fn().mockResolvedValue(undefined),
+}));
+
 jest.mock("@expo/vector-icons", () => ({
   Feather: "Feather",
   MaterialCommunityIcons: "MaterialCommunityIcons",
@@ -171,5 +180,57 @@ describe("PriorityScreen", () => {
     expect(getByText(/All clear/i)).toBeTruthy();
 
     alertSpy.mockRestore();
+  });
+});
+
+// Completing a task writes to the decision history. Priority was the only module
+// that never did, so a finished task earned XP and a badge but left no trace on
+// the History screen and was missing from the Home count, which made the app
+// disagree with itself about how many decisions had been made.
+describe("PriorityScreen decision history", () => {
+  function addAndComplete(name: string) {
+    const utils = render(<PriorityScreen />);
+    fireEvent.changeText(utils.getByPlaceholderText("Add a new task"), name);
+    fireEvent.press(utils.getByLabelText("Add task"));
+    fireEvent.press(utils.getByLabelText("Complete task"));
+    return utils;
+  }
+
+  it("records a completed task as a decision", () => {
+    const { logDecision } = jest.requireMock("@/features/history/historyStorage");
+    logDecision.mockClear();
+
+    addAndComplete("Finish the report");
+
+    expect(logDecision).toHaveBeenCalledWith(
+      expect.objectContaining({
+        moduleType: "priority",
+        itemSnapshot: expect.objectContaining({ name: "Finish the report" }),
+      })
+    );
+  });
+
+  it("records when the decision started, so the average is measurable", () => {
+    const { logDecision } = jest.requireMock("@/features/history/historyStorage");
+    logDecision.mockClear();
+
+    addAndComplete("Email the tutor");
+
+    const call = logDecision.mock.calls[0][0];
+    expect(typeof call.startedAt).toBe("string");
+    // Missing this is how the Home figure silently becomes a dash forever.
+    expect(Number.isNaN(Date.parse(call.startedAt))).toBe(false);
+  });
+
+  it("still completes the task when the history write fails", () => {
+    // Losing a history row must never cost somebody the XP and the animation
+    // they have already been shown.
+    const { logDecision } = jest.requireMock("@/features/history/historyStorage");
+    logDecision.mockClear();
+    logDecision.mockRejectedValueOnce(new Error("database unavailable"));
+
+    const { queryByText } = addAndComplete("Read chapter 4");
+
+    expect(queryByText("Read chapter 4")).toBeNull();
   });
 });

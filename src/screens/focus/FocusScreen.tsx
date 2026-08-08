@@ -38,6 +38,7 @@ import {
   type FocusOption,
 } from "@/services/recommendation/recommendationEngine";
 import { logDecision } from "@/features/history/historyStorage";
+import { useDecisionStart } from "@/features/history/useDecisionStart";
 import { useProgress } from "@/features/progress/ProgressProvider";
 import { XP_PER_DECISION } from "@/features/progress/progress";
 import { moduleAccent, moduleDeep } from "@/theme/themes";
@@ -116,6 +117,9 @@ function FilterOptionGroup({
 }
 
 export function FocusScreen() {
+  // Start of this decision, for the Avg. decide figure on Home. Captured at
+  // first render and deliberately not reset by a reroll.
+  const decisionStartedAt = useDecisionStart();
   const { colors } = useTheme();
   const { progress, awardXp } = useProgress();
   const accent = moduleAccent(colors, "focus");
@@ -386,6 +390,7 @@ export function FocusScreen() {
                     },
                   },
                   appliedFilters: { energyLevel, vibe },
+                  startedAt: decisionStartedAt,
                   rerolled: hasRerolled,
                 });
 
