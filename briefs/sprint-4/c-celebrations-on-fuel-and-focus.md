@@ -74,10 +74,14 @@ It fails if the burst is moved back inside a screen. Three of the five tests wer
 
 `useCelebration()` outside the provider returns a no-op rather than throwing, so a screen rendered on its own, which every screen unit test does, still works. That is deliberate: decoration must never take a screen down with it.
 
-## What I could and could not verify
+## Both of these have been seen working
 
 **Confirmed on an Android emulator:** accepting a Focus recommendation shows the confetti falling over the **Home** screen after the navigation. That is the whole point, and it is the thing a screen-local burst cannot do.
 
-**Not confirmed by me:** the reroll toast on Fuel. Rerolling works (the card changes), and the wiring is the same hook, component and placement as the one on Focus. But the toast lasts 1150ms and neither a screencap nor a hierarchy dump is fast enough to catch it. I checked that by trying the same capture on **Focus**, whose toast already worked before any of this, and it was equally invisible, so the tooling is at fault rather than the code. **It still needs a human to look at it**, so it belongs on the manual checklist rather than being called done.
+**Confirmed by watching it:** the reroll toast on Fuel, on both an Android emulator and an iOS simulator.
+
+I could not capture that one automatically, and it is worth saying why in case you hit the same wall. The toast lasts 1150ms, and neither a screenshot nor a view-hierarchy dump is fast enough to catch it. That looks exactly like a broken feature. What ruled the code out was trying the identical capture against **Focus**, whose toast already worked before any of this, and finding it equally invisible. So the tooling was the problem, not the toast.
+
+An emulator settles a question like this, because the animation is drawn the same way there as on a phone. That is not true of everything: a distance on a Fuel card still needs a real phone outdoors, since an emulator has no GPS and only reports numbers somebody typed.
 
 Gates: 451 tests over 44 suites, tsc clean, lint unchanged.
