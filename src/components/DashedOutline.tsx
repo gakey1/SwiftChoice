@@ -44,9 +44,19 @@ export function DashedOutline({
     );
   }
 
-  // A stroke straddles its path, so the path is inset by half the thickness or
-  // the outer half of every dash is clipped by the parent's overflow: hidden.
-  const inset = thickness / 2;
+  // A stroke straddles its path, so the path has to be inset or the outer half
+  // of every dash is clipped by the parent's overflow: hidden.
+  //
+  // Inset by a whole thickness rather than the half that geometry alone calls
+  // for. Half puts the outer edge of the stroke exactly on the canvas boundary,
+  // and a layout in points is rarely a whole number of pixels, so Android
+  // truncates the last fraction of a pixel and takes most of the stroke with
+  // it. The bottom edge of the daily quest card was drawing one pixel tall
+  // against four along the top, which reads as a grey line rather than a teal
+  // one in light mode and disappears almost entirely in dark. A full thickness
+  // leaves half a stroke of slack, so nothing lands on the boundary. The
+  // outline sits half a point further in, which is not visible.
+  const inset = thickness;
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none" onLayout={handleLayout}>
@@ -55,8 +65,8 @@ export function DashedOutline({
           <Rect
             x={inset}
             y={inset}
-            width={size.width - thickness}
-            height={size.height - thickness}
+            width={Math.max(0, size.width - inset * 2)}
+            height={Math.max(0, size.height - inset * 2)}
             rx={Math.max(0, radius - inset)}
             ry={Math.max(0, radius - inset)}
             fill="none"
