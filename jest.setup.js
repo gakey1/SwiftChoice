@@ -9,11 +9,11 @@ jest.mock("@react-native-async-storage/async-storage", () =>
   require("@react-native-async-storage/async-storage/jest/async-storage-mock")
 );
 
-// Mock expo-blur. Its native module is not available under Jest, and both of
-// these are purely visual wrappers, so plain host-component stubs let any screen
-// using the glass surfaces render in tests. BlurTargetView is included because
-// the ambient background wraps its glows in one, which Android needs in order to
-// have something to blur.
+// Mock expo-blur. Nothing in src imports it any more - the ambient wash and the
+// cards are both drawn rather than blurred, see GlassCard's header for why - but
+// the package is still installed, and the mock costs nothing while it is. Its
+// native module does not resolve under Jest, so if anything reaches for it again
+// the failure would be a module-load error rather than anything readable.
 jest.mock("expo-blur", () => ({
   BlurView: "BlurView",
   BlurTargetView: "BlurTargetView",

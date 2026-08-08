@@ -5,9 +5,10 @@
 // so its position is identical on every screen. It ignores touches so it never
 // blocks the UI underneath.
 
-import { StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { CoinIcon } from "@/components/CoinIcon";
 import { useProgress } from "@/features/progress/ProgressProvider";
 import { useTheme } from "@/theme/ThemeProvider";
 import { T } from "@/theme/tokens";
@@ -28,7 +29,11 @@ export function XpHud() {
       style={[styles.wrap, { top: insets.top + 4, right: T.spacing.pageX }]}
     >
       <View style={[styles.pill, { backgroundColor: colors.cardSolid, borderColor: colors.cardLine }]}>
-        <Text style={styles.coin}>🪙</Text>
+        {/* iOS draws the coin from Apple's emoji font, which is the look being
+            matched to. Android's emoji font draws the same character as a
+            brighter coin with a bank motif, so it gets the drawn one instead.
+            See CoinIcon for why this is not simply the same asset twice. */}
+        {Platform.OS === "android" ? <CoinIcon /> : <Text style={styles.coin}>🪙</Text>}
         <Text style={[styles.count, { color: colors.fuel }]}>{progress.coins}</Text>
       </View>
     </View>

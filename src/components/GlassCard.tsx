@@ -1,71 +1,59 @@
-// A frosted-glass surface, the card style from the Arcade mockup. It blurs
-// whatever sits behind it (the ambient background glows) and lays a translucent
-// theme tint plus a hairline border on top, so cards read as frosted glass
-// rather than flat fills. Colours follow the active theme.
+// The card surface from the Arcade mockup: an opaque base, a translucent theme
+// tint over it, and a hairline border, clipped to a rounded rectangle.
 //
 // Usage: wrap content in <GlassCard style={{ padding: 16, marginBottom: 14 }}>.
-// The caller's style controls layout (padding, margin, width); the blur fills
+// The caller's style controls layout (padding, margin, width); the fill covers
 // the whole rounded rectangle underneath.
+//
+// The name is historical. These were frosted glass: a real BlurView softening
+// the ambient wash behind them. That is gone on both platforms, and it is worth
+// recording why, because "add the blur back" is an obvious-looking idea.
+//
+// On Android it never reliably worked. Blurring there means handing the
+// BlurView a target view to snapshot, and that plumbing failed three ways, each
+// silently and each rendering a WHITE card:
+//
+//  1. No target at all, and the blur quietly renders nothing.
+//  2. A transparent target, and the engine clears each frame with the window
+//     background instead - white - which measured as rgb(87,81,110) through
+//     this component's layers, against the rgb(35,28,62) intended.
+//  3. One shared target across a tab navigator. Home, History and Settings all
+//     stay mounted and all registered into the same slot, so the cards on
+//     screen could end up blurring another screen's hidden, empty view. That
+//     one depends on mount order, so it cleared on a reload and came back on a
+//     tab change, and read as fixed twice before it was.
+//
+// On iOS it worked, and still cost more than it paid. The blur material lifts
+// and desaturates whatever is under it, so the background measured rgb(26,24,35)
+// where the theme asks for rgb(20,16,38), and the cards inherited that haze
+// along with whatever glow happened to sit behind them - one card measured
+// green-tinted purely because the teal glow was behind it.
+//
+// An opaque base does none of that. It composites to exactly what a correct
+// blur produced, stays theme-driven so the light theme is right for the same
+// reason the dark one is, and is the same on both platforms with no mount order
+// to get wrong. Frost is worth less than a card that is the right colour every
+// time.
 
 import { StyleSheet, View } from "react-native";
 import type { StyleProp, ViewStyle } from "react-native";
-import { BlurView } from "expo-blur";
-import { useEffect, useState } from "react";
 
-import { useBlurTarget } from "@/components/BlurTarget";
 import { useTheme } from "@/theme/ThemeProvider";
 
 export type GlassCardProps = {
   children?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
-  // Blur strength (0-100). The default suits the mockup's cards; the nav bar
-  // uses a stronger blur.
-  intensity?: number;
 };
 
-export function GlassCard({ children, style, intensity }: GlassCardProps) {
-  const { colors, isDark } = useTheme();
-
-  // The blur is held back until after the first commit, which is what stops the
-  // Android crash from handing BlurView a node that has not finished mounting.
-  // That guard is Tracy's and the behaviour is unchanged; only the way it is
-  // switched on has moved.
-  //
-  // Setting the flag directly inside the effect is what `react-hooks/set-state-
-  // in-effect` rejects, and the rule is right here rather than pedantic: this
-  // component renders many times per screen, and a synchronous state write on
-  // mount cascades a second render pass for every card on it. Deferring to the
-  // next frame gets the same result one frame later, which is invisible next to
-  // the blur itself appearing.
-  //
-  // The unmount branch is gone on purpose. Setting state on a component that is
-  // already unmounting does nothing, so it was cleanup that could not run.
-  const [blurReady, setBlurReady] = useState(false);
-
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => setBlurReady(true));
-    return () => cancelAnimationFrame(frame);
-  }, []);
-
-  // The screen's ambient background, which is what a card is frosting. Null on
-  // a screen with no ambient background, and unused on iOS, which blurs what is
-  // behind the view without being told. Omitted rather than passed as null,
-  // because the prop is optional under exactOptionalPropertyTypes.
-  const blurTarget = useBlurTarget();
+export function GlassCard({ children, style }: GlassCardProps) {
+  const { colors } = useTheme();
 
   return (
     <View style={[styles.wrap, { borderColor: colors.cardLine }, style]}>
-      {blurReady && (
-        <BlurView
-          intensity={intensity ?? 24}
-          tint={isDark ? "dark" : "light"}
-          // iOS blurs natively. Android has to be handed the view to blur, and
-          // silently renders no blur at all without it.
-          blurMethod="dimezisBlurView"
-          {...(blurTarget ? { blurTarget } : {})}
-          style={StyleSheet.absoluteFill}
-        />
-      )}
+      {/* Opaque first, then the translucent tint over it. The two together are
+          what compose to the card colour: rgb(35,27,63) in the dark theme,
+          rgb(252,251,254) in the light one, both measured on device. */}
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bg }]} />
       <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.card }]} />
       {children}
     </View>
@@ -80,5 +68,5 @@ const styles = StyleSheet.create({
   },
 });
 
-// Kept so callers can align to the same radius the glass uses.
+// Kept so callers can align to the same radius the card uses.
 export const GLASS_RADIUS = 22;

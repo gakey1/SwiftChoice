@@ -8,6 +8,7 @@
 // read too light over dark content, so a solid surface is used deliberately.
 
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/Icon";
 import type { IconName } from "@/components/Icon";
@@ -37,8 +38,26 @@ export type BottomNavProps = {
 // Draws the three tabs and highlights whichever one is active in teal.
 export function BottomNav({ active, onNavigate }: BottomNavProps) {
   const { colors } = useTheme();
+
+  // This bar is a custom tabBar, so react-navigation hands it no safe-area
+  // padding of its own. Android has drawn edge to edge since SDK 35, which puts
+  // the system navigation directly over the bottom of the app: on a gesture
+  // phone that is a 24dp pill, but on three-button navigation it is a 48dp bar,
+  // and the labels sat underneath it. The 18 is kept as a floor so the bar keeps
+  // its designed breathing room on a device that reports no inset at all.
+  const insets = useSafeAreaInsets();
+
   return (
-    <View style={[styles.bar, { backgroundColor: colors.cardSolid, borderTopColor: colors.cardLine }]}>
+    <View
+      style={[
+        styles.bar,
+        {
+          backgroundColor: colors.cardSolid,
+          borderTopColor: colors.cardLine,
+          paddingBottom: Math.max(insets.bottom, 18),
+        },
+      ]}
+    >
       {ITEMS.map((item) => {
         const on = item.key === active;
         const tint = on ? colors.teal : colors.ink3;
@@ -67,7 +86,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     borderTopWidth: 1,
     paddingTop: T.spacing[2],
-    paddingBottom: 18,
   },
   tab: {
     flex: 1,
