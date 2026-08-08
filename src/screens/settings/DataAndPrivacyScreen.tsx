@@ -46,7 +46,7 @@ const LEAVES_THE_PHONE: readonly { what: string; where: string; when: string }[]
   {
     what: "The names of tasks that tie",
     where: "Our own server, then Google",
-    when: "Only when you rank, and only for tasks that scored exactly the same. Their names, deadlines and notes are sent so the order can be explained. Nothing identifying you goes with them, and our server keeps no copy.",
+    when: "Only when you rank, and only for tasks that scored exactly the same. Their names, deadlines and notes are sent so the order can be explained. Nothing identifying you goes with them and our server keeps no copy, but Google may keep what it receives and use it to improve its own products. Keep private details out of a task you intend to rank.",
   },
 ];
 

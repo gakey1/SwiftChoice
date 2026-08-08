@@ -57,6 +57,7 @@ const PRIVACY: LegalDocument = {
         "When two or more Priority tasks score exactly the same and you rank them, those tasks are sent to a small server we run, which passes them to Google's Gemini service to break the tie and explain the order. Only the tied tasks go, never the whole list.",
         "Nothing identifying you is sent to Google or to the weather service. The location services receive a position, not a person, and the tie-break receives task text with no account, name or device attached to it.",
         "Our server keeps no copy of what passes through it. It holds the key that talks to Google, which is the reason it exists at all: without it that key would have to ship inside the app, where anyone could read it.",
+        "What Google does with it is not ours to control. On the free service we use, Google may keep what it receives and use it to improve its own products, and its reviewers may read it. So treat a task you intend to rank as something that leaves this phone, and keep private details out of one. A task you never rank against an equal is never sent.",
       ],
     },
     {
