@@ -15,10 +15,13 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { StyleSheet, Text, TextInput, View, TouchableOpacity, ScrollView, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon } from "@/components/Icon";
+import { DataNotice } from "@/components/DataNotice";
 import { AmbientBackground } from "@/components/AmbientBackground";
 import { GlassCard } from "@/components/GlassCard";
 import { ModuleGlyph } from "@/components/ModuleGlyph";
 import { HUD_CLEARANCE } from "@/components/XpHud";
+import { RewardToast, useRewardToast } from "@/components/RewardToast";
+import { useCelebration } from "@/components/Celebration";
 import { T } from "@/theme/tokens";
 import { moduleAccent, moduleDeep } from "@/theme/themes";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -40,6 +43,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import type { AppStackParamList } from "@/navigation/types";
 import { logDecision } from "@/features/history/historyStorage";
+import { useDecisionStart } from "@/features/history/useDecisionStart";
 import { loadPreferences } from "@/services/localdb/preferencesStorage";
 
 // Dark ink sits on top of the bright accent fills (buttons), for contrast.
@@ -158,8 +162,16 @@ export function getBudgetRanges(tier: string | null): TierRanges {
 }
 
 export function FuelScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  // Start of this decision, for the Avg. saved figure on Home. Captured at
+  // first render and deliberately not reset by a reroll.
+  const decisionStartedAt = useDecisionStart();
   const { colors } = useTheme();
   const { progress, awardXp } = useProgress();
+  // The reroll acknowledgement, and the confetti for an accepted decision. Both
+  // match Focus, which had them first; this screen was missing them.
+  const { toastText, toastProgress, showToast } = useRewardToast();
+  const { celebrate } = useCelebration();
   const accent = moduleAccent(colors, "fuel");
   const [userTier, setUserTier] = useState<string | null>(null);
 
@@ -172,6 +184,7 @@ export function FuelScreen() {
   // are rather than the app assuming a city they may be nowhere near.
   const [manualArea, setManualArea] = useState<string>("");
   const [needsArea, setNeedsArea] = useState<boolean>(false);
+  const [isCheckingBudget, setIsCheckingBudget] = useState(true);
 
   // Re-loads the saved budget level every time the screen comes into focus, so
   // changing it in Settings shows here without restarting the app.
@@ -182,28 +195,37 @@ export function FuelScreen() {
       async function loadBudgetPreference() {
         try {
           const savedTier = await loadPreferences();
-          if (active && savedTier.defaultBudget) {
-            setUserTier(savedTier.defaultBudget);
+          if (!active) return;
 
-            if (savedTier.defaultBudget === 'budget') {
-              setBudget('$');
-            } else if (savedTier.defaultBudget === 'moderate') {
-              setBudget('$$');
-            } else if (savedTier.defaultBudget === 'premium') {
-              setBudget('$$$');
-            }
+          // Check if the budget is missing, empty, or unconfigured ("None set")
+          if (!savedTier.defaultBudget || savedTier.defaultBudget === "None set") {
+            navigation.replace("BudgetSurvey");
+            return;
           }
+
+          setUserTier(savedTier.defaultBudget);
+          if (savedTier.defaultBudget === 'budget') {
+              setBudget('$');
+          } else if (savedTier.defaultBudget === 'moderate') {
+              setBudget('$$');
+          } else if (savedTier.defaultBudget === 'premium') {
+              setBudget('$$$');
+          }
+
+          // Only show the Fuel screen UI once we know a budget exists
+          setIsCheckingBudget(false);
         } catch (error) {
           console.error("Failed to load user budget tier", error);
+          setIsCheckingBudget(false);
         }
       }
 
-      loadBudgetPreference();
+      void loadBudgetPreference();
 
       return () => {
         active = false;
       };
-    }, [])
+    }, [navigation])
   );
   // Get the dynamic labels based on the tier
   const budgetRanges = getBudgetRanges(userTier);
@@ -232,7 +254,6 @@ export function FuelScreen() {
   const [matchList, setMatchList] = useState<FoodOption[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const primaryColor = accent.color;
-  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
 
   // Runs on every keystroke in the area box. Asks Google for matching areas and
   // shows them, so the user picks a real place instead of typing a name we then
@@ -387,12 +408,23 @@ export function FuelScreen() {
         setCurrentIndex(1);
         setRecommendation(nextItem);
         setHasRerolled(true);
+        // Says the reroll was spent, since it is the only one and the card
+        // changing does not by itself tell you that.
+        showToast("Reroll used");
       }
     } else {
       //If there are no other options, let the user look for something else
       Alert.alert("No other matching options found in the pool. Try adjusting your filters!");
     }
   };
+
+  if (isCheckingBudget) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.bg }}>
+        <AmbientBackground />
+      </View>
+    );
+  }
 
   // === VIEW 1: SHOW THE RESULT CARD MANUALLY IF MATCH IS FOUND ===
   if (recommendation) {
@@ -427,32 +459,67 @@ export function FuelScreen() {
                 <ModuleGlyph moduleKey="fuel" size={36} color={primaryColor} />
               </View>
 
-              <Text style={[styles.itemName, { color: colors.ink }]}>{recommendation.item_name}</Text>
-              <Text style={[styles.cuisineType, { color: colors.ink2 }]}>
-                {recommendation.type === "in" ? "Home-cooked Meal" : "Local Restaurant / Eatery"}
-              </Text>
+              {/* Name, what kind of place it is, and where it is. Grouped,
+                  because all three answer "which place is this" and the address
+                  belongs with them rather than down among the statistics.
+                  Live Eat Out results only: a home-cooked meal has no address,
+                  and neither do the places Google holds none for, which show no
+                  row at all rather than a placeholder. */}
+              <View style={styles.identityBlock}>
+                <Text style={[styles.itemName, { color: colors.ink }]}>{recommendation.item_name}</Text>
+                <Text style={[styles.cuisineType, { color: colors.ink2 }]}>
+                  {recommendation.type === "in" ? "Home-cooked Meal" : "Local Restaurant / Eatery"}
+                </Text>
+                {recommendation.address !== undefined && (
+                  <View style={styles.addressRow}>
+                    <Icon name="map-pin" size={13} color={colors.ink2} />
+                    <Text style={[styles.addressText, { color: colors.ink2 }]}>
+                      {recommendation.address}
+                    </Text>
+                  </View>
+                )}
+              </View>
 
               <View style={styles.statsRow}>
-                <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
-                  <Text style={[styles.statValue, { color: primaryColor }]}>{recommendation.budget_level}</Text>
-                  <Text style={[styles.statLabel, { color: colors.ink2 }]}>Budget</Text>
-                </View>
-
-                <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
-                  <Text style={[styles.statValue, { color: colors.ink }]}>{distanceText}</Text>
-                  <Text style={[styles.statLabel, { color: colors.ink2 }]}>Distance</Text>
-                </View>
-
-                {/* Google holds no rating for some real places. Show nothing
-                    rather than a zero or an invented score. */}
-                {recommendation.rating !== "" && (
+                {recommendation.type === "in" ? (
+                  <>
                   <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
-                    <View style={styles.ratingContainer}>
-                      <Text style={[styles.statValue, { color: colors.ink }]}>{recommendation.rating}</Text>
-                      <Icon name="star" size={13} color={primaryColor} />
+                      <Text style={[styles.statValue, { color: primaryColor }]}>{recommendation.budget_level}</Text>
+                      <Text style={[styles.statLabel, { color: colors.ink2 }]}>Budget</Text>
                     </View>
-                    <Text style={[styles.statLabel, { color: colors.ink2 }]}>Rating</Text>
+                    <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
+                      <Text style={[styles.statValue, { color: colors.ink }]}>15 min</Text>
+                      <Text style={[styles.statLabel, { color: colors.ink2 }]}>Prep</Text>
+                    </View>
+                    <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
+                      <Text style={[styles.statValue, { color: colors.ink }]}>Easy</Text>
+                      <Text style={[styles.statLabel, { color: colors.ink2 }]}>Effort</Text>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
+                      <Text style={[styles.statValue, { color: primaryColor }]}>{recommendation.budget_level}</Text>
+                      <Text style={[styles.statLabel, { color: colors.ink2 }]}>Budget</Text>
+                    </View>
+
+                  <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
+                    <Text style={[styles.statValue, { color: colors.ink }]}>{distanceText}</Text>
+                    <Text style={[styles.statLabel, { color: colors.ink2 }]}>Distance</Text>
                   </View>
+
+                  {/* Google holds no rating for some real places. Show nothing
+                    rather than a zero or an invented score. */}
+                  {recommendation.rating !== "" && (
+                    <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
+                      <View style={styles.ratingContainer}>
+                        <Text style={[styles.statValue, { color: colors.ink }]}>{recommendation.rating}</Text>
+                        <Icon name="star" size={13} color={primaryColor} />
+                      </View>
+                      <Text style={[styles.statLabel, { color: colors.ink2 }]}>Rating</Text>
+                    </View>
+                  )}
+                  </>
                 )}
               </View>
 
@@ -492,6 +559,7 @@ export function FuelScreen() {
                           rating: recommendation.rating,
                         },
                       },
+                      startedAt: decisionStartedAt,
                       appliedFilters: {
                         mode: recommendation.type,
                         budget: recommendation.budget_level,
@@ -504,6 +572,12 @@ export function FuelScreen() {
                     // Award the XP the History row and the Home quest pill both
                     // advertise, so the label and the running total agree.
                     awardXp(XP_PER_DECISION);
+
+                    // Confetti for the decision, the same as Priority gives a
+                    // completed task. The burst is owned above the navigator, so
+                    // it survives the goBack() below rather than being unmounted
+                    // with this screen.
+                    celebrate();
 
                     //Clear the active choice view states
                     setRecommendation(null);
@@ -544,8 +618,24 @@ export function FuelScreen() {
                  </Text>
               </TouchableOpacity>
             </View>
+
+            {/* US34. Sits under Accept rather than after it, so it is read
+                before the copy is made and not as an announcement afterwards. */}
+            <DataNotice>
+              Accepting saves this to your history and copies it to your account, so it is there
+              when you sign in again.
+            </DataNotice>
           </View>
         </View>
+
+        {/* Outside the content so it floats over the card rather than pushing
+            it, and last so it draws above everything. Same placement as Focus. */}
+        <RewardToast
+          text={toastText}
+          progress={toastProgress}
+          color={primaryColor}
+          textColor={ON_ACCENT}
+        />
       </SafeAreaView>
     );
   }
@@ -645,6 +735,16 @@ export function FuelScreen() {
         >
           <Text style={styles.actionButtonText}>Decide for Me</Text>
         </TouchableOpacity>
+
+        {/* US34. Only on Eat Out, because Eat In never leaves the phone, and a
+            notice shown where nothing is collected teaches people the notices
+            mean nothing. */}
+        {mealType === "out" && (
+          <DataNotice>
+            Eat Out sends your location, or the area you type, to Google to find places near you.
+            Nothing identifying you goes with it.
+          </DataNotice>
+        )}
 
         {/* The phone would not give a position, so ask where they are rather
             than assuming a city. Only appears when location actually fails, so
@@ -797,12 +897,29 @@ const styles = StyleSheet.create({
   resultCardCustom: { width: "100%", padding: T.spacing[5], alignItems: "center", marginBottom: T.spacing[4] },
   avatarBadge: { width: 80, height: 80, borderRadius: 22, justifyContent: "center", alignItems: "center", marginBottom: T.spacing[4] },
   itemName: { fontFamily: T.font.bold, fontSize: T.fontSize.title, marginBottom: 4, textAlign: "center" },
-  cuisineType: { fontFamily: T.font.regular, fontSize: T.fontSize.body, marginBottom: T.spacing[5] },
+  identityBlock: { alignItems: "center", marginBottom: T.spacing[5] },
+  cuisineType: { fontFamily: T.font.regular, fontSize: T.fontSize.body },
   statsRow: { flexDirection: "row", width: "100%", gap: T.spacing[3] },
   statChip: { flex: 1, alignItems: "center", gap: 3, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 6 },
   statValue: { fontFamily: T.font.monoMedium, fontSize: T.fontSize.subtitle },
   ratingContainer: { flexDirection: "row", alignItems: "center", gap: 4 },
   attribution: { fontSize: 11, marginTop: 10, textAlign: "center" },
+  addressRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    marginTop: 6,
+  },
+  // Shrinks rather than grows, so a long address wraps inside the card instead
+  // of stretching the centred block to full width.
+  addressText: {
+    flexShrink: 1,
+    fontFamily: T.font.regular,
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: "center",
+  },
   locationNotice: { fontSize: 12, marginTop: 12, textAlign: "center", lineHeight: 17 },
   areaInput: { width: "100%", borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, marginTop: 14, fontSize: 15 },
   suggestionList: { width: "100%", borderWidth: 1, borderRadius: 12, marginTop: 8, overflow: "hidden" },

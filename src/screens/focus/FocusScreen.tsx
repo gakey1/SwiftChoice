@@ -18,16 +18,28 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { AmbientBackground } from "@/components/AmbientBackground";
 import { GlassCard } from "@/components/GlassCard";
 import { ModuleGlyph } from "@/components/ModuleGlyph";
-import { Icon } from "@/components/Icon";
+import { Icon, type IconName } from "@/components/Icon";
+import { DataNotice } from "@/components/DataNotice";
+import { spotIcon } from "@/features/focus/spotIcons";
+import { RewardToast, useRewardToast } from "@/components/RewardToast";
+import { useCelebration } from "@/components/Celebration";
 import { HUD_CLEARANCE } from "@/components/XpHud";
 import type { AppStackParamList } from "@/navigation/types";
 import { getCurrentPosition } from "@/services/location/locationService";
-import { getRainForecast } from "@/services/weather/weatherService";
+import { getOutdoorConditions } from "@/services/weather/weatherService";
+import {
+  conditionsAdvice,
+  conditionsSummary,
+  shouldShowConditions,
+  type Readings,
+  type SpotSetting,
+} from "@/services/weather/weatherAdvice";
 import {
   getFocusRecommendation,
   type FocusOption,
 } from "@/services/recommendation/recommendationEngine";
 import { logDecision } from "@/features/history/historyStorage";
+import { useDecisionStart } from "@/features/history/useDecisionStart";
 import { useProgress } from "@/features/progress/ProgressProvider";
 import { XP_PER_DECISION } from "@/features/progress/progress";
 import { moduleAccent, moduleDeep } from "@/theme/themes";
@@ -106,6 +118,9 @@ function FilterOptionGroup({
 }
 
 export function FocusScreen() {
+  // Start of this decision, for the Avg. decide figure on Home. Captured at
+  // first render and deliberately not reset by a reroll.
+  const decisionStartedAt = useDecisionStart();
   const { colors } = useTheme();
   const { progress, awardXp } = useProgress();
   const accent = moduleAccent(colors, "focus");
@@ -115,70 +130,87 @@ export function FocusScreen() {
 
   const [recommendation, setRecommendation] = useState<FocusOption | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const [matchList, setMatchList] = useState<FocusOption[]>([]);
-  // Only ever true when the spot is outside and rain is actually likely. Any
-  // failure along the way, no location or no forecast, leaves it false so the
-  // card shows nothing rather than a warning nobody can trust.
-  const [rainLikely, setRainLikely] = useState(false);
+  // The readings for an outdoor spot, or null. Null covers three cases that all
+  // want the same answer of showing nothing: the spot is indoors, the position
+  // is unknown, or the forecast could not be reached. A card that says nothing
+  // is always better than one that says something untrue about the weather.
+  const [conditions, setConditions] = useState<Readings | null>(null);
+
+  const { toastText, toastProgress, showToast } = useRewardToast();
+  const { celebrate } = useCelebration();
 
   const primaryColor = accent.color;
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
 
   // Runs when "Find My Spot" is pressed. Asks the engine for matching spots,
   // keeps the whole list so a reroll can show the next one, and shows the first.
-  function handleGetRecommendation() {
-    const randomizedList = getFocusRecommendation({
-      energyLevel,
-      vibe,
-    });
+  //
+  // Async since the engine started reading the saved pool instead of a list
+  // written into its own file. The wait is a local database read, so it is short,
+  // but the button is disabled while it runs rather than left looking dead.
+  async function handleGetRecommendation() {
+    setIsSearching(true);
 
-    if (randomizedList.length > 0) {
-      const firstChoice = randomizedList[0];
+    try {
+      const randomizedList = await getFocusRecommendation({
+        energyLevel,
+        vibe,
+      });
 
-      setMatchList(randomizedList);
+      if (randomizedList.length > 0) {
+        const firstChoice = randomizedList[0];
 
-      if (firstChoice) {
-        setRecommendation(firstChoice);
+        setMatchList(randomizedList);
+
+        if (firstChoice) {
+          setRecommendation(firstChoice);
+        }
+      } else {
+        setMatchList([]);
+        setRecommendation(null);
       }
-    } else {
-      setMatchList([]);
-      setRecommendation(null);
-    }
 
-    setHasRerolled(false);
-    setHasSearched(true);
+      setHasRerolled(false);
+      setHasSearched(true);
+    } finally {
+      setIsSearching(false);
+    }
   }
 
-  // Checks the forecast only when the spot on screen is outdoors. A library desk
-  // does not care about rain, and asking anyway would be a wasted call.
+  // Checks conditions for every spot, indoors included, because you still have
+  // to travel to a library and rain on the walk is worth knowing about. What
+  // differs is whether the answer is worth showing, which shouldShowConditions
+  // decides at render time.
   useEffect(() => {
     let active = true;
 
-    async function checkRain() {
-      if (recommendation?.outdoor !== true) {
-        setRainLikely(false);
+    async function checkConditions() {
+      if (recommendation === null) {
+        setConditions(null);
         return;
       }
 
       const position = await getCurrentPosition();
       if (!position.ok) {
-        // Without a position there is nothing to forecast for. Show no warning
-        // rather than guessing at a city, same rule as the Fuel search.
-        if (active) setRainLikely(false);
+        // Without a position there is nothing to look up. Show nothing rather
+        // than guessing at a city, same rule as the Fuel search.
+        if (active) setConditions(null);
         return;
       }
 
-      const forecast = await getRainForecast({
+      const result = await getOutdoorConditions({
         latitude: position.latitude,
         longitude: position.longitude,
       });
 
       if (active) {
-        setRainLikely(forecast.ok && forecast.rainLikely);
+        setConditions(result.ok ? result : null);
       }
     }
 
-    checkRain();
+    checkConditions();
 
     return () => {
       active = false;
@@ -199,11 +231,28 @@ export function FocusScreen() {
       if (nextItem) {
         setRecommendation(nextItem);
         setHasRerolled(true);
+        // Acknowledges the reroll, per the design. It matters here more than it
+        // looks: the card swaps in place, so without this the only sign anything
+        // happened is that the name changed, which is easy to miss.
+        showToast("Reroll used");
       }
     }
   }
 
   if (recommendation) {
+    // Drives both the wording and whether the strip shows at all. Anything not
+    // explicitly marked outdoor is treated as indoors, which is the safer of the
+    // two defaults: it under-shows rather than promising a forecast for a desk.
+    const spotSetting: SpotSetting = recommendation.outdoor === true ? "outdoor" : "indoor";
+    const settingText = spotSetting === "outdoor" ? "Outdoor" : "Indoor";
+    // Worked out once for the row rather than per chip, so the three values
+    // step down together. See statValueSize.
+    const statSize = statValueSize([
+      energyLabel(recommendation.energy_level),
+      vibeChipLabel(recommendation.vibe),
+      settingText,
+    ]);
+
     return (
       <SafeAreaView style={[styles.frame, { backgroundColor: colors.bg }]} edges={["top", "left", "right"]}>
         <AmbientBackground />
@@ -225,26 +274,61 @@ export function FocusScreen() {
           </View>
 
           <GlassCard style={styles.resultCardCustom}>
-            <View style={[styles.avatarBadge, { backgroundColor: accent.tint }]}>
-              <ModuleGlyph moduleKey="focus" size={36} color={primaryColor} />
-            </View>
+            {/* Conditions. This used to appear only when rain was likely at an
+                outdoor spot, which meant it was invisible almost every time and
+                could not be shown on purpose. It now appears whenever an outdoor
+                spot's readings arrived, and for an indoor spot when there is
+                something worth carrying on the way. Focus green is correct here:
+                this sits on a Focus screen, and the module-colour rule keeps
+                green off the other modules.
 
-            {/* Rain warning for outdoor spots, per the Arcade prototype. Focus
-                green is correct here: this sits on a Focus screen, and the
-                module-colour rule keeps green off the other modules. */}
-            {rainLikely && (
+                Sits above the glyph rather than below it: it is the thing that
+                changes whether you go, so it should be read before the spot is,
+                not as a footnote after it. */}
+            {conditions !== null && shouldShowConditions(conditions, spotSetting) && (
               <View
                 style={[
                   styles.weatherNotice,
                   { backgroundColor: accent.tint, borderColor: primaryColor },
                 ]}
               >
-                <Icon name="cloud-rain" size={18} color={primaryColor} />
-                <Text style={[styles.weatherNoticeText, { color: colors.ink2 }]}>
-                  Rain likely in the next hour. Consider an indoor spot, or take an umbrella.
-                </Text>
+                <Icon name={weatherIconName(conditions)} size={18} color={primaryColor} />
+                <View style={styles.weatherNoticeBody}>
+                  <Text style={[styles.weatherNoticeSummary, { color: colors.ink }]}>
+                    {conditionsSummary(conditions)}
+                  </Text>
+                  <Text style={[styles.weatherNoticeText, { color: colors.ink2 }]}>
+                    {conditionsAdvice(conditions, spotSetting)}
+                  </Text>
+                </View>
               </View>
             )}
+
+            {/* The spot's own picture, rather than the Focus module glyph that
+                used to sit here.
+
+                The glyph was saying nothing: the header above already reads
+                "Your Focus recommendation" and the whole screen is Focus green,
+                so it was the third statement of the module in one view, and
+                every spot arrived looking identical.
+
+                Per spot rather than per vibe, because the design has two silent
+                spots that look different, a library and a park bench, which no
+                rule based on vibe can produce. Drawn in Focus green as the glyph
+                was, so the module reading of the card is unchanged. */}
+            <View
+              style={[
+                styles.avatarBadge,
+                { backgroundColor: accent.tint, borderColor: primaryColor, shadowColor: primaryColor },
+              ]}
+              accessible
+              accessibilityRole="image"
+              // The icon now carries meaning, so it needs saying out loud. A
+              // decorative glyph would have been better left unlabelled.
+              accessibilityLabel={`${recommendation.spot_name}, ${vibeLabel(recommendation.vibe)}`}
+            >
+              <Icon name={spotIcon(recommendation.icon)} size={46} color={primaryColor} />
+            </View>
 
             <Text style={[styles.itemName, { color: colors.ink }]}>{recommendation.spot_name}</Text>
             <Text style={[styles.cuisineType, { color: colors.ink2 }]}>
@@ -254,23 +338,45 @@ export function FocusScreen() {
 
             <View style={styles.statsRow}>
               <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
-                <Text style={[styles.statValue, { color: primaryColor }]}>
+                <Text
+                  style={[styles.statValue, { color: primaryColor, fontSize: statSize }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
                   {energyLabel(recommendation.energy_level)}
                 </Text>
                 <Text style={[styles.statLabel, { color: colors.ink2 }]}>Energy</Text>
               </View>
 
               <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
-                <Text style={[styles.statValue, { color: colors.ink }]}>{vibeLabel(recommendation.vibe)}</Text>
+                <Text
+                  style={[styles.statValue, { color: primaryColor, fontSize: statSize }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
+                  {vibeChipLabel(recommendation.vibe)}
+                </Text>
                 <Text style={[styles.statLabel, { color: colors.ink2 }]}>Vibe</Text>
               </View>
 
+              {/* This chip used to show a rating. The figures behind it were
+                  typed into the code by hand, and neither the saved pool nor the
+                  proposal's FocusSpot has a rating field at all, so it was a
+                  number we invented.
+
+                  Indoor or outdoor replaces it because it is stored on every
+                  spot, needs nothing from the network, and answers the question
+                  the card otherwise raises: why some spots show the weather and
+                  others do not. */}
               <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
-                <View style={styles.ratingContainer}>
-                  <Text style={[styles.statValue, { color: colors.ink }]}>{recommendation.rating}</Text>
-                  <Icon name="star" size={13} color={primaryColor} />
-                </View>
-                <Text style={[styles.statLabel, { color: colors.ink2 }]}>Rating</Text>
+                <Text
+                  style={[styles.statValue, { color: primaryColor, fontSize: statSize }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
+                  {settingText}
+                </Text>
+                <Text style={[styles.statLabel, { color: colors.ink2 }]}>Setting</Text>
               </View>
             </View>
           </GlassCard>
@@ -294,12 +400,19 @@ export function FocusScreen() {
                     },
                   },
                   appliedFilters: { energyLevel, vibe },
+                  startedAt: decisionStartedAt,
                   rerolled: hasRerolled,
                 });
 
                 // Award the XP the History row and the Home quest pill both
                 // advertise, so the label and the running total agree.
                 awardXp(XP_PER_DECISION);
+
+                // Confetti for the decision, the same as Priority gives a
+                // completed task. The burst is owned above the navigator, so it
+                // survives the goBack() below rather than being unmounted with
+                // this screen.
+                celebrate();
 
                 setRecommendation(null);
                 navigation.goBack();
@@ -322,7 +435,23 @@ export function FocusScreen() {
               <Text style={[styles.rerollBtnText, { color: colors.ink }]}>Reroll</Text>
             </TouchableOpacity>
           </View>
+
+          {/* US34. Sits under Accept rather than after it, so it is read before
+              the copy is made and not as an announcement afterwards. */}
+          <DataNotice>
+            Accepting saves this to your history and copies it to your account, so it is there
+            when you sign in again.
+          </DataNotice>
         </View>
+
+        {/* Outside the scrolling content so it floats over the card rather than
+            pushing it, and last so it draws above everything. */}
+        <RewardToast
+          text={toastText}
+          progress={toastProgress}
+          color={primaryColor}
+          textColor={ON_ACCENT}
+        />
       </SafeAreaView>
     );
   }
@@ -380,12 +509,26 @@ export function FocusScreen() {
         />
 
         <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: primaryColor, shadowColor: primaryColor }]}
+          style={[
+            styles.actionButton,
+            { backgroundColor: primaryColor, shadowColor: primaryColor },
+            isSearching && styles.actionButtonBusy,
+          ]}
           onPress={handleGetRecommendation}
           activeOpacity={0.8}
+          disabled={isSearching}
         >
-          <Text style={styles.actionButtonText}>Find My Spot</Text>
+          <Text style={styles.actionButtonText}>
+            {isSearching ? "Finding your spot" : "Find My Spot"}
+          </Text>
         </TouchableOpacity>
+
+        {/* US34. Every recommendation, not only outdoor ones: the check runs
+            each time, and what changes is whether the answer is worth showing. */}
+        <DataNotice>
+          Checks the weather where you are, so we can say if you need a jacket or an umbrella.
+          Your location goes to a weather service. Nothing identifying you goes with it.
+        </DataNotice>
 
         {recommendation === null && hasSearched && (
           <View style={styles.noResultContainer}>
@@ -407,12 +550,71 @@ function energyLabel(value: EnergyLevel) {
   return "Medium";
 }
 
+// Picks the icon for the conditions strip. Rain outranks the sky code, because
+// the umbrella is the part someone acts on. Anything the map does not cover
+// falls back to the neutral cloud rather than claiming sunshine.
+function weatherIconName(readings: Readings): IconName {
+  if (readings.rainLikely) return "cloud-rain";
+  if (readings.weatherCode === 0 || readings.weatherCode === 1) return "sun";
+  if (readings.weatherCode >= 95) return "cloud-lightning";
+  if (readings.weatherCode >= 71 && readings.weatherCode <= 86) return "cloud-snow";
+  if (readings.weatherCode >= 51) return "cloud-drizzle";
+
+  return "cloud";
+}
+
 // Turns the stored vibe value into a word to show on screen.
 function vibeLabel(value: FocusVibe) {
   if (value === "silent") return "Silent";
   if (value === "collaborative") return "Collaborative";
 
   return "Background";
+}
+
+// The same vibe, worded for the stat chip rather than for a sentence.
+//
+// A chip is a third of the card wide, and "Collaborative" does not fit at the
+// size the other two chips use, so the row had to shrink to accommodate one
+// word and every value became hard to read. Short words let the row stay at
+// full size instead.
+//
+// The design does the same thing: its prototype puts the long word on the
+// filter and a single short word on the result chip. So the filter buttons and
+// the "Based on ... vibe" sentence keep the full label, where there is room for
+// it and the extra precision is worth having, and only the chip is shortened.
+function vibeChipLabel(value: FocusVibe) {
+  if (value === "silent") return "Silent";
+  if (value === "collaborative") return "Collab";
+
+  return "Ambient";
+}
+
+// One font size for all three stat chips, chosen from the longest label in the
+// row.
+//
+// adjustsFontSizeToFit shrinks each Text on its own, which is correct per word
+// and wrong for a row: "Collaborative" shrank to fit its chip while "Medium"
+// and "Outdoor" stayed at full size beside it, and the row read as a mistake
+// rather than as three labels of different lengths. Deciding the size for the
+// row means they all step down together, or none of them do.
+//
+// Since the vibe chip took short words, no label reaches 8 characters and this
+// returns the full size every time. It is kept because the alternative is an
+// invisible rule that a chip label must stay under eight characters, which the
+// next person to add a vibe or a setting would have no way of knowing. This way
+// a longer word costs a smaller row rather than a clipped word, and the steps
+// below say so out loud.
+//
+// The chips also keep adjustsFontSizeToFit underneath, as a backstop for a
+// narrower screen than the ones tested. There, losing the even row is a better
+// failure than losing the end of a word.
+function statValueSize(labels: string[]): number {
+  const longest = Math.max(...labels.map((label) => label.length));
+
+  if (longest <= 8) return T.fontSize.subtitle;
+  if (longest <= 10) return 13;
+
+  return 11;
 }
 
 const styles = StyleSheet.create({
@@ -497,6 +699,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   actionButtonText: { color: ON_ACCENT, fontFamily: T.font.bold, fontSize: T.fontSize.subtitle },
+  actionButtonBusy: { opacity: 0.6 },
   headerContainer: { alignItems: "center", marginBottom: T.spacing[4] },
   contextSubtitle: {
     fontFamily: T.font.regular,
@@ -509,13 +712,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: T.spacing[4],
   },
+  // A circle rather than a rounded square, sized and lit to match the design's
+  // result ring: tinted fill, a hairline of the module colour, and a glow of the
+  // same colour behind it.
+  //
+  // The glow is iOS only, deliberately. Android ignores the shadow properties
+  // and takes `elevation` instead, but it draws an elevation shadow from a
+  // polygon approximation of the view's outline, which on a circle this size is
+  // a visible octagon sitting around the icon. It read as a different shape on
+  // the two platforms rather than as a softer glow. Dropping `elevation` costs
+  // Android the halo and gives back the circle, which is the better trade: the
+  // halo was already untinted there, since Android has no shadow colour on
+  // views, so it was the least faithful part of the design on that platform
+  // even before the octagon.
   avatarBadge: {
-    width: 80,
-    height: 80,
-    borderRadius: 22,
+    width: 112,
+    height: 112,
+    borderRadius: 56,
+    borderWidth: 2,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: T.spacing[4],
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.45,
+    shadowRadius: 17,
   },
   itemName: {
     fontFamily: T.font.bold,
@@ -559,7 +779,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 12,
   },
-  weatherNoticeText: { flex: 1, fontSize: 12.5, lineHeight: 17.5 },
+  weatherNoticeBody: { flex: 1, gap: 2 },
+  weatherNoticeSummary: { fontFamily: T.font.bold, fontSize: 13, lineHeight: 18 },
+  weatherNoticeText: { fontSize: 12.5, lineHeight: 17.5 },
   rerollBtn: {
     flex: 1,
     flexDirection: "row",

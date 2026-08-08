@@ -5,6 +5,7 @@ import { getDb } from "@/services/localdb/db";
 
 export type FuelBudget = "$" | "$$" | "$$$";
 export type FuelPrepTime = "short" | "medium" | "long";
+export type FuelEffort = "Easy" | "Medium" | "Hard";
 export type FuelDistance = "near" | "mid" | "far";
 
 export interface FuelPoolItem {
@@ -12,6 +13,7 @@ export interface FuelPoolItem {
   name: string;
   budget: FuelBudget;
   prepTime: FuelPrepTime;
+  effort: FuelEffort;
   distance: FuelDistance;
 }
 
@@ -25,6 +27,7 @@ export async function getFuelPool(): Promise<FuelPoolItem[]> {
       name,
       budget,
       prep_time AS prepTime,
+      effort AS effort,
       distance
     FROM fuel_pool
     ORDER BY name`
@@ -36,6 +39,7 @@ export async function addFuelItem(
   name: string,
   budget: FuelBudget = "$$",
   prepTime: FuelPrepTime = "medium",
+  effort: FuelEffort = "Easy",
   distance: FuelDistance = "mid"
 ): Promise<void> {
   const trimmedName = name.trim();
@@ -47,7 +51,7 @@ export async function addFuelItem(
   const db = await getDb();
 
   await db.runAsync(
-    "INSERT INTO fuel_pool (name, budget, prep_time, distance) VALUES (?, ?, ?, ?)",
+    "INSERT INTO fuel_pool (name, budget, prep_time, effort, distance) VALUES (?, ?, ?, ?, ?)",
     [trimmedName, budget, prepTime, distance]
   );
 }
@@ -58,6 +62,7 @@ export async function updateFuelItem(
   name: string,
   budget: FuelBudget = "$$",
   prepTime: FuelPrepTime = "medium",
+  effort: FuelEffort = "Easy",
   distance: FuelDistance = "mid"
 ): Promise<void> {
   const trimmedName = name.trim();
@@ -69,7 +74,7 @@ export async function updateFuelItem(
   const db = await getDb();
 
   await db.runAsync(
-    "UPDATE fuel_pool SET name = ?, budget = ?, prep_time = ?, distance = ? WHERE id = ?",
+    "UPDATE fuel_pool SET name = ?, budget = ?, prep_time = ?, effort = ?, distance = ? WHERE id = ?",
     [trimmedName, budget, prepTime, distance, id]
   );
 }

@@ -3,7 +3,16 @@
 // the app's own record of the user. It is used to show their info and to link
 // their data to them later.
 
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  serverTimestamp,
+  setDoc,
+  writeBatch,
+} from "firebase/firestore";
 
 import { db } from "@/services/firebase";
 
@@ -66,7 +75,45 @@ export async function getBudgetTier(uid: string): Promise<BudgetTier | null> {
 }
 
 // Empties the remembered levels. Used by the tests so one case cannot carry a
-// value into the next one.
+// value into the next one, and by account deletion, so a level read before the
+// account went cannot be handed to whoever signs in next on this phone.
 export function clearBudgetTierCache(): void {
   tierCache.clear();
+}
+
+// Firestore commits at most 500 writes in one batch. Larger collections are
+// deleted in several batches, which are individually atomic but not atomic with
+// each other, so a failure part way through leaves some documents behind. That
+// is acceptable here only because deleting is repeatable: running it again
+// removes what is left and does nothing to what has already gone.
+const BATCH_LIMIT = 500;
+
+// Deletes every decision saved to this user's account (US33). Firestore has no
+// "delete this collection" call at any tier, because a collection is not a real
+// object, just the shape left by documents existing at a path. So the documents
+// are listed and removed, and the collection stops existing once the last one does.
+//
+// Returns how many were deleted, so the caller can say something true about what
+// happened rather than guessing.
+export async function deleteAllDecisions(uid: string): Promise<number> {
+  const snapshot = await getDocs(collection(db, "users", uid, "decisions"));
+  const documents = snapshot.docs;
+
+  for (let start = 0; start < documents.length; start += BATCH_LIMIT) {
+    const batch = writeBatch(db);
+    for (const document of documents.slice(start, start + BATCH_LIMIT)) {
+      batch.delete(document.ref);
+    }
+    await batch.commit();
+  }
+
+  return documents.length;
+}
+
+// Deletes the user's own profile document, which holds their id, email, sign-up
+// date and budget level. Runs after the decisions, because the parent document
+// going first would leave that subcollection with no visible owner while it is
+// still being read from.
+export async function deleteUserDocument(uid: string): Promise<void> {
+  await deleteDoc(doc(db, "users", uid));
 }

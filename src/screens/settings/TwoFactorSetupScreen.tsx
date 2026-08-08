@@ -175,15 +175,15 @@ export function TwoFactorSetupScreen({
           </View>
         ) : null}
 
+        {/* Deliberately short. An earlier version explained the same-device
+            limit across two paragraphs and read as a disclaimer, which buried
+            the three enrolment options underneath it. The scope claim still has
+            to be here and has to be accurate (D-012), so it is kept as the last
+            sentence rather than dropped. */}
         <Text style={[styles.body, { color: colors.ink2 }]}>
-          Adds a six-digit code from an authenticator app when you sign in on
-          this phone. The code changes every 30 seconds and is worked out on the
-          device, so it keeps working with no signal.
-        </Text>
-        <Text style={[styles.body, { color: colors.ink2 }]}>
-          It protects sign-ins on this phone only. Signing in on a different
-          phone is not asked for a code, because the key is kept in the secure
-          storage on this phone and is not copied anywhere.
+          Asks for a six-digit code from an authenticator app when you sign in
+          on this phone. Codes change every 30 seconds and work with no signal.
+          This covers this phone only, because the key never leaves it.
         </Text>
 
         {loading ? (
@@ -204,8 +204,14 @@ export function TwoFactorSetupScreen({
             <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>
               STEP 1, ADD THE KEY
             </Text>
+            {/* The three options are separated by an explicit "or" because
+                without one they read as a sequence: scan the square, then press
+                the button, then type the key. Everybody on the team read it
+                that way and missed the one-tap handoff entirely, assuming it
+                was something that happened after scanning. */}
             <Text style={[styles.body, { color: colors.ink2 }]}>
-              Use whichever of these three suits the phone you are on.
+              Any one of these three will do it. Pick the one that suits the
+              phone you are on.
             </Text>
 
             {/* The square is always black on white, whatever the theme is
@@ -226,6 +232,8 @@ export function TwoFactorSetupScreen({
               </Text>
             </View>
 
+            <Text style={[styles.or, { color: colors.ink3 }]}>or</Text>
+
             <View style={styles.action}>
               <Button variant="outline" onPress={() => void handleOpenInAuthenticator()}>
                 Open in your authenticator app
@@ -241,8 +249,11 @@ export function TwoFactorSetupScreen({
               </Text>
             ) : null}
 
+            <Text style={[styles.or, { color: colors.ink3 }]}>or</Text>
+
             <Text style={[styles.body, { color: colors.ink2 }]}>
-              Or add an account by entering a key, and type this in.
+              In your authenticator app, add an account by entering a key, and
+              type this in.
             </Text>
             <Text style={[styles.secret, { color: colors.ink }]} testID="totp-secret">
               {groupSecret(pendingSecret)}
@@ -384,6 +395,15 @@ const styles = StyleSheet.create({
     fontSize: T.fontSize.caption,
     marginTop: T.spacing[2],
     marginBottom: T.spacing[2],
+  },
+  // Sits between the three enrolment options. Centred and quiet on purpose: it
+  // is a separator, not a heading, and it should read as the word between two
+  // choices rather than as another instruction.
+  or: {
+    fontFamily: T.font.regular,
+    fontSize: T.fontSize.caption,
+    textAlign: "center",
+    marginVertical: T.spacing[2],
   },
   demo: {
     borderWidth: 1,

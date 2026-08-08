@@ -5,12 +5,18 @@
 
 import {
   fetchNearbyPlaces,
+  readableAddress,
   fetchPlacesByArea,
   MissingPlacesKeyError,
   type GooglePlaceResult,
 } from "./googlePlaces";
 import { getCurrentPosition } from "@/services/location/locationService";
+import {
+  getFocusRecommendationPool,
+  type FocusPoolItem,
+} from "@/features/focus/focusPoolStorage";
 import { distanceMeters } from "./openStreetMapPlaces";
+import { getFuelRecommendationPool } from "@/features/fuel/fuelPoolStorage";
 
 // Define what a Food Option choice looks like.
 export interface FoodOption {
@@ -20,6 +26,7 @@ export interface FoodOption {
   type: "in" | "out";
   budget_level: "$" | "$$" | "$$$";
   prep_time: "short" | "medium" | "long";
+  effort: "Easy" | "Medium" | "Hard";
   distance_range: "near" | "mid" | "far";
   rating: string;
   // How far the place actually is from where the search ran, in metres. Only
@@ -31,30 +38,24 @@ export interface FoodOption {
   // phone's position. The screen shows it, so a result is never presented as
   // nearby when it came from a typed area rather than real location.
   searched_area?: string | undefined;
+  // The street address, for live Eat Out results only. A distance alone tells
+  // you how far but not which way, so this is what makes a result actionable.
+  // Undefined for pool items, which have no address, and for places Google holds
+  // no address for.
+  address?: string | undefined;
 }
 
 // The mock Fuel pool used by the Eat In recommendation flow.
 export const FOOD_POOL: FoodOption[] = [
-  { fuel_id: "in_1", user_id: "user_123", item_name: "Home-cooked Instant Noodles", type: "in", budget_level: "$", prep_time: "short", distance_range: "near", rating: "4.0" },
-  { fuel_id: "in_2", user_id: "user_123", item_name: "Microwave Fried Rice", type: "in", budget_level: "$", prep_time: "short", distance_range: "mid", rating: "3.8" },
-  { fuel_id: "in_3", user_id: "user_123", item_name: "Toasted Cheese Sandwich", type: "in", budget_level: "$", prep_time: "short", distance_range: "far", rating: "4.2" },
-  { fuel_id: "in_4", user_id: "user_123", item_name: "Gourmet Homemade Pasta", type: "in", budget_level: "$$", prep_time: "medium", distance_range: "near", rating: "4.5" },
-  { fuel_id: "in_5", user_id: "user_123", item_name: "Avocado Toast with Poached Egg", type: "in", budget_level: "$$", prep_time: "medium", distance_range: "mid", rating: "4.4" },
-  { fuel_id: "in_6", user_id: "user_123", item_name: "Creamy Chicken Alfredo", type: "in", budget_level: "$$", prep_time: "medium", distance_range: "far", rating: "4.6" },
-  { fuel_id: "in_7", user_id: "user_123", item_name: "Slow-roasted Home BBQ", type: "in", budget_level: "$$$", prep_time: "long", distance_range: "near", rating: "4.8" },
-  { fuel_id: "in_8", user_id: "user_123", item_name: "Traditional Beef Stew", type: "in", budget_level: "$$$", prep_time: "long", distance_range: "mid", rating: "4.7" },
-  { fuel_id: "in_9", user_id: "user_123", item_name: "Oven-Baked Salmon Dinner", type: "in", budget_level: "$$$", prep_time: "long", distance_range: "far", rating: "4.9" },
-  { fuel_id: "out_1", user_id: "user_123", item_name: "Local Fast Food Drive-thru", type: "out", budget_level: "$", prep_time: "short", distance_range: "near", rating: "3.5" },
-  { fuel_id: "out_2", user_id: "user_123", item_name: "Corner Bakery Pastries", type: "out", budget_level: "$", prep_time: "short", distance_range: "mid", rating: "3.9" },
-  { fuel_id: "out_3", user_id: "user_123", item_name: "Train Station Kebab Stand", type: "out", budget_level: "$", prep_time: "short", distance_range: "far", rating: "4.0" },
-  { fuel_id: "out_4", user_id: "user_123", item_name: "Cozy Neighborhood Cafe", type: "out", budget_level: "$$", prep_time: "medium", distance_range: "near", rating: "4.2" },
-  { fuel_id: "out_5", user_id: "user_123", item_name: "Downtown Sushi Train", type: "out", budget_level: "$$", prep_time: "medium", distance_range: "mid", rating: "4.3" },
-  { fuel_id: "out_5_b", user_id: "user_123", item_name: "Thai Fusion Express", type: "out", budget_level: "$$", prep_time: "medium", distance_range: "mid", rating: "4.5" },
-  { fuel_id: "out_5_c", user_id: "user_123", item_name: "Hakata Ramen Tavern", type: "out", budget_level: "$$", prep_time: "medium", distance_range: "mid", rating: "4.2" },
-  { fuel_id: "out_6", user_id: "user_123", item_name: "Authentic Pizzeria", type: "out", budget_level: "$$", prep_time: "medium", distance_range: "far", rating: "4.5" },
-  { fuel_id: "out_7", user_id: "user_123", item_name: "City Center Steakhouse", type: "out", budget_level: "$$$", prep_time: "long", distance_range: "far", rating: "5.0" },
-  { fuel_id: "out_8", user_id: "user_123", item_name: "Boutique Fine Dining Bistro", type: "out", budget_level: "$$$", prep_time: "long", distance_range: "near", rating: "4.8" },
-  { fuel_id: "out_9", user_id: "user_123", item_name: "Premium Teppanyaki Grill", type: "out", budget_level: "$$$", prep_time: "long", distance_range: "mid", rating: "4.9" },
+  { fuel_id: "in_1", user_id: "user_123", item_name: "Home-cooked Instant Noodles", type: "in", budget_level: "$", prep_time: "short", effort: "Easy", distance_range: "near", rating: "4.0" },
+  { fuel_id: "in_2", user_id: "user_123", item_name: "Microwave Fried Rice", type: "in", budget_level: "$", prep_time: "short", effort: "Easy", distance_range: "mid", rating: "3.8" },
+  { fuel_id: "in_3", user_id: "user_123", item_name: "Toasted Cheese Sandwich", type: "in", budget_level: "$", prep_time: "short", effort: "Easy", distance_range: "far", rating: "4.2" },
+  { fuel_id: "in_4", user_id: "user_123", item_name: "Gourmet Homemade Pasta", type: "in", budget_level: "$$", prep_time: "medium", effort: "Medium", distance_range: "near", rating: "4.5" },
+  { fuel_id: "in_5", user_id: "user_123", item_name: "Avocado Toast with Poached Egg", type: "in", budget_level: "$$", prep_time: "medium", effort: "Medium", distance_range: "mid", rating: "4.4" },
+  { fuel_id: "in_6", user_id: "user_123", item_name: "Creamy Chicken Alfredo", type: "in", budget_level: "$$", prep_time: "medium", effort: "Medium", distance_range: "far", rating: "4.6" },
+  { fuel_id: "in_7", user_id: "user_123", item_name: "Slow-roasted Home BBQ", type: "in", budget_level: "$$$", prep_time: "long", effort: "Hard", distance_range: "near", rating: "4.8" },
+  { fuel_id: "in_8", user_id: "user_123", item_name: "Traditional Beef Stew", type: "in", budget_level: "$$$", prep_time: "long", effort: "Hard", distance_range: "mid", rating: "4.7" },
+  { fuel_id: "in_9", user_id: "user_123", item_name: "Oven-Baked Salmon Dinner", type: "in", budget_level: "$$$", prep_time: "long", effort: "Hard", distance_range: "far", rating: "4.9" },
 ];
 
 // Define the filter criteria matching the FuelScreen states.
@@ -85,7 +86,6 @@ export interface FilterCriteria {
  * Places API structure (mocked for now). Both paths return the matching set in
  * a randomly shuffled order.
  */
-
 // Returned when Eat Out has no way to know where the user is: the phone would
 // not give a position and no area was typed in. The screen asks for an area
 // rather than guessing a city, because a guess would show somebody in Queensland
@@ -125,14 +125,37 @@ function priceLevelToSymbol(level: string | undefined): "$" | "$$" | "$$$" | nul
 }
 
 // Helper to map UI tiers ('budget', 'moderate', 'premium') to database symbols ('$', '$$', '$$$')
-function mapTierToSymbol(tierOrSymbol: string): "$" | "$$" | "$$$" {
-  if (tierOrSymbol === 'budget') return '$';
-  if (tierOrSymbol === 'moderate') return '$$';
-  if (tierOrSymbol === 'premium') return '$$$';
+function mapTierToSymbol(tierOrSymbol: string | undefined): "$" | "$$" | "$$$" {
+  // If undefined or empty, return a safe default fallback
+  if (!tierOrSymbol) {
+    return '$$';
+  }
+
   if (tierOrSymbol === '$' || tierOrSymbol === '$$' || tierOrSymbol === '$$$') {
     return tierOrSymbol;
   }
+
+  // If it's a dynamic range string (e.g. "$15 - $22" or custom ranges)
+  if (tierOrSymbol.includes('-')) {
+    // Look at the lower bound of the range to determine the tier
+    const cleanLower = tierOrSymbol.split('-')[0]!.replace('$', '').trim();
+    const lowVal = parseInt(cleanLower, 10);
+
+    // Dynamic thresholds based on your scaling
+    if (lowVal < 30) return '$';    // Lower tier range
+    if (lowVal < 50) return '$$';   // Moderate tier range
+    return '$$$';                   // Premium / High tier range
+  }
+
+  if (tierOrSymbol === 'budget') return '$';
+  if (tierOrSymbol === 'moderate') return '$$';
+  if (tierOrSymbol === 'premium') return '$$$';
+  /*if (tierOrSymbol === '$' || tierOrSymbol === '$$' || tierOrSymbol === '$$$') {
+    return tierOrSymbol;
+  }
   return '$$'; // Default fallback
+  */
+ return '$$'; // Default fallback
 }
 export async function getRecommendation(
   criteria: FilterCriteria
@@ -142,15 +165,40 @@ export async function getRecommendation(
 
   // Pathway A: Eat In. Filter the local pool by budget and prep time.
   if (criteria.type === "in") {
-    const matchingOptions = FOOD_POOL.filter((food) => {
+    const localPool = await getFuelRecommendationPool();
+
+    let resolvedPrepTime: "short" | "medium" | "long" = "short";
+    const rawPrep = String(criteria.prepTime);
+    
+    if (rawPrep.includes("15") && rawPrep.includes("30")) {
+      resolvedPrepTime = "medium";
+    } else if (rawPrep.includes("30+") || rawPrep.includes("long")) {
+      resolvedPrepTime = "long";
+    } else {
+      resolvedPrepTime = "short";
+    }
+    
+    const matchingOptions = localPool.filter((food) => {
       return (
-        food.type === "in" &&
-        food.budget_level === resolvedBudget &&
-        food.prep_time === criteria.prepTime
+        food.budget === resolvedBudget &&
+        food.prepTime === resolvedPrepTime
       );
     });
 
-    return shuffleOptions(matchingOptions);
+    // Map SQLite fields to match the FoodOption interface structure if needed
+    const formattedOptions: FoodOption[] = matchingOptions.map((item) => ({
+      fuel_id: `local_${item.id}`,
+      user_id: "user_123",
+      item_name: item.name,
+      type: "in",
+      budget_level: item.budget,
+      prep_time: item.prepTime,
+      effort: item.effort || "Easy",
+      distance_range: item.distance,
+      rating: "4.5", // Default rating for home-cooked meals
+    }));
+
+    return shuffleOptions(formattedOptions);
   }
 
   // Pathway B: Eat Out. Skip the local pool and ask Google Places for real
@@ -223,11 +271,15 @@ export async function getRecommendation(
         // user asked for. Never a made-up figure.
         budget_level: placeBudget ?? resolvedBudget,
         prep_time: criteria.prepTime,
+        effort: "Easy",
         distance_range: criteria.distance ?? "near",
         // Empty means Google holds no rating for this place. The screen hides
         // the rating chip rather than showing a zero or an invented score.
         rating: place.rating === undefined ? "" : place.rating.toFixed(1),
         searched_area: positionFromDevice ? undefined : typedArea,
+        // Straight from Google, never assembled by us. An address we composed
+        // could send somebody to the wrong building.
+        address: readableAddress(place),
         // Measured whenever there is a centre to measure from, which now
         // includes an area chosen off the list. Only a freehand area with no
         // coordinates behind it leaves this unset, and that card falls back to
@@ -258,18 +310,29 @@ export async function getRecommendation(
 // Define what a Focus option looks like.
 export interface FocusOption {
   focus_id: string;
-  user_id: string;
+  user_id?: string | undefined;
   spot_name: string;
   energy_level: "low" | "medium" | "high";
   vibe: "silent" | "background" | "collaborative";
-  rating: string;
-  // Whether the spot is outside. Only outdoor spots get the rain warning, since
-  // the forecast is irrelevant to a library desk. The real pool will need this
-  // field too when it replaces the list below.
+  // Optional because the saved pool has no rating column, and the proposal's
+  // FocusSpot never had one either. The figures on the fallback list below were
+  // written by hand, so a spot from the pool shows no rating rather than one we
+  // made up.
+  rating?: string | undefined;
+  // Whether the spot is outside. Only outdoor spots get the conditions strip,
+  // since the weather is irrelevant to a library desk.
   outdoor?: boolean | undefined;
+  // The picture the result card shows, stored on the spot. Optional because the
+  // fallback list below carries none, and validated by spotIcon() before use.
+  icon?: string | undefined;
 }
 
-// Temporary Focus pool used until the real pool is connected.
+// Fallback list, used only when the saved pool cannot be read.
+//
+// The saved pool is the real source now. This stays because a database that
+// fails to open would otherwise leave the module with nothing to recommend, and
+// a demo that shows a spot is better than one that shows an error. It is not
+// reached in normal use.
 export const FOCUS_POOL: FocusOption[] = [
   { focus_id: "focus_1", user_id: "user_123", spot_name: "Quiet Library Desk", energy_level: "low", vibe: "silent", rating: "4.8" },
   { focus_id: "focus_2", user_id: "user_123", spot_name: "Home Study Corner", energy_level: "low", vibe: "background", rating: "4.2" },
@@ -290,16 +353,57 @@ export interface FocusCriteria {
   vibe: "silent" | "background" | "collaborative";
 }
 
+// Turns a saved pool row into the shape the Focus screen already renders.
+//
+// The pool stores an integer id, so it is stringified here to match the rest of
+// the app, where a decision's focus_id is a string. No rating is set, because
+// the pool holds none.
+function toFocusOption(item: FocusPoolItem): FocusOption {
+  return {
+    focus_id: String(item.id),
+    spot_name: item.name,
+    energy_level: item.energy,
+    vibe: item.vibe,
+    outdoor: item.outdoor,
+    icon: item.icon,
+  };
+}
+
 // Filters the Focus pool by energy and vibe, then returns shuffled matches.
-export function getFocusRecommendation(criteria: FocusCriteria): FocusOption[] {
-  const matchingOptions = FOCUS_POOL.filter((spot) => {
-    return (
-      spot.energy_level === criteria.energyLevel &&
-      spot.vibe === criteria.vibe
-    );
+//
+// Reads the saved pool rather than a list written into this file, so a spot
+// somebody adds is a spot the module can recommend. Async for that reason: the
+// pool is on-device SQLite, and the read has to finish before there is anything
+// to filter.
+export async function getFocusRecommendation(
+  criteria: FocusCriteria
+): Promise<FocusOption[]> {
+  const spots = await readFocusSpots();
+
+  const matchingOptions = spots.filter((spot) => {
+    return spot.energy_level === criteria.energyLevel && spot.vibe === criteria.vibe;
   });
 
   return shuffleOptions(matchingOptions);
+}
+
+// Reads the saved pool, falling back to the built-in list if the database will
+// not answer. A failure here is not the user's problem to solve, so it is warned
+// about and worked around rather than surfaced as an error on the screen.
+async function readFocusSpots(): Promise<FocusOption[]> {
+  try {
+    const saved = await getFocusRecommendationPool();
+
+    if (saved.length > 0) {
+      return saved.map(toFocusOption);
+    }
+
+    console.warn("Focus pool came back empty. Using the built-in list.");
+  } catch (error) {
+    console.warn("Could not read the Focus pool. Using the built-in list.", error);
+  }
+
+  return FOCUS_POOL;
 }
 
 // Small shared shuffle helper used by the Fuel and Focus recommendations.

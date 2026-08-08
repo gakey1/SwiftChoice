@@ -1,9 +1,24 @@
-// Tests for the rain forecast. The network is stubbed, so these check what is
-// ours: that the right question is asked, that the threshold behaves at its
-// edges, and above all that every failure reports "unavailable" rather than
-// letting a wrong warning reach the user.
+// Tests for the outdoor conditions lookup. The network is stubbed, so these
+// check what is ours: that the right question is asked, that units are pinned,
+// that the rain threshold behaves at its edges, and above all that every failure
+// reports "unavailable" rather than letting a wrong claim reach the user.
 
-import { getRainForecast, RAIN_LIKELY_PERCENT } from "./weatherService";
+import { getOutdoorConditions, RAIN_LIKELY_PERCENT } from "./weatherService";
+
+const CURRENT = {
+  temperature_2m: 17.4,
+  apparent_temperature: 15.1,
+  weather_code: 2,
+  wind_speed_10m: 12,
+};
+
+function payload(overrides: { hourly?: unknown; current?: unknown } = {}) {
+  return {
+    hourly: { precipitation_probability: [10] },
+    current: CURRENT,
+    ...overrides,
+  };
+}
 
 function mockFetchOnce(body: unknown, ok = true) {
   const spy = jest.fn(async (_url: string) => ({ ok, json: async () => body }));
@@ -13,54 +28,119 @@ function mockFetchOnce(body: unknown, ok = true) {
 
 const MELBOURNE = { latitude: -37.8136, longitude: 144.9631 };
 
-describe("getRainForecast", () => {
-  it("asks only for the next hour's chance of rain at the given point", () => {
-    const spy = mockFetchOnce({ hourly: { precipitation_probability: [10] } });
+describe("getOutdoorConditions", () => {
+  it("asks one request for the present readings and the next hour's chance of rain", async () => {
+    const spy = mockFetchOnce(payload());
 
-    return getRainForecast(MELBOURNE).then(() => {
-      const url = String(spy.mock.calls[0]?.[0]);
-      expect(url).toContain("latitude=-37.8136");
-      expect(url).toContain("longitude=144.9631");
-      expect(url).toContain("hourly=precipitation_probability");
-      // One hour only. Asking for a longer forecast would be data we never use.
-      expect(url).toContain("forecast_hours=1");
+    await getOutdoorConditions(MELBOURNE);
+
+    // One call, not two. The two blocks come back together, and splitting them
+    // would double the requests for no extra information.
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    const url = String(spy.mock.calls[0]?.[0]);
+    expect(url).toContain("latitude=-37.8136");
+    expect(url).toContain("longitude=144.9631");
+    // Probability is published hourly, not as a current reading, so both blocks
+    // are needed to answer the whole question.
+    expect(url).toContain("hourly=precipitation_probability");
+    expect(url).toContain("current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m");
+    // One hour only. Asking for a longer forecast would be data we never use.
+    expect(url).toContain("forecast_hours=1");
+  });
+
+  it("pins the units, so an upstream default cannot silently change them", async () => {
+    const spy = mockFetchOnce(payload());
+
+    await getOutdoorConditions(MELBOURNE);
+
+    const url = String(spy.mock.calls[0]?.[0]);
+    expect(url).toContain("temperature_unit=celsius");
+    expect(url).toContain("wind_speed_unit=kmh");
+  });
+
+  it("returns every reading, rounded by the caller rather than here", async () => {
+    mockFetchOnce(payload());
+
+    await expect(getOutdoorConditions(MELBOURNE)).resolves.toEqual({
+      ok: true,
+      temperatureC: 17.4,
+      feelsLikeC: 15.1,
+      rainChancePercent: 10,
+      rainLikely: false,
+      weatherCode: 2,
+      windKph: 12,
     });
   });
 
   it("calls rain likely at the threshold and above", async () => {
-    mockFetchOnce({ hourly: { precipitation_probability: [RAIN_LIKELY_PERCENT] } });
-    await expect(getRainForecast(MELBOURNE)).resolves.toEqual({
-      ok: true,
+    mockFetchOnce(payload({ hourly: { precipitation_probability: [RAIN_LIKELY_PERCENT] } }));
+    await expect(getOutdoorConditions(MELBOURNE)).resolves.toMatchObject({
       rainLikely: true,
-      probabilityPercent: RAIN_LIKELY_PERCENT,
+      rainChancePercent: RAIN_LIKELY_PERCENT,
     });
 
-    mockFetchOnce({ hourly: { precipitation_probability: [95] } });
-    await expect(getRainForecast(MELBOURNE)).resolves.toMatchObject({ rainLikely: true });
+    mockFetchOnce(payload({ hourly: { precipitation_probability: [95] } }));
+    await expect(getOutdoorConditions(MELBOURNE)).resolves.toMatchObject({ rainLikely: true });
   });
 
   it("does not call rain likely below the threshold", async () => {
-    // A warning on a merely cloudy day teaches people to ignore it.
-    mockFetchOnce({ hourly: { precipitation_probability: [RAIN_LIKELY_PERCENT - 1] } });
-    await expect(getRainForecast(MELBOURNE)).resolves.toMatchObject({ rainLikely: false });
+    // Advice on a merely cloudy day teaches people to ignore it.
+    mockFetchOnce(payload({ hourly: { precipitation_probability: [RAIN_LIKELY_PERCENT - 1] } }));
+    await expect(getOutdoorConditions(MELBOURNE)).resolves.toMatchObject({ rainLikely: false });
 
-    mockFetchOnce({ hourly: { precipitation_probability: [0] } });
-    await expect(getRainForecast(MELBOURNE)).resolves.toMatchObject({ rainLikely: false });
+    mockFetchOnce(payload({ hourly: { precipitation_probability: [0] } }));
+    await expect(getOutdoorConditions(MELBOURNE)).resolves.toMatchObject({ rainLikely: false });
   });
 
   it("reports unavailable when the service errors, rather than throwing", async () => {
     mockFetchOnce({}, false);
-    await expect(getRainForecast(MELBOURNE)).resolves.toEqual({ ok: false, reason: "unavailable" });
+    await expect(getOutdoorConditions(MELBOURNE)).resolves.toEqual({
+      ok: false,
+      reason: "unavailable",
+    });
   });
 
-  it("reports unavailable when the answer has no forecast in it", async () => {
-    mockFetchOnce({ hourly: {} });
-    await expect(getRainForecast(MELBOURNE)).resolves.toEqual({ ok: false, reason: "unavailable" });
+  it("reports unavailable when the answer has no rain forecast in it", async () => {
+    mockFetchOnce(payload({ hourly: {} }));
+    await expect(getOutdoorConditions(MELBOURNE)).resolves.toEqual({
+      ok: false,
+      reason: "unavailable",
+    });
   });
 
-  it("reports unavailable when the forecast value is not a number", async () => {
-    mockFetchOnce({ hourly: { precipitation_probability: ["heavy"] } });
-    await expect(getRainForecast(MELBOURNE)).resolves.toEqual({ ok: false, reason: "unavailable" });
+  it("reports unavailable when a current reading is missing", async () => {
+    // Half a reading on the card would be worse than none, so a partial answer
+    // is treated as no answer.
+    mockFetchOnce(payload({ current: { temperature_2m: 17.4, weather_code: 2, wind_speed_10m: 12 } }));
+    await expect(getOutdoorConditions(MELBOURNE)).resolves.toEqual({
+      ok: false,
+      reason: "unavailable",
+    });
+  });
+
+  it("reports unavailable when the current block is absent entirely", async () => {
+    mockFetchOnce({ hourly: { precipitation_probability: [10] } });
+    await expect(getOutdoorConditions(MELBOURNE)).resolves.toEqual({
+      ok: false,
+      reason: "unavailable",
+    });
+  });
+
+  it("reports unavailable when a value is not a number", async () => {
+    mockFetchOnce(payload({ hourly: { precipitation_probability: ["heavy"] } }));
+    await expect(getOutdoorConditions(MELBOURNE)).resolves.toEqual({
+      ok: false,
+      reason: "unavailable",
+    });
+  });
+
+  it("rejects NaN, which survives a typeof check and then poisons comparisons", async () => {
+    mockFetchOnce(payload({ current: { ...CURRENT, apparent_temperature: NaN } }));
+    await expect(getOutdoorConditions(MELBOURNE)).resolves.toEqual({
+      ok: false,
+      reason: "unavailable",
+    });
   });
 
   it("reports unavailable when the network throws, so no caller needs a catch", async () => {
@@ -68,6 +148,9 @@ describe("getRainForecast", () => {
       throw new Error("offline");
     });
 
-    await expect(getRainForecast(MELBOURNE)).resolves.toEqual({ ok: false, reason: "unavailable" });
+    await expect(getOutdoorConditions(MELBOURNE)).resolves.toEqual({
+      ok: false,
+      reason: "unavailable",
+    });
   });
 });

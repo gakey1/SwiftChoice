@@ -96,6 +96,80 @@ describe("getCurrentPosition", () => {
     expect(result).toEqual({ ok: true, latitude: -37.81, longitude: 144.96 });
   });
 
+  // The tier that exists so a slightly old position beats no position. The
+  // mock answers by age: nothing recent enough for the fast path, something
+  // within the wider last-resort window.
+  const RECENT_WINDOW_MS = 5 * 60 * 1000;
+  function cacheOnlyHasAnOlderFix() {
+    mockLastKnown.mockImplementation(async (options: { maxAge: number }) =>
+      options.maxAge > RECENT_WINDOW_MS
+        ? { coords: { latitude: -37.911247, longitude: 145.35714 } }
+        : null
+    );
+  }
+
+  it("uses an older cached fix rather than giving up when no fresh fix arrives", async () => {
+    mockRequest.mockResolvedValue({ granted: true });
+    cacheOnlyHasAnOlderFix();
+    mockGetPosition.mockRejectedValue(new Error("location unavailable"));
+
+    const result = await getCurrentPosition();
+
+    expect(result).toEqual({
+      ok: true,
+      latitude: -37.911247,
+      longitude: 145.35714,
+      stale: true,
+    });
+  });
+
+  it("marks an older fix as stale so callers do not present it as the current position", async () => {
+    // The flag is the whole point of the tier: a position that may be a suburb
+    // out must not be shown as "near you" without saying so.
+    mockRequest.mockResolvedValue({ granted: true });
+    cacheOnlyHasAnOlderFix();
+    mockGetPosition.mockRejectedValue(new Error("location unavailable"));
+
+    const result = await getCurrentPosition();
+
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.stale).toBe(true);
+  });
+
+  it("prefers a fresh fix over an older cached one, and does not mark it stale", async () => {
+    mockRequest.mockResolvedValue({ granted: true });
+    cacheOnlyHasAnOlderFix();
+    mockGetPosition.mockResolvedValue({ coords: { latitude: -37.81, longitude: 144.96 } });
+
+    const result = await getCurrentPosition();
+
+    // No stale key at all, not merely a falsy one: the ordinary paths keep the
+    // shape they have always had.
+    expect(result).toEqual({ ok: true, latitude: -37.81, longitude: 144.96 });
+  });
+
+  it("still reports unavailable when there is no fix at any age", async () => {
+    // Guards against the older tier turning a genuine "we do not know" into a
+    // confident answer. Nothing cached, nothing fresh, so the screen must ask.
+    mockRequest.mockResolvedValue({ granted: true });
+    mockLastKnown.mockResolvedValue(null);
+    mockGetPosition.mockRejectedValue(new Error("location unavailable"));
+
+    const result = await getCurrentPosition();
+
+    expect(result).toEqual({ ok: false, reason: "unavailable" });
+  });
+
+  it("reports unavailable when reading the older fix throws as well", async () => {
+    mockRequest.mockResolvedValue({ granted: true });
+    mockLastKnown.mockRejectedValue(new Error("cache unavailable"));
+    mockGetPosition.mockRejectedValue(new Error("location unavailable"));
+
+    const result = await getCurrentPosition();
+
+    expect(result).toEqual({ ok: false, reason: "unavailable" });
+  });
+
   it("gives up rather than waiting forever for a fix that never arrives", async () => {
     // The defect this guards. With no time limit the call waits as long as the
     // operating system takes, which indoors or on an emulator with no location

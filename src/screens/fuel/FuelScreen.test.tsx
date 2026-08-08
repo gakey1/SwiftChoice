@@ -11,6 +11,16 @@ import { XP_PER_DECISION } from "@/features/progress/progress";
 // Stub the native icon sets so this test does not pull in expo-font / expo-asset,
 // which are not resolvable under Jest. Both sets are stubbed because the screen's
 // module glyph uses MaterialCommunityIcons and its other icons use Feather.
+// Her engine now reads the saved Fuel pool, which reaches expo-sqlite through
+// fuelPoolStorage. Mocked so this screen test does not pull that chain in: the
+// suite otherwise fails to LOAD, with a "Cannot find module 'expo-asset'" error
+// that names neither this screen nor the engine. Sixth time this trap has
+// appeared (MC-007), and the tell is always the same, a suite count that drops
+// rather than a test going red.
+jest.mock("@/features/fuel/fuelPoolStorage", () => ({
+  getFuelRecommendationPool: jest.fn(async () => []),
+}));
+
 jest.mock("@expo/vector-icons", () => ({ Feather: "Feather", MaterialCommunityIcons: "MaterialCommunityIcons" }));
 
 // Mock the navigation hooks this screen uses. useFocusEffect is included because
@@ -32,6 +42,14 @@ jest.mock("@/features/history/historyStorage", () => ({
   logDecision: jest.fn(),
 }));
 
+// The engine reads the saved Focus pool, which reaches expo-sqlite, and there is
+// no native module for it under Jest. Fuel never touches the Focus pool, so this
+// only exists to stop the import chain failing to load. Same pattern as the
+// history mock above, and the same one that produced MC-007.
+jest.mock("@/features/focus/focusPoolStorage", () => ({
+  getFocusRecommendationPool: jest.fn(async () => []),
+}));
+
 // Stand in for the live Google Places call and the device GPS, so the Eat Out
 // path returns a predictable result instead of failing on a missing key. Without
 // this the engine falls into its catch, the screen shows the empty state, and
@@ -50,6 +68,10 @@ jest.mock("@/services/recommendation/googlePlaces", () => ({
   // pass the test while the real screen showed the wrong message.
   MissingPlacesKeyError: jest.requireActual("@/services/recommendation/googlePlaces")
     .MissingPlacesKeyError,
+  // Also the real one. It is pure, and the engine calls it on every live place,
+  // so a stand-in returning undefined would quietly drop the address off every
+  // card while every other assertion still passed.
+  readableAddress: jest.requireActual("@/services/recommendation/googlePlaces").readableAddress,
   fetchAreaSuggestions: jest.fn(async () => [
     { placeId: "belgrave-id", label: "Belgrave VIC 3160, Australia" },
   ]),
@@ -60,6 +82,8 @@ jest.mock("@/services/recommendation/googlePlaces", () => ({
       rating: 4.4,
       priceLevel: "PRICE_LEVEL_MODERATE",
       location: { latitude: -37.8045, longitude: 144.9 },
+      shortFormattedAddress: "120 Swanston St, Melbourne",
+      formattedAddress: "120 Swanston St, Melbourne VIC 3000, Australia",
     },
   ]),
   fetchPlacesByArea: jest.fn(async () => [
@@ -126,6 +150,23 @@ describe("FuelScreen", () => {
 
     //Confirms the component handles interaction event smoothly
     expect(eatInButton).toBeTruthy();
+  });
+
+  it("says a location goes to Google on Eat Out", async () => {
+    // US34. Eat Out is the default mode, so this is visible on arrival.
+    const { getByText } = await renderFuelScreen();
+
+    expect(getByText(/sends your location, or the area you type, to Google/i)).toBeTruthy();
+  });
+
+  it("shows no such notice on Eat In, where nothing leaves the phone", async () => {
+    // A notice where nothing is collected teaches people that the notices mean
+    // nothing, which costs us the ones that matter.
+    const { getByText, queryByText } = await renderFuelScreen();
+
+    fireEvent.press(getByText("Eat In"));
+
+    expect(queryByText(/to Google/i)).toBeNull();
   });
 
   it("starts from the budget saved in settings", async () => {
@@ -322,5 +363,55 @@ describe("formatDistance", () => {
 
   it("names the band rather than inventing a figure when nothing was measured", () => {
     expect(formatDistance({ distance_meters: undefined, distance_range: "mid" })).toBe("Mid");
+  });
+});
+
+// The street address on the result card, added on Tracy's suggestion. A distance
+// tells you how far but not which way, so this is what makes an Eat Out result
+// something you can act on.
+describe("FuelScreen address", () => {
+  it("shows the street address on a live place", async () => {
+    const { getByText, findByText } = await renderFuelScreen();
+
+    fireEvent.press(getByText("Decide for Me"));
+    await findByText("Test Cafe", {}, { timeout: 3000 });
+
+    // The short form, which is the one that fits the card.
+    expect(await findByText("120 Swanston St, Melbourne")).toBeTruthy();
+  });
+
+  it("puts the address with the place name, above the stat chips", async () => {
+    // Position is the point: the address answers "which place is this", so it
+    // belongs with the name rather than down among the numbers. Nothing else
+    // would catch it drifting back below them.
+    const { getByText, findByText, toJSON } = await renderFuelScreen();
+
+    fireEvent.press(getByText("Decide for Me"));
+    await findByText("Test Cafe", {}, { timeout: 3000 });
+
+    const tree = JSON.stringify(toJSON());
+    expect(tree.indexOf("Test Cafe")).toBeLessThan(tree.indexOf("120 Swanston St"));
+    expect(tree.indexOf("120 Swanston St")).toBeLessThan(tree.indexOf("Budget"));
+  });
+
+  it("shows no address row when Google holds none", async () => {
+    // Real records genuinely lack one. A placeholder would take the same space
+    // as a real address and tell you less than showing nothing.
+    const { fetchNearbyPlaces } = jest.requireMock("@/services/recommendation/googlePlaces");
+    fetchNearbyPlaces.mockResolvedValueOnce([
+      {
+        displayName: { text: "Nameless Diner" },
+        rating: 4.1,
+        priceLevel: "PRICE_LEVEL_MODERATE",
+        location: { latitude: -37.8045, longitude: 144.9 },
+      },
+    ]);
+
+    const { getByText, findByText, queryByText } = await renderFuelScreen();
+
+    fireEvent.press(getByText("Decide for Me"));
+    await findByText("Nameless Diner", {}, { timeout: 3000 });
+
+    expect(queryByText(/Swanston/)).toBeNull();
   });
 });

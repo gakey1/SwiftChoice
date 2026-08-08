@@ -11,6 +11,8 @@ import type { BudgetTier } from "@/services/firestore/users";
 import { loadPreferences, savePreferences } from "@/services/localdb/preferencesStorage";
 import { useTheme } from "@/theme/ThemeProvider";
 import { moduleDeep } from "@/theme/themes";
+import { T } from "@/theme/tokens";
+
 
 export function BudgetSurveyScreen() {
   const { colors } = useTheme();
@@ -50,15 +52,15 @@ export function BudgetSurveyScreen() {
       <AmbientBackground />
       <Text style={[styles.title, { color: colors.ink }]}>Personalize Your Budget</Text>
       <Text style={[styles.subtitle, { color: colors.ink2 }]}>
-        What feels like a reasonable amount to spend on a normal meal?
+        What is your typical meal budget?
       </Text>
 
       <View style={styles.optionContainer}>
         {(['budget', 'moderate', 'premium'] as const).map((tier) => {
           const isSelected = selectedTier === tier;
           const labelText = 
-            tier === 'budget' ? 'Under $15 (Budget-friendly)' :
-            tier === 'moderate' ? '$15 to $35 (Moderate)' : 'Over $35 (Premium)';
+            tier === 'budget' ? '$10' :
+            tier === 'moderate' ? '$25' : '$45';
 
           return (
             <TouchableOpacity
@@ -76,11 +78,20 @@ export function BudgetSurveyScreen() {
         })}
       </View>
 
+      {/* Continue button */}
       <TouchableOpacity 
         style={[styles.continueButton, { backgroundColor: moduleDeep('fuel') }]}
         onPress={handleSave}
       >
         <Text style={styles.continueButtonText}>Continue</Text>
+      </TouchableOpacity>
+
+      {/* Skip button */}
+      <TouchableOpacity 
+        style={styles.skipButton} 
+        onPress={() => navigation.goBack()}
+      >
+        <Text style={[styles.skipButtonText, { color: colors.ink2 }]}>Skip for now</Text>
       </TouchableOpacity>
     </View>
   );
@@ -95,4 +106,13 @@ const styles = StyleSheet.create({
   optionText: { fontSize: 16, fontWeight: '600' },
   continueButton: { padding: 16, borderRadius: 12, alignItems: 'center' },
   continueButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
+  skipButton: {
+    marginTop: T.spacing[4],
+    alignItems: "center",
+    padding: T.spacing[2],
+  },
+  skipButtonText: {
+    fontFamily: T.font.medium,
+    fontSize: T.fontSize.body,
+  },
 });

@@ -31,7 +31,10 @@ import { GameIcon } from "@/components/GameIcon";
 import { GlassCard } from "@/components/GlassCard";
 import { Icon } from "@/components/Icon";
 import { HUD_CLEARANCE } from "@/components/XpHud";
+import { useCelebration } from "@/components/Celebration";
 import type { AppStackParamList } from "@/navigation/types";
+import { logDecision } from "@/features/history/historyStorage";
+import { useDecisionStart } from "@/features/history/useDecisionStart";
 import { coreAchievements, earnedFirst } from "@/features/progress/achievements";
 import { capFor, levelTitle, xpFraction } from "@/features/progress/progress";
 import { useProgress } from "@/features/progress/ProgressProvider";
@@ -68,8 +71,6 @@ const BADGE: Record<Level, { fg: string; tint: string }> = {
 };
 
 // Colours the confetti draws from (module + accent colours, no emoji).
-const CONFETTI_COLORS = ["priority", "teal", "fuel", "focus"] as const;
-
 export function PriorityScreen() {
   const { colors } = useTheme();
   const accent = moduleAccent(colors, "priority");
@@ -85,6 +86,9 @@ export function PriorityScreen() {
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
   const [isRanking, setIsRanking] = useState<boolean>(false); // New state to track if ranking is in progress
   const [rankingReasons, setRankingReasons] = useState<string[]>([]); // New state to hold AI reasons
+
+  // Start of this decision, for the Avg. decide figure on Home.
+  const decisionStartedAt = useDecisionStart();
 
   // ----- Tracy's logic (kept verbatim) -----
   const addTask = () => {
@@ -127,7 +131,6 @@ export function PriorityScreen() {
   // ----- Gamification: shared progress via context, feedback via local state -----
   const { progress, awardXp, bumpCompleted, markRanked } = useProgress();
   const [mascotMsg, setMascotMsg] = useState<string>("Let's decide what's next.");
-  const [confettiKey, setConfettiKey] = useState<number>(0);
 
   // Animated values live in state (lazy init) so they are stable across renders
   // and safe to read during render, unlike a ref.
@@ -162,10 +165,9 @@ export function PriorityScreen() {
     [toastAnim]
   );
 
-  // Fires a confetti burst by bumping the key, which remounts the overlay.
-  const celebrate = useCallback(() => {
-    setConfettiKey((k) => k + 1);
-  }, []);
+  // The confetti burst now lives above the navigator, so one implementation
+  // serves Priority, Fuel and Focus instead of this screen keeping its own.
+  const { celebrate } = useCelebration();
 
   // Animate the XP bar to match the shared progress whenever it changes (from
   // this screen or anywhere else that awards XP).
@@ -223,6 +225,7 @@ export function PriorityScreen() {
   };
 
   const onComplete = (taskId: number) => {
+    const task = taskList.find((t) => t.taskId === taskId);
     const updatedList = taskList.filter((t) => t.taskId !== taskId);
 
     setTaskList(updatedList);
@@ -230,6 +233,33 @@ export function PriorityScreen() {
     bumpCompleted();
     reward(30, "Done. One less decision.");
     celebrate();
+
+    // Record it in the decision history, the same as accepting a meal or a
+    // study spot. Priority was the only module that never did this, so finishing
+    // a task earned XP but left no trace on the History screen and was missing
+    // from the Home count, which made the totals disagree with each other.
+    //
+    // Completing the top task is this module's version of accepting a
+    // recommendation: the ranking is the recommendation, and doing the task is
+    // the acceptance. Not awaited, and failure is swallowed, because losing the
+    // history row must never cost somebody the XP and the animation they have
+    // already been shown.
+    if (task) {
+      void logDecision({
+        moduleType: "priority",
+        taskId: String(task.taskId),
+        itemSnapshot: {
+          name: task.taskName,
+          details: { urgency: task.urgency, importance: task.importance },
+        },
+        appliedFilters: { ranked: isRanked },
+        startedAt: decisionStartedAt,
+        // Priority has no reroll, so this is always false rather than unknown.
+        rerolled: false,
+      }).catch(() => {
+        // History unavailable is not a reason to fail a completed task.
+      });
+    }
   };
 
   // Deleting a task cannot be undone and the delete button sits right next to
@@ -609,7 +639,6 @@ export function PriorityScreen() {
       </View>
 
       {/* Reward overlays */}
-      <ConfettiOverlay key={confettiKey} trigger={confettiKey} colors={colors} />
       {toastText !== "" && (
         <Animated.View
           pointerEvents="none"
@@ -696,79 +725,6 @@ function LevelBadge({ kind, level }: { kind: string; level: Level }) {
     <View style={[styles.levelBadge, { backgroundColor: palette.tint }]}>
       <Text style={[styles.levelBadgeKind, { color: palette.fg }]}>{kind} </Text>
       <Text style={[styles.levelBadgeValue, { color: palette.fg }]}>{level}</Text>
-    </View>
-  );
-}
-
-// A one-shot confetti burst. It mounts a set of coloured squares and animates
-// them falling, then leaves them faded out. Remounting (via a changing key)
-// starts a fresh burst. Built from plain Views + Animated, no extra library.
-function ConfettiOverlay({
-  trigger,
-  colors,
-}: {
-  trigger: number;
-  colors: ReturnType<typeof useTheme>["colors"];
-}) {
-  const [particles] = useState(() =>
-    Array.from({ length: 14 }, (_, i) => ({
-      anim: new Animated.Value(0),
-      left: 8 + Math.random() * 84,
-      size: 6 + Math.random() * 6,
-      drift: Math.random() * 120 - 60,
-      rotate: Math.random() * 360,
-      colorKey: CONFETTI_COLORS[i % CONFETTI_COLORS.length] as (typeof CONFETTI_COLORS)[number],
-      round: Math.random() > 0.5,
-    }))
-  );
-
-  React.useEffect(() => {
-    if (trigger === 0) return undefined;
-    const animations = particles.map((p) => {
-      p.anim.setValue(0);
-      return Animated.timing(p.anim, {
-        toValue: 1,
-        duration: 1100 + Math.random() * 500,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
-      });
-    });
-    const composite = Animated.parallel(animations);
-    composite.start();
-    // Stop the burst if the overlay unmounts before it finishes.
-    return () => composite.stop();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trigger]);
-
-  if (trigger === 0) return null;
-
-  return (
-    <View pointerEvents="none" style={styles.confettiLayer}>
-      {particles.map((p, i) => (
-        <Animated.View
-          key={i}
-          style={{
-            position: "absolute",
-            left: `${p.left}%`,
-            top: 90,
-            width: p.size,
-            height: p.size * 1.4,
-            borderRadius: p.round ? 999 : 2,
-            backgroundColor: colors[p.colorKey],
-            opacity: p.anim.interpolate({ inputRange: [0, 0.8, 1], outputRange: [1, 1, 0] }),
-            transform: [
-              { translateY: p.anim.interpolate({ inputRange: [0, 1], outputRange: [0, 460] }) },
-              { translateX: p.anim.interpolate({ inputRange: [0, 1], outputRange: [0, p.drift] }) },
-              {
-                rotate: p.anim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: ["0deg", `${p.rotate + 360}deg`],
-                }),
-              },
-            ],
-          }}
-        />
-      ))}
     </View>
   );
 }
@@ -937,7 +893,6 @@ const styles = StyleSheet.create({
   rankButtonText: { fontFamily: T.font.bold, fontSize: T.fontSize.subtitle, color: "#FFFFFF" },
 
   // Overlays
-  confettiLayer: { position: "absolute", left: 0, right: 0, top: 0, bottom: 0 },
   toast: {
     position: "absolute",
     top: 150,
