@@ -11,6 +11,7 @@ import {
 } from "./googlePlaces";
 import { getCurrentPosition } from "@/services/location/locationService";
 import { distanceMeters } from "./openStreetMapPlaces";
+import { getFuelRecommendationPool } from "@/features/fuel/fuelPoolStorage";
 
 // Define what a Food Option choice looks like.
 export interface FoodOption {
@@ -20,6 +21,7 @@ export interface FoodOption {
   type: "in" | "out";
   budget_level: "$" | "$$" | "$$$";
   prep_time: "short" | "medium" | "long";
+  effort: "Easy" | "Medium" | "Hard";
   distance_range: "near" | "mid" | "far";
   rating: string;
   // How far the place actually is from where the search ran, in metres. Only
@@ -35,26 +37,15 @@ export interface FoodOption {
 
 // The mock Fuel pool used by the Eat In recommendation flow.
 export const FOOD_POOL: FoodOption[] = [
-  { fuel_id: "in_1", user_id: "user_123", item_name: "Home-cooked Instant Noodles", type: "in", budget_level: "$", prep_time: "short", distance_range: "near", rating: "4.0" },
-  { fuel_id: "in_2", user_id: "user_123", item_name: "Microwave Fried Rice", type: "in", budget_level: "$", prep_time: "short", distance_range: "mid", rating: "3.8" },
-  { fuel_id: "in_3", user_id: "user_123", item_name: "Toasted Cheese Sandwich", type: "in", budget_level: "$", prep_time: "short", distance_range: "far", rating: "4.2" },
-  { fuel_id: "in_4", user_id: "user_123", item_name: "Gourmet Homemade Pasta", type: "in", budget_level: "$$", prep_time: "medium", distance_range: "near", rating: "4.5" },
-  { fuel_id: "in_5", user_id: "user_123", item_name: "Avocado Toast with Poached Egg", type: "in", budget_level: "$$", prep_time: "medium", distance_range: "mid", rating: "4.4" },
-  { fuel_id: "in_6", user_id: "user_123", item_name: "Creamy Chicken Alfredo", type: "in", budget_level: "$$", prep_time: "medium", distance_range: "far", rating: "4.6" },
-  { fuel_id: "in_7", user_id: "user_123", item_name: "Slow-roasted Home BBQ", type: "in", budget_level: "$$$", prep_time: "long", distance_range: "near", rating: "4.8" },
-  { fuel_id: "in_8", user_id: "user_123", item_name: "Traditional Beef Stew", type: "in", budget_level: "$$$", prep_time: "long", distance_range: "mid", rating: "4.7" },
-  { fuel_id: "in_9", user_id: "user_123", item_name: "Oven-Baked Salmon Dinner", type: "in", budget_level: "$$$", prep_time: "long", distance_range: "far", rating: "4.9" },
-  { fuel_id: "out_1", user_id: "user_123", item_name: "Local Fast Food Drive-thru", type: "out", budget_level: "$", prep_time: "short", distance_range: "near", rating: "3.5" },
-  { fuel_id: "out_2", user_id: "user_123", item_name: "Corner Bakery Pastries", type: "out", budget_level: "$", prep_time: "short", distance_range: "mid", rating: "3.9" },
-  { fuel_id: "out_3", user_id: "user_123", item_name: "Train Station Kebab Stand", type: "out", budget_level: "$", prep_time: "short", distance_range: "far", rating: "4.0" },
-  { fuel_id: "out_4", user_id: "user_123", item_name: "Cozy Neighborhood Cafe", type: "out", budget_level: "$$", prep_time: "medium", distance_range: "near", rating: "4.2" },
-  { fuel_id: "out_5", user_id: "user_123", item_name: "Downtown Sushi Train", type: "out", budget_level: "$$", prep_time: "medium", distance_range: "mid", rating: "4.3" },
-  { fuel_id: "out_5_b", user_id: "user_123", item_name: "Thai Fusion Express", type: "out", budget_level: "$$", prep_time: "medium", distance_range: "mid", rating: "4.5" },
-  { fuel_id: "out_5_c", user_id: "user_123", item_name: "Hakata Ramen Tavern", type: "out", budget_level: "$$", prep_time: "medium", distance_range: "mid", rating: "4.2" },
-  { fuel_id: "out_6", user_id: "user_123", item_name: "Authentic Pizzeria", type: "out", budget_level: "$$", prep_time: "medium", distance_range: "far", rating: "4.5" },
-  { fuel_id: "out_7", user_id: "user_123", item_name: "City Center Steakhouse", type: "out", budget_level: "$$$", prep_time: "long", distance_range: "far", rating: "5.0" },
-  { fuel_id: "out_8", user_id: "user_123", item_name: "Boutique Fine Dining Bistro", type: "out", budget_level: "$$$", prep_time: "long", distance_range: "near", rating: "4.8" },
-  { fuel_id: "out_9", user_id: "user_123", item_name: "Premium Teppanyaki Grill", type: "out", budget_level: "$$$", prep_time: "long", distance_range: "mid", rating: "4.9" },
+  { fuel_id: "in_1", user_id: "user_123", item_name: "Home-cooked Instant Noodles", type: "in", budget_level: "$", prep_time: "short", effort: "Easy", distance_range: "near", rating: "4.0" },
+  { fuel_id: "in_2", user_id: "user_123", item_name: "Microwave Fried Rice", type: "in", budget_level: "$", prep_time: "short", effort: "Easy", distance_range: "mid", rating: "3.8" },
+  { fuel_id: "in_3", user_id: "user_123", item_name: "Toasted Cheese Sandwich", type: "in", budget_level: "$", prep_time: "short", effort: "Easy", distance_range: "far", rating: "4.2" },
+  { fuel_id: "in_4", user_id: "user_123", item_name: "Gourmet Homemade Pasta", type: "in", budget_level: "$$", prep_time: "medium", effort: "Medium", distance_range: "near", rating: "4.5" },
+  { fuel_id: "in_5", user_id: "user_123", item_name: "Avocado Toast with Poached Egg", type: "in", budget_level: "$$", prep_time: "medium", effort: "Medium", distance_range: "mid", rating: "4.4" },
+  { fuel_id: "in_6", user_id: "user_123", item_name: "Creamy Chicken Alfredo", type: "in", budget_level: "$$", prep_time: "medium", effort: "Medium", distance_range: "far", rating: "4.6" },
+  { fuel_id: "in_7", user_id: "user_123", item_name: "Slow-roasted Home BBQ", type: "in", budget_level: "$$$", prep_time: "long", effort: "Hard", distance_range: "near", rating: "4.8" },
+  { fuel_id: "in_8", user_id: "user_123", item_name: "Traditional Beef Stew", type: "in", budget_level: "$$$", prep_time: "long", effort: "Hard", distance_range: "mid", rating: "4.7" },
+  { fuel_id: "in_9", user_id: "user_123", item_name: "Oven-Baked Salmon Dinner", type: "in", budget_level: "$$$", prep_time: "long", effort: "Hard", distance_range: "far", rating: "4.9" },
 ];
 
 // Define the filter criteria matching the FuelScreen states.
@@ -85,7 +76,6 @@ export interface FilterCriteria {
  * Places API structure (mocked for now). Both paths return the matching set in
  * a randomly shuffled order.
  */
-
 // Returned when Eat Out has no way to know where the user is: the phone would
 // not give a position and no area was typed in. The screen asks for an area
 // rather than guessing a city, because a guess would show somebody in Queensland
@@ -125,14 +115,37 @@ function priceLevelToSymbol(level: string | undefined): "$" | "$$" | "$$$" | nul
 }
 
 // Helper to map UI tiers ('budget', 'moderate', 'premium') to database symbols ('$', '$$', '$$$')
-function mapTierToSymbol(tierOrSymbol: string): "$" | "$$" | "$$$" {
-  if (tierOrSymbol === 'budget') return '$';
-  if (tierOrSymbol === 'moderate') return '$$';
-  if (tierOrSymbol === 'premium') return '$$$';
+function mapTierToSymbol(tierOrSymbol: string | undefined): "$" | "$$" | "$$$" {
+  // If undefined or empty, return a safe default fallback
+  if (!tierOrSymbol) {
+    return '$$';
+  }
+
   if (tierOrSymbol === '$' || tierOrSymbol === '$$' || tierOrSymbol === '$$$') {
     return tierOrSymbol;
   }
+
+  // If it's a dynamic range string (e.g. "$15 - $22" or custom ranges)
+  if (tierOrSymbol.includes('-')) {
+    // Look at the lower bound of the range to determine the tier
+    const cleanLower = tierOrSymbol.split('-')[0]!.replace('$', '').trim();
+    const lowVal = parseInt(cleanLower, 10);
+
+    // Dynamic thresholds based on your scaling
+    if (lowVal < 30) return '$';    // Lower tier range
+    if (lowVal < 50) return '$$';   // Moderate tier range
+    return '$$$';                   // Premium / High tier range
+  }
+
+  if (tierOrSymbol === 'budget') return '$';
+  if (tierOrSymbol === 'moderate') return '$$';
+  if (tierOrSymbol === 'premium') return '$$$';
+  /*if (tierOrSymbol === '$' || tierOrSymbol === '$$' || tierOrSymbol === '$$$') {
+    return tierOrSymbol;
+  }
   return '$$'; // Default fallback
+  */
+ return '$$'; // Default fallback
 }
 export async function getRecommendation(
   criteria: FilterCriteria
@@ -142,15 +155,40 @@ export async function getRecommendation(
 
   // Pathway A: Eat In. Filter the local pool by budget and prep time.
   if (criteria.type === "in") {
-    const matchingOptions = FOOD_POOL.filter((food) => {
+    const localPool = await getFuelRecommendationPool();
+
+    let resolvedPrepTime: "short" | "medium" | "long" = "short";
+    const rawPrep = String(criteria.prepTime);
+    
+    if (rawPrep.includes("15") && rawPrep.includes("30")) {
+      resolvedPrepTime = "medium";
+    } else if (rawPrep.includes("30+") || rawPrep.includes("long")) {
+      resolvedPrepTime = "long";
+    } else {
+      resolvedPrepTime = "short";
+    }
+    
+    const matchingOptions = localPool.filter((food) => {
       return (
-        food.type === "in" &&
-        food.budget_level === resolvedBudget &&
-        food.prep_time === criteria.prepTime
+        food.budget === resolvedBudget &&
+        food.prepTime === resolvedPrepTime
       );
     });
 
-    return shuffleOptions(matchingOptions);
+    // Map SQLite fields to match the FoodOption interface structure if needed
+    const formattedOptions: FoodOption[] = matchingOptions.map((item) => ({
+      fuel_id: `local_${item.id}`,
+      user_id: "user_123",
+      item_name: item.name,
+      type: "in",
+      budget_level: item.budget,
+      prep_time: item.prepTime,
+      effort: item.effort || "Easy",
+      distance_range: item.distance,
+      rating: "4.5", // Default rating for home-cooked meals
+    }));
+
+    return shuffleOptions(formattedOptions);
   }
 
   // Pathway B: Eat Out. Skip the local pool and ask Google Places for real
@@ -223,6 +261,7 @@ export async function getRecommendation(
         // user asked for. Never a made-up figure.
         budget_level: placeBudget ?? resolvedBudget,
         prep_time: criteria.prepTime,
+        effort: "Easy",
         distance_range: criteria.distance ?? "near",
         // Empty means Google holds no rating for this place. The screen hides
         // the rating chip rather than showing a zero or an invented score.

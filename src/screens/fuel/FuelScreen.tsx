@@ -158,6 +158,7 @@ export function getBudgetRanges(tier: string | null): TierRanges {
 }
 
 export function FuelScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { colors } = useTheme();
   const { progress, awardXp } = useProgress();
   const accent = moduleAccent(colors, "fuel");
@@ -172,6 +173,7 @@ export function FuelScreen() {
   // are rather than the app assuming a city they may be nowhere near.
   const [manualArea, setManualArea] = useState<string>("");
   const [needsArea, setNeedsArea] = useState<boolean>(false);
+  const [isCheckingBudget, setIsCheckingBudget] = useState(true);
 
   // Re-loads the saved budget level every time the screen comes into focus, so
   // changing it in Settings shows here without restarting the app.
@@ -182,28 +184,37 @@ export function FuelScreen() {
       async function loadBudgetPreference() {
         try {
           const savedTier = await loadPreferences();
-          if (active && savedTier.defaultBudget) {
-            setUserTier(savedTier.defaultBudget);
+          if (!active) return;
 
-            if (savedTier.defaultBudget === 'budget') {
-              setBudget('$');
-            } else if (savedTier.defaultBudget === 'moderate') {
-              setBudget('$$');
-            } else if (savedTier.defaultBudget === 'premium') {
-              setBudget('$$$');
-            }
+          // Check if the budget is missing, empty, or unconfigured ("None set")
+          if (!savedTier.defaultBudget || savedTier.defaultBudget === "None set") {
+            navigation.replace("BudgetSurvey");
+            return;
           }
+
+          setUserTier(savedTier.defaultBudget);
+          if (savedTier.defaultBudget === 'budget') {
+              setBudget('$');
+          } else if (savedTier.defaultBudget === 'moderate') {
+              setBudget('$$');
+          } else if (savedTier.defaultBudget === 'premium') {
+              setBudget('$$$');
+          }
+
+          // Only show the Fuel screen UI once we know a budget exists
+          setIsCheckingBudget(false);
         } catch (error) {
           console.error("Failed to load user budget tier", error);
+          setIsCheckingBudget(false);
         }
       }
 
-      loadBudgetPreference();
+      void loadBudgetPreference();
 
       return () => {
         active = false;
       };
-    }, [])
+    }, [navigation])
   );
   // Get the dynamic labels based on the tier
   const budgetRanges = getBudgetRanges(userTier);
@@ -232,7 +243,6 @@ export function FuelScreen() {
   const [matchList, setMatchList] = useState<FoodOption[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const primaryColor = accent.color;
-  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
 
   // Runs on every keystroke in the area box. Asks Google for matching areas and
   // shows them, so the user picks a real place instead of typing a name we then
@@ -394,6 +404,14 @@ export function FuelScreen() {
     }
   };
 
+  if (isCheckingBudget) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.bg }}>
+        <AmbientBackground />
+      </View>
+    );
+  }
+
   // === VIEW 1: SHOW THE RESULT CARD MANUALLY IF MATCH IS FOUND ===
   if (recommendation) {
     // The measured distance from where the search ran, when we have it. Live
@@ -433,26 +451,45 @@ export function FuelScreen() {
               </Text>
 
               <View style={styles.statsRow}>
-                <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
-                  <Text style={[styles.statValue, { color: primaryColor }]}>{recommendation.budget_level}</Text>
-                  <Text style={[styles.statLabel, { color: colors.ink2 }]}>Budget</Text>
-                </View>
-
-                <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
-                  <Text style={[styles.statValue, { color: colors.ink }]}>{distanceText}</Text>
-                  <Text style={[styles.statLabel, { color: colors.ink2 }]}>Distance</Text>
-                </View>
-
-                {/* Google holds no rating for some real places. Show nothing
-                    rather than a zero or an invented score. */}
-                {recommendation.rating !== "" && (
+                {recommendation.type === "in" ? (
+                  <>
                   <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
-                    <View style={styles.ratingContainer}>
-                      <Text style={[styles.statValue, { color: colors.ink }]}>{recommendation.rating}</Text>
-                      <Icon name="star" size={13} color={primaryColor} />
+                      <Text style={[styles.statValue, { color: primaryColor }]}>{recommendation.budget_level}</Text>
+                      <Text style={[styles.statLabel, { color: colors.ink2 }]}>Budget</Text>
                     </View>
-                    <Text style={[styles.statLabel, { color: colors.ink2 }]}>Rating</Text>
+                    <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
+                      <Text style={[styles.statValue, { color: colors.ink }]}>15 min</Text>
+                      <Text style={[styles.statLabel, { color: colors.ink2 }]}>Prep</Text>
+                    </View>
+                    <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
+                      <Text style={[styles.statValue, { color: colors.ink }]}>Easy</Text>
+                      <Text style={[styles.statLabel, { color: colors.ink2 }]}>Effort</Text>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
+                      <Text style={[styles.statValue, { color: primaryColor }]}>{recommendation.budget_level}</Text>
+                      <Text style={[styles.statLabel, { color: colors.ink2 }]}>Budget</Text>
+                    </View>
+
+                  <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
+                    <Text style={[styles.statValue, { color: colors.ink }]}>{distanceText}</Text>
+                    <Text style={[styles.statLabel, { color: colors.ink2 }]}>Distance</Text>
                   </View>
+
+                  {/* Google holds no rating for some real places. Show nothing
+                    rather than a zero or an invented score. */}
+                  {recommendation.rating !== "" && (
+                    <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
+                      <View style={styles.ratingContainer}>
+                        <Text style={[styles.statValue, { color: colors.ink }]}>{recommendation.rating}</Text>
+                        <Icon name="star" size={13} color={primaryColor} />
+                      </View>
+                      <Text style={[styles.statLabel, { color: colors.ink2 }]}>Rating</Text>
+                    </View>
+                  )}
+                  </>
                 )}
               </View>
 

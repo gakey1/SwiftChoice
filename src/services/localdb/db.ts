@@ -41,8 +41,9 @@ async function initialiseDatabase(): Promise<SQLite.SQLiteDatabase> {
     CREATE TABLE IF NOT EXISTS fuel_pool (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
-      budget TEXT NOT NULL DEFAULT '$$',
-      prep_time TEXT NOT NULL DEFAULT 'medium',
+      budget TEXT NOT NULL,
+      prep_time TEXT NOT NULL,
+      effort TEXT NOT NULL DEFAULT 'Easy',
       distance TEXT NOT NULL DEFAULT 'mid'
     );
 
@@ -69,6 +70,29 @@ async function initialiseDatabase(): Promise<SQLite.SQLiteDatabase> {
   await ensureColumn(db, "fuel_pool", "budget", "TEXT NOT NULL DEFAULT '$$'");
   await ensureColumn(db, "fuel_pool", "prep_time", "TEXT NOT NULL DEFAULT 'medium'");
   await ensureColumn(db, "fuel_pool", "distance", "TEXT NOT NULL DEFAULT 'mid'");
+
+  // Check if fuel_pool is empty and seed default recipes if it is
+  const fuelCountResult = await db.getAllAsync<{ count: number }>("SELECT COUNT(*) as count FROM fuel_pool");
+  if (fuelCountResult[0]?.count === 0) {
+    const defaultFuelItems = [
+      ["Home-cooked Instant Noodles", "$", "short", "Easy", "near"],
+      ["Microwave Fried Rice", "$", "short", "Easy", "mid"],
+      ["Toasted Cheese Sandwich", "$", "short", "Easy", "far"],
+      ["Gourmet Homemade Pasta", "$$", "medium", "Medium", "near"],
+      ["Avocado Toast with Poached Egg", "$$", "medium", "Medium", "mid"],
+      ["Creamy Chicken Alfredo", "$$", "medium", "Medium", "far"],
+      ["Slow-roasted Home BBQ", "$$$", "long", "Hard", "near"],
+      ["Traditional Beef Stew", "$$$", "long", "Hard", "mid"],
+      ["Oven-Baked Salmon Dinner", "$$$", "long", "Hard", "far"]
+    ];
+
+    for (const item of defaultFuelItems) {
+      await db.runAsync(
+        "INSERT INTO fuel_pool (name, budget, prep_time, effort, distance) VALUES (?, ?, ?, ?, ?)",
+        item
+      );
+    }
+  }
 
   await ensureColumn(db, "focus_pool", "energy", "TEXT NOT NULL DEFAULT 'medium'");
   await ensureColumn(db, "focus_pool", "vibe", "TEXT NOT NULL DEFAULT 'background'");
