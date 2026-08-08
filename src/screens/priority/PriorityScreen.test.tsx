@@ -22,6 +22,17 @@ jest.mock("@/features/history/historyStorage", () => ({
 // on every change. Real AsyncStorage is already mocked globally; this spies on
 // the store itself so a test can say what was on the device when the screen
 // opened, which is the only way to exercise the hydration guard.
+// The rank confirmation names the tie-break only when one is configured, so
+// the test has to be able to say which.
+// requireActual, not a bare replacement: priorityAIRanking imports
+// requestPriorityAITieBreak out of this same module, so stubbing the whole
+// thing leaves the ranking calling undefined and takes an unrelated test down
+// with it.
+jest.mock("@/features/priority/priorityAI", () => ({
+  ...jest.requireActual("@/features/priority/priorityAI"),
+  isPriorityTieBreakEnabled: jest.fn().mockReturnValue(false),
+}));
+
 jest.mock("@/services/localdb/taskStorage", () => ({
   loadTaskBoard: jest.fn().mockResolvedValue({ tasks: [], isRanked: false, reasons: [] }),
   saveTaskBoard: jest.fn().mockResolvedValue(undefined),
@@ -319,5 +330,48 @@ describe("PriorityScreen persistence", () => {
     expect(store.saveTaskBoard).toHaveBeenCalled();
     const board = store.saveTaskBoard.mock.calls.at(-1)?.[0] as typeof SAVED;
     expect(board.tasks.map((t) => t.taskName)).toContain("Book the room");
+  });
+});
+
+// What the confirmation says before anything is sent. A privacy policy in
+// Settings is not a choice somebody was offered; this is the moment their own
+// words are about to leave the phone.
+describe("PriorityScreen tie-break consent", () => {
+  const ai = jest.requireMock("@/features/priority/priorityAI") as {
+    isPriorityTieBreakEnabled: jest.Mock;
+  };
+
+  function addOneTaskAndRank(): jest.SpyInstance {
+    const alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    const view = render(<PriorityScreen />);
+    fireEvent.changeText(view.getByPlaceholderText("Add a new task"), "One");
+    fireEvent.press(view.getByLabelText("Add task"));
+    fireEvent.changeText(view.getByPlaceholderText("Add a new task"), "Two");
+    fireEvent.press(view.getByLabelText("Add task"));
+    fireEvent.press(view.getByText("Rank my tasks"));
+    return alertSpy;
+  }
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+    ai.isPriorityTieBreakEnabled.mockReturnValue(false);
+  });
+
+  it("warns that tied tasks go to Google when a tie-break is configured", () => {
+    ai.isPriorityTieBreakEnabled.mockReturnValue(true);
+
+    const alertSpy = addOneTaskAndRank();
+
+    expect(String(alertSpy.mock.calls[0]?.[1])).toMatch(/sent to Google/i);
+  });
+
+  it("says nothing about Google when no tie-break is configured", () => {
+    // Nothing is sent in that state, and warning about a request the app is not
+    // making is its own kind of dishonest.
+    ai.isPriorityTieBreakEnabled.mockReturnValue(false);
+
+    const alertSpy = addOneTaskAndRank();
+
+    expect(String(alertSpy.mock.calls[0]?.[1])).not.toMatch(/Google/i);
   });
 });

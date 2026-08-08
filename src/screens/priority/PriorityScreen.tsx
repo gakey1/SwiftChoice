@@ -41,6 +41,7 @@ import { useProgress } from "@/features/progress/ProgressProvider";
 import { moduleAccent, moduleDeep } from "@/theme/themes";
 import { useTheme } from "@/theme/ThemeProvider";
 import { T } from "@/theme/tokens";
+import { isPriorityTieBreakEnabled } from "@/features/priority/priorityAI";
 import { rankTasksWithAI } from "@/features/priority/priorityAIRanking";
 import { loadTaskBoard, saveTaskBoard } from "@/services/localdb/taskStorage";
 // ---------------------------------------------------------------------------
@@ -317,7 +318,14 @@ export function PriorityScreen() {
 
   Alert.alert(
     "Lock in Priority?",
-    "Once you rank your tasks, you won't be able to edit or delete them. Are you sure?",
+    // Said here, rather than only in the privacy policy, because this is the
+    // moment somebody's own words are about to leave their phone and a notice
+    // buried in Settings is not a choice they were offered. Only shown when a
+    // tie-break endpoint is actually configured; with none, nothing is sent and
+    // warning about it would be its own kind of dishonest.
+    isPriorityTieBreakEnabled()
+      ? "Once you rank your tasks, you won't be able to edit or delete them.\n\nIf any tasks score the same, those tasks are sent to Google to break the tie, so keep private details out of them."
+      : "Once you rank your tasks, you won't be able to edit or delete them. Are you sure?",
     [
       { text: "Not yet", style: "cancel" },
       {

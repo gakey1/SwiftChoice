@@ -8,6 +8,20 @@ export interface PriorityAITieBreakResult {
 const REQUEST_TIMEOUT_MS = 8_000;
 const MAX_TASKS = 8;
 
+/**
+ * True when a tie-break endpoint is configured, which is the only condition
+ * under which any task text leaves the device.
+ *
+ * Exported so the screen can tell the user what is about to happen at the
+ * moment they ask for it. Without this the rank confirmation would have to
+ * either stay silent, or warn about a request that is skipped entirely when
+ * EXPO_PUBLIC_PRIORITY_AI_URL is unset, and a warning about something the app
+ * is not doing is its own kind of dishonest.
+ */
+export function isPriorityTieBreakEnabled(): boolean {
+  return getWorkerUrl() !== null;
+}
+
 function getWorkerUrl(): string | null {
   const value = process.env.EXPO_PUBLIC_PRIORITY_AI_URL?.trim();
 
