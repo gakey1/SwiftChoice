@@ -26,4 +26,12 @@ export type AppStackParamList = {
   // password change invalidated an existing enrolment (D-012), which makes the
   // screen explain itself rather than appearing for no visible cause.
   TwoFactorSetup: { reason?: "password-changed" } | undefined;
+  // Reached from the Your data row in Settings. The full account of what leaves
+  // the phone and what does not, which the short notices around the app point
+  // back to (US34).
+  DataAndPrivacy: undefined;
+  // The privacy policy and the terms of use. One screen with two documents
+  // rather than two screens, because they share their whole structure and the
+  // only thing that differs is the text.
+  Legal: { document: "privacy" | "terms" };
 };

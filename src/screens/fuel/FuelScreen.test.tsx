@@ -42,6 +42,14 @@ jest.mock("@/features/history/historyStorage", () => ({
   logDecision: jest.fn(),
 }));
 
+// The engine reads the saved Focus pool, which reaches expo-sqlite, and there is
+// no native module for it under Jest. Fuel never touches the Focus pool, so this
+// only exists to stop the import chain failing to load. Same pattern as the
+// history mock above, and the same one that produced MC-007.
+jest.mock("@/features/focus/focusPoolStorage", () => ({
+  getFocusRecommendationPool: jest.fn(async () => []),
+}));
+
 // Stand in for the live Google Places call and the device GPS, so the Eat Out
 // path returns a predictable result instead of failing on a missing key. Without
 // this the engine falls into its catch, the screen shows the empty state, and
@@ -136,6 +144,23 @@ describe("FuelScreen", () => {
 
     //Confirms the component handles interaction event smoothly
     expect(eatInButton).toBeTruthy();
+  });
+
+  it("says a location goes to Google on Eat Out", async () => {
+    // US34. Eat Out is the default mode, so this is visible on arrival.
+    const { getByText } = await renderFuelScreen();
+
+    expect(getByText(/sends your location, or the area you type, to Google/i)).toBeTruthy();
+  });
+
+  it("shows no such notice on Eat In, where nothing leaves the phone", async () => {
+    // A notice where nothing is collected teaches people that the notices mean
+    // nothing, which costs us the ones that matter.
+    const { getByText, queryByText } = await renderFuelScreen();
+
+    fireEvent.press(getByText("Eat In"));
+
+    expect(queryByText(/to Google/i)).toBeNull();
   });
 
   it("starts from the budget saved in settings", async () => {

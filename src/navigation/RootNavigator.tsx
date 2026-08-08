@@ -17,6 +17,8 @@ import { LoginScreen } from "@/screens/auth/LoginScreen";
 import { RegisterScreen } from "@/screens/auth/RegisterScreen";
 import { TotpChallengeScreen } from "@/screens/auth/TotpChallengeScreen";
 import { TwoFactorSetupScreen } from "@/screens/settings/TwoFactorSetupScreen";
+import { DataAndPrivacyScreen } from "@/screens/settings/DataAndPrivacyScreen";
+import { LegalScreen } from "@/screens/settings/LegalScreen";
 import { VerifyEmailScreen } from "@/screens/auth/VerifyEmailScreen";
 import { FuelScreen } from "@/screens/fuel/FuelScreen";
 import { FocusScreen } from "@/screens/focus/FocusScreen";
@@ -163,6 +165,16 @@ export function RootNavigator() {
             name="TwoFactorSetup"
             component={TwoFactorSetupScreen}
             initialParams={totpGate.wiped ? { reason: "password-changed" } : undefined}
+            options={{ animation: "slide_from_bottom" }}
+          />
+          <AppStack.Screen
+            name="DataAndPrivacy"
+            component={DataAndPrivacyScreen}
+            options={{ animation: "slide_from_bottom" }}
+          />
+          <AppStack.Screen
+            name="Legal"
+            component={LegalScreen}
             options={{ animation: "slide_from_bottom" }}
           />
         </AppStack.Navigator>

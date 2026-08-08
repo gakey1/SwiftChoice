@@ -19,7 +19,7 @@ jest.mock("@/services/localdb/db", () => ({
 
 const mockGetDb = getDb as jest.Mock;
 
-let rows: { id: number; name: string; energy: string; vibe: string; outdoor: number }[] = [];
+let rows: { id: number; name: string; energy: string; vibe: string; outdoor: number; icon: string }[] = [];
 let nextId = 1;
 
 // A stand-in for the real database: it keeps the pool items in an array and
@@ -38,8 +38,23 @@ const mockDb = {
         vibe: params?.[2] as string,
         // SQLite stores this as 0 or 1, not a boolean, so the fake does too.
         outdoor: params?.[3] as number,
+        icon: params?.[4] as string,
       });
       nextId += 1;
+      return;
+    }
+
+    // The icon backfill is a narrower update than the general one below, and
+    // has to be matched first or it falls into it and is read as a full row
+    // update with the wrong parameters.
+    if (sql.startsWith("UPDATE focus_pool SET icon")) {
+      const icon = params?.[0] as string;
+      const name = params?.[1] as string;
+      const onlyWhenIcon = params?.[2] as string;
+
+      rows = rows.map((row) =>
+        row.name === name && row.icon === onlyWhenIcon ? { ...row, icon } : row
+      );
       return;
     }
 
@@ -48,10 +63,11 @@ const mockDb = {
       const energy = params?.[1] as string;
       const vibe = params?.[2] as string;
       const outdoor = params?.[3] as number;
-      const id = params?.[4] as number;
+      const icon = params?.[4] as string;
+      const id = params?.[5] as number;
 
       rows = rows.map((row) =>
-        row.id === id ? { ...row, name, energy, vibe, outdoor } : row
+        row.id === id ? { ...row, name, energy, vibe, outdoor, icon } : row
       );
       return;
     }
@@ -81,8 +97,8 @@ describe("focusPoolStorage", () => {
     await addFocusItem("Cafe", "medium", "background");
 
     await expect(getFocusPool()).resolves.toEqual([
-      { id: 2, name: "Cafe", energy: "medium", vibe: "background", outdoor: false },
-      { id: 1, name: "Library", energy: "low", vibe: "silent", outdoor: false },
+      { id: 2, name: "Cafe", energy: "medium", vibe: "background", outdoor: false, icon: "map-pin" },
+      { id: 1, name: "Library", energy: "low", vibe: "silent", outdoor: false, icon: "map-pin" },
     ]);
   });
 
@@ -90,7 +106,7 @@ describe("focusPoolStorage", () => {
     await addFocusItem("Library");
 
     await expect(getFocusPool()).resolves.toEqual([
-      { id: 1, name: "Library", energy: "medium", vibe: "background", outdoor: false },
+      { id: 1, name: "Library", energy: "medium", vibe: "background", outdoor: false, icon: "map-pin" },
     ]);
   });
 
@@ -98,7 +114,7 @@ describe("focusPoolStorage", () => {
     await addFocusItem("Library", "low", "silent");
 
     await expect(getFocusRecommendationPool()).resolves.toEqual([
-      { id: 1, name: "Library", energy: "low", vibe: "silent", outdoor: false },
+      { id: 1, name: "Library", energy: "low", vibe: "silent", outdoor: false, icon: "map-pin" },
     ]);
   });
 
@@ -114,7 +130,7 @@ describe("focusPoolStorage", () => {
     await addFocusItem("  Library  ", "low", "silent");
 
     await expect(getFocusPool()).resolves.toEqual([
-      { id: 1, name: "Library", energy: "low", vibe: "silent", outdoor: false },
+      { id: 1, name: "Library", energy: "low", vibe: "silent", outdoor: false, icon: "map-pin" },
     ]);
   });
 
@@ -138,6 +154,7 @@ describe("focusPoolStorage", () => {
         energy: "high",
         vibe: "collaborative",
         outdoor: false,
+        icon: "map-pin",
       },
     ]);
   });
@@ -149,7 +166,7 @@ describe("focusPoolStorage", () => {
     await deleteFocusItem(1);
 
     await expect(getFocusPool()).resolves.toEqual([
-      { id: 2, name: "Cafe", energy: "medium", vibe: "background", outdoor: false },
+      { id: 2, name: "Cafe", energy: "medium", vibe: "background", outdoor: false, icon: "map-pin" },
     ]);
   });
 
@@ -168,7 +185,7 @@ describe("focusPoolStorage", () => {
     await addFocusItem("Park Bench", "low", "silent", true);
 
     await expect(getFocusPool()).resolves.toEqual([
-      { id: 1, name: "Park Bench", energy: "low", vibe: "silent", outdoor: true },
+      { id: 1, name: "Park Bench", energy: "low", vibe: "silent", outdoor: true, icon: "map-pin" },
     ]);
   });
 
@@ -184,7 +201,132 @@ describe("focusPoolStorage", () => {
     await updateFocusItem(1, "Courtyard Cafe", "medium", "background", false);
 
     await expect(getFocusPool()).resolves.toEqual([
-      { id: 1, name: "Courtyard Cafe", energy: "medium", vibe: "background", outdoor: false },
+      { id: 1, name: "Courtyard Cafe", energy: "medium", vibe: "background", outdoor: false, icon: "map-pin" },
     ]);
+  });
+});
+
+// The seed is the difference between a fresh install having spots to recommend
+// and having none, so these check the count, the contents, and that it cannot
+// run twice over the same pool.
+describe("seeding the Focus pool", () => {
+  beforeEach(() => {
+    rows = [];
+    nextId = 1;
+    jest.clearAllMocks();
+    mockGetDb.mockResolvedValue(mockDb);
+  });
+
+  it("fills an empty pool the first time the recommendation reads it", async () => {
+    await expect(isFocusPoolEmpty()).resolves.toBe(true);
+
+    const pool = await getFocusRecommendationPool();
+
+    expect(pool.length).toBeGreaterThan(0);
+  });
+
+  it("leaves a pool that already has spots alone", async () => {
+    // Somebody's own saved spots must not be joined by a set of defaults.
+    await addFocusItem("My Own Desk", "low", "silent");
+
+    const pool = await getFocusRecommendationPool();
+
+    expect(pool).toEqual([
+      { id: 1, name: "My Own Desk", energy: "low", vibe: "silent", outdoor: false, icon: "map-pin" },
+    ]);
+  });
+
+  it("does not seed a second time on a later read", async () => {
+    const first = await getFocusRecommendationPool();
+    const second = await getFocusRecommendationPool();
+
+    expect(second).toHaveLength(first.length);
+  });
+
+  it("does not double-seed when two reads arrive at once", async () => {
+    // Both would otherwise see an empty pool and both would fill it.
+    const [first, second] = await Promise.all([
+      getFocusRecommendationPool(),
+      getFocusRecommendationPool(),
+    ]);
+
+    expect(second).toHaveLength(first?.length ?? 0);
+    expect(new Set(first?.map((spot) => spot.name)).size).toBe(first?.length);
+  });
+
+  it("includes outdoor spots, without which the conditions strip never appears", async () => {
+    const pool = await getFocusRecommendationPool();
+    const outdoor = pool.filter((spot) => spot.outdoor);
+
+    expect(outdoor.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("spreads the outdoor spots across more than one energy and vibe pairing", async () => {
+    // Clustered in one pairing they would be unreachable from most filters.
+    const pool = await getFocusRecommendationPool();
+    const pairings = new Set(
+      pool.filter((spot) => spot.outdoor).map((spot) => `${spot.energy}/${spot.vibe}`)
+    );
+
+    expect(pairings.size).toBeGreaterThanOrEqual(2);
+  });
+
+  it("backfills icons on a pool seeded before the icon column existed", async () => {
+    // The case that actually reached a device. Seeding only runs on an empty
+    // pool, so anyone who opened Focus between the seed landing and the icons
+    // landing keeps 14 rows carrying nothing but the default, and every spot
+    // draws the fallback pin.
+    await addFocusItem("Campus Common Area", "medium", "collaborative", true);
+    await addFocusItem("Busy Coffee Shop", "high", "background", false);
+
+    const pool = await getFocusRecommendationPool();
+
+    expect(pool.find((spot) => spot.name === "Campus Common Area")?.icon).toBe("users");
+    expect(pool.find((spot) => spot.name === "Busy Coffee Shop")?.icon).toBe("coffee");
+  });
+
+  it("leaves a spot alone if its name is not one of the defaults", async () => {
+    // Somebody's own spot has no default icon to restore, so it keeps the pin
+    // rather than being given one that means nothing.
+    await addFocusItem("My Own Desk", "low", "silent");
+
+    const pool = await getFocusRecommendationPool();
+
+    expect(pool[0]?.icon).toBe("map-pin");
+  });
+
+  it("gives the seeded spots more than one icon between them", async () => {
+    // The whole point of storing an icon per spot is that a library and a park
+    // bench do not arrive looking identical. One icon across the seed would meet
+    // every other test here and defeat that entirely.
+    const pool = await getFocusRecommendationPool();
+    const icons = new Set(pool.map((spot) => spot.icon));
+
+    expect(icons.size).toBeGreaterThanOrEqual(5);
+  });
+
+  it("gives the two silent low-energy spots different icons", async () => {
+    // This is the case vibe alone cannot serve, and the reason the icon is
+    // stored rather than derived: in the design a library and a park bench are
+    // both silent and look nothing alike.
+    const pool = await getFocusRecommendationPool();
+    const silent = pool.filter((spot) => spot.vibe === "silent" && spot.energy === "low");
+    const icons = new Set(silent.map((spot) => spot.icon));
+
+    expect(silent.length).toBeGreaterThan(1);
+    expect(icons.size).toBeGreaterThan(1);
+  });
+
+  it("keeps medium and collaborative resolving to a single outdoor spot", async () => {
+    // This is the one pairing guaranteed to reach the conditions strip, so it is
+    // how the weather feature gets demonstrated on purpose. A later edit that
+    // adds an indoor spot here would remove the guarantee silently.
+    const pool = await getFocusRecommendationPool();
+    const matches = pool.filter(
+      (spot) => spot.energy === "medium" && spot.vibe === "collaborative"
+    );
+
+    expect(matches).toHaveLength(1);
+    expect(matches[0]?.outdoor).toBe(true);
   });
 });

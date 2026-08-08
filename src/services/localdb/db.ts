@@ -99,6 +99,9 @@ async function initialiseDatabase(): Promise<SQLite.SQLiteDatabase> {
   // Whether the spot is outside. SQLite has no boolean, so 0 is no and 1 is yes.
   // Used by the Focus rain warning, which only applies to outdoor spots.
   await ensureColumn(db, "focus_pool", "outdoor", "INTEGER NOT NULL DEFAULT 0");
+  // The picture on the result card. Stored per spot so a library and a park
+  // bench do not look identical, which is what the design asks for.
+  await ensureColumn(db, "focus_pool", "icon", "TEXT NOT NULL DEFAULT 'map-pin'");
 
   return db;
 }

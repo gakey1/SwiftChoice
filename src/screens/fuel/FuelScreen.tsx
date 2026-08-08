@@ -15,6 +15,7 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { StyleSheet, Text, TextInput, View, TouchableOpacity, ScrollView, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon } from "@/components/Icon";
+import { DataNotice } from "@/components/DataNotice";
 import { AmbientBackground } from "@/components/AmbientBackground";
 import { GlassCard } from "@/components/GlassCard";
 import { ModuleGlyph } from "@/components/ModuleGlyph";
@@ -581,6 +582,13 @@ export function FuelScreen() {
                  </Text>
               </TouchableOpacity>
             </View>
+
+            {/* US34. Sits under Accept rather than after it, so it is read
+                before the copy is made and not as an announcement afterwards. */}
+            <DataNotice>
+              Accepting saves this to your history and copies it to your account, so it is there
+              when you sign in again.
+            </DataNotice>
           </View>
         </View>
       </SafeAreaView>
@@ -682,6 +690,16 @@ export function FuelScreen() {
         >
           <Text style={styles.actionButtonText}>Decide for Me</Text>
         </TouchableOpacity>
+
+        {/* US34. Only on Eat Out, because Eat In never leaves the phone, and a
+            notice shown where nothing is collected teaches people the notices
+            mean nothing. */}
+        {mealType === "out" && (
+          <DataNotice>
+            Eat Out sends your location, or the area you type, to Google to find places near you.
+            Nothing identifying you goes with it.
+          </DataNotice>
+        )}
 
         {/* The phone would not give a position, so ask where they are rather
             than assuming a city. Only appears when location actually fails, so

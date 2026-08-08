@@ -1,63 +1,122 @@
-// Answers one question for the Focus module: is rain likely in the next hour
-// where the user is. That is all the outdoor-spot warning needs, so this asks
-// for nothing more.
+// Answers one question for the Focus module: what is it like outside right now,
+// where the user is. The Focus card uses this to tell someone heading to an
+// outdoor spot what to expect, so it asks for temperature and conditions as well
+// as the chance of rain.
+//
+// It started as a rain warning only. That version showed nothing at all unless
+// rain was at least likely, which meant the feature was invisible almost every
+// time an outdoor spot came up, and could not be demonstrated on purpose. The
+// figures below are always present, so the card always has something true to
+// say, and the umbrella line is now one sentence inside that rather than the
+// whole feature.
 //
 // Open-Meteo is used rather than a paid weather product because it needs no key,
 // no account and no card, so it adds no billing surface and keeps working even
-// if the Google billing used by Fuel ever lapses. See decision D-010.
+// if the Google billing used by Fuel ever lapses. See decision D-010. Widening
+// the question costs nothing: it is the same endpoint and the same single
+// request, with more fields named in the query string.
 
 // Open-Meteo is free for this kind of use and needs no key.
 const ENDPOINT = "https://api.open-meteo.com/v1/forecast";
 
-// At or above this chance of rain, the spot warning is worth showing. Below it
-// the warning would fire on most cloudy days and people would learn to ignore it.
+// At or above this chance of rain, the umbrella advice is worth giving. Below it
+// the advice would fire on most cloudy days and people would learn to ignore it.
 export const RAIN_LIKELY_PERCENT = 50;
 
 // A tagged result rather than an exception, matching locationService, so callers
-// never need a try and catch and a failed forecast simply shows no warning.
-export type RainForecast =
-  | { ok: true; rainLikely: boolean; probabilityPercent: number }
+// never need a try and catch and a failed lookup simply shows nothing.
+export type OutdoorConditions =
+  | {
+      ok: true;
+      temperatureC: number;
+      // What the air feels like once wind and humidity are accounted for. This
+      // is the number the advice is derived from.
+      feelsLikeC: number;
+      rainChancePercent: number;
+      rainLikely: boolean;
+      // WMO code describing the sky. Translated to a word by conditionLabel.
+      weatherCode: number;
+      windKph: number;
+    }
   | { ok: false; reason: "unavailable" };
 
-export type RainForecastParams = {
+export type OutdoorConditionsParams = {
   latitude: number;
   longitude: number;
 };
 
-// Looks up the chance of rain in the coming hour. Never throws: if the service
-// is unreachable or answers with something unexpected, this reports that the
-// forecast is unavailable and the caller shows nothing, because a missing
-// forecast must not turn into a wrong warning.
-export async function getRainForecast(params: RainForecastParams): Promise<RainForecast> {
-  try {
-    const url =
-      `${ENDPOINT}?latitude=${params.latitude}&longitude=${params.longitude}` +
-      `&hourly=precipitation_probability&forecast_hours=1&timezone=auto`;
+// Open-Meteo publishes the chance of rain in its hourly block only, not its
+// current block, so the request asks for both: one hour of probability, and the
+// present readings for everything else. Units are named explicitly rather than
+// left to the service's defaults, because a default that changed upstream would
+// turn a Celsius reading into a Fahrenheit one with nothing on our side failing.
+function buildUrl(params: OutdoorConditionsParams): string {
+  return (
+    `${ENDPOINT}?latitude=${params.latitude}&longitude=${params.longitude}` +
+    `&hourly=precipitation_probability&forecast_hours=1` +
+    `&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m` +
+    `&temperature_unit=celsius&wind_speed_unit=kmh&timezone=auto`
+  );
+}
 
-    const response = await fetch(url);
+// Narrows an unknown field to a usable number. Open-Meteo answers with JSON we
+// do not control, so every value is checked rather than trusted, and NaN is
+// rejected because it survives a typeof check and then poisons any comparison
+// it reaches.
+function asNumber(value: unknown): number | null {
+  return typeof value === "number" && !Number.isNaN(value) ? value : null;
+}
+
+// Looks up what it is like outside right now. Never throws: if the service is
+// unreachable or answers with something unexpected, this reports that conditions
+// are unavailable and the caller shows nothing, because a missing forecast must
+// not turn into a wrong claim about the weather.
+export async function getOutdoorConditions(
+  params: OutdoorConditionsParams
+): Promise<OutdoorConditions> {
+  try {
+    const response = await fetch(buildUrl(params));
 
     if (!response.ok) {
       return { ok: false, reason: "unavailable" };
     }
 
-    const payload: unknown = await response.json();
-    const probabilities = (payload as { hourly?: { precipitation_probability?: unknown } })
-      .hourly?.precipitation_probability;
+    const payload = (await response.json()) as {
+      hourly?: { precipitation_probability?: unknown };
+      current?: Record<string, unknown>;
+    };
 
-    if (!Array.isArray(probabilities)) {
-      return { ok: false, reason: "unavailable" };
-    }
+    const probabilities = payload.hourly?.precipitation_probability;
+    const rainChancePercent = Array.isArray(probabilities) ? asNumber(probabilities[0]) : null;
 
-    const next = probabilities[0];
+    const current = payload.current ?? {};
+    const temperatureC = asNumber(current["temperature_2m"]);
+    const feelsLikeC = asNumber(current["apparent_temperature"]);
+    const weatherCode = asNumber(current["weather_code"]);
+    const windKph = asNumber(current["wind_speed_10m"]);
 
-    if (typeof next !== "number" || Number.isNaN(next)) {
+    // Everything is required. A partial answer is not a real mode for a single
+    // endpoint, so one missing field means the request itself is wrong rather
+    // than the weather being partly unknown, and half a reading on the card
+    // would be worse than none.
+    if (
+      rainChancePercent === null ||
+      temperatureC === null ||
+      feelsLikeC === null ||
+      weatherCode === null ||
+      windKph === null
+    ) {
       return { ok: false, reason: "unavailable" };
     }
 
     return {
       ok: true,
-      rainLikely: next >= RAIN_LIKELY_PERCENT,
-      probabilityPercent: next,
+      temperatureC,
+      feelsLikeC,
+      rainChancePercent,
+      rainLikely: rainChancePercent >= RAIN_LIKELY_PERCENT,
+      weatherCode,
+      windKph,
     };
   } catch {
     return { ok: false, reason: "unavailable" };

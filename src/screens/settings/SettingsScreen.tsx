@@ -350,6 +350,14 @@ export function SettingsScreen() {
         </View>
 
         <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>YOUR DATA</Text>
+        <View style={[styles.card, cardStyle]}>
+          <SettingRow
+            label="What we collect"
+            value=""
+            onPress={() => navigation.navigate("DataAndPrivacy")}
+            isLast
+          />
+        </View>
         <Text style={[styles.sub, { color: colors.ink2 }]}>
           Clears what this app has saved on this phone. Your account stays, and history already
           saved to your account is not affected.
