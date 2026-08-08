@@ -13,12 +13,30 @@ type TableColumn = {
 
 // Returns the database. The first call opens and sets it up; every call after
 // that gets back the same one.
+//
+// A failed setup is NOT kept. Caching the rejected promise meant one bad step
+// during initialisation permanently broke every store behind this connection
+// for the rest of the app's run: history, pools, preferences and progress all
+// call getDb, so all of them failed together and the app looked like it had
+// lost the user's data. It had not; nothing could reach it.
+//
+// Clearing the handle means the next caller retries. A problem that is really
+// permanent just fails again, which is the same outcome minus the cascade.
 export function getDb(): Promise<SQLite.SQLiteDatabase> {
   if (!dbPromise) {
-    dbPromise = initialiseDatabase();
+    dbPromise = initialiseDatabase().catch((error: unknown) => {
+      dbPromise = null;
+      throw error;
+    });
   }
 
   return dbPromise;
+}
+
+// Drops the cached connection so each test starts from a database that has not
+// been opened yet. Only the tests call this.
+export function resetDbForTests(): void {
+  dbPromise = null;
 }
 
 // Opens the database file and makes sure all the tables exist. "IF NOT EXISTS"
@@ -77,10 +95,41 @@ async function initialiseDatabase(): Promise<SQLite.SQLiteDatabase> {
   await ensureColumn(db, "fuel_pool", "budget", "TEXT NOT NULL DEFAULT '$$'");
   await ensureColumn(db, "fuel_pool", "prep_time", "TEXT NOT NULL DEFAULT 'medium'");
   await ensureColumn(db, "fuel_pool", "distance", "TEXT NOT NULL DEFAULT 'mid'");
+  // How much work the meal is. Added to the CREATE TABLE above at the same time,
+  // which does nothing at all on a phone that already has this table, and every
+  // phone that has ever run the app does. Without this line the seed below fails
+  // with "table fuel_pool has no column named effort" on every existing install.
+  await ensureColumn(db, "fuel_pool", "effort", "TEXT NOT NULL DEFAULT 'Easy'");
 
-  // Check if fuel_pool is empty and seed default recipes if it is
-  const fuelCountResult = await db.getAllAsync<{ count: number }>("SELECT COUNT(*) as count FROM fuel_pool");
-  if (fuelCountResult[0]?.count === 0) {
+  await seedFuelPool(db);
+
+  await ensureColumn(db, "focus_pool", "energy", "TEXT NOT NULL DEFAULT 'medium'");
+  await ensureColumn(db, "focus_pool", "vibe", "TEXT NOT NULL DEFAULT 'background'");
+  // Whether the spot is outside. SQLite has no boolean, so 0 is no and 1 is yes.
+  // Used by the Focus rain warning, which only applies to outdoor spots.
+  await ensureColumn(db, "focus_pool", "outdoor", "INTEGER NOT NULL DEFAULT 0");
+  // The picture on the result card. Stored per spot so a library and a park
+  // bench do not look identical, which is what the design asks for.
+  await ensureColumn(db, "focus_pool", "icon", "TEXT NOT NULL DEFAULT 'map-pin'");
+
+  return db;
+}
+
+// Puts a starter set of meals in the Fuel pool on a database that has none, so
+// Eat In has something to recommend before the user has added anything.
+//
+// Deliberately cannot fail the whole setup. Sample data is a convenience; the
+// user's own history, preferences and progress are not, and they all sit behind
+// the same connection. A seed that throws used to take every one of them with
+// it. Warned about rather than swallowed silently, because an empty Eat In pool
+// with no explanation is its own kind of confusing.
+async function seedFuelPool(db: SQLite.SQLiteDatabase): Promise<void> {
+  try {
+    const fuelCountResult = await db.getAllAsync<{ count: number }>(
+      "SELECT COUNT(*) as count FROM fuel_pool"
+    );
+    if (fuelCountResult[0]?.count !== 0) return;
+
     const defaultFuelItems = [
       ["Home-cooked Instant Noodles", "$", "short", "Easy", "near"],
       ["Microwave Fried Rice", "$", "short", "Easy", "mid"],
@@ -99,18 +148,9 @@ async function initialiseDatabase(): Promise<SQLite.SQLiteDatabase> {
         item
       );
     }
+  } catch (error) {
+    console.warn("Could not seed the starter meals; Eat In starts empty.", error);
   }
-
-  await ensureColumn(db, "focus_pool", "energy", "TEXT NOT NULL DEFAULT 'medium'");
-  await ensureColumn(db, "focus_pool", "vibe", "TEXT NOT NULL DEFAULT 'background'");
-  // Whether the spot is outside. SQLite has no boolean, so 0 is no and 1 is yes.
-  // Used by the Focus rain warning, which only applies to outdoor spots.
-  await ensureColumn(db, "focus_pool", "outdoor", "INTEGER NOT NULL DEFAULT 0");
-  // The picture on the result card. Stored per spot so a library and a park
-  // bench do not look identical, which is what the design asks for.
-  await ensureColumn(db, "focus_pool", "icon", "TEXT NOT NULL DEFAULT 'map-pin'");
-
-  return db;
 }
 
 // Existing local databases may already have the old tables.
