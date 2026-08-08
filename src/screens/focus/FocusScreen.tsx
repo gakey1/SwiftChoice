@@ -242,6 +242,14 @@ export function FocusScreen() {
     // explicitly marked outdoor is treated as indoors, which is the safer of the
     // two defaults: it under-shows rather than promising a forecast for a desk.
     const spotSetting: SpotSetting = recommendation.outdoor === true ? "outdoor" : "indoor";
+    const settingText = spotSetting === "outdoor" ? "Outdoor" : "Indoor";
+    // Worked out once for the row rather than per chip, so the three values
+    // step down together. See statValueSize.
+    const statSize = statValueSize([
+      energyLabel(recommendation.energy_level),
+      vibeChipLabel(recommendation.vibe),
+      settingText,
+    ]);
 
     return (
       <SafeAreaView style={[styles.frame, { backgroundColor: colors.bg }]} edges={["top", "left", "right"]}>
@@ -329,7 +337,7 @@ export function FocusScreen() {
             <View style={styles.statsRow}>
               <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
                 <Text
-                  style={[styles.statValue, { color: primaryColor }]}
+                  style={[styles.statValue, { color: primaryColor, fontSize: statSize }]}
                   numberOfLines={1}
                   adjustsFontSizeToFit
                 >
@@ -340,11 +348,11 @@ export function FocusScreen() {
 
               <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
                 <Text
-                  style={[styles.statValue, { color: primaryColor }]}
+                  style={[styles.statValue, { color: primaryColor, fontSize: statSize }]}
                   numberOfLines={1}
                   adjustsFontSizeToFit
                 >
-                  {vibeLabel(recommendation.vibe)}
+                  {vibeChipLabel(recommendation.vibe)}
                 </Text>
                 <Text style={[styles.statLabel, { color: colors.ink2 }]}>Vibe</Text>
               </View>
@@ -360,11 +368,11 @@ export function FocusScreen() {
                   others do not. */}
               <View style={[styles.statChip, { backgroundColor: colors.chip }]}>
                 <Text
-                  style={[styles.statValue, { color: primaryColor }]}
+                  style={[styles.statValue, { color: primaryColor, fontSize: statSize }]}
                   numberOfLines={1}
                   adjustsFontSizeToFit
                 >
-                  {recommendation.outdoor === true ? "Outdoor" : "Indoor"}
+                  {settingText}
                 </Text>
                 <Text style={[styles.statLabel, { color: colors.ink2 }]}>Setting</Text>
               </View>
@@ -553,6 +561,52 @@ function vibeLabel(value: FocusVibe) {
   if (value === "collaborative") return "Collaborative";
 
   return "Background";
+}
+
+// The same vibe, worded for the stat chip rather than for a sentence.
+//
+// A chip is a third of the card wide, and "Collaborative" does not fit at the
+// size the other two chips use, so the row had to shrink to accommodate one
+// word and every value became hard to read. Short words let the row stay at
+// full size instead.
+//
+// The design does the same thing: its prototype puts the long word on the
+// filter and a single short word on the result chip. So the filter buttons and
+// the "Based on ... vibe" sentence keep the full label, where there is room for
+// it and the extra precision is worth having, and only the chip is shortened.
+function vibeChipLabel(value: FocusVibe) {
+  if (value === "silent") return "Silent";
+  if (value === "collaborative") return "Collab";
+
+  return "Ambient";
+}
+
+// One font size for all three stat chips, chosen from the longest label in the
+// row.
+//
+// adjustsFontSizeToFit shrinks each Text on its own, which is correct per word
+// and wrong for a row: "Collaborative" shrank to fit its chip while "Medium"
+// and "Outdoor" stayed at full size beside it, and the row read as a mistake
+// rather than as three labels of different lengths. Deciding the size for the
+// row means they all step down together, or none of them do.
+//
+// Since the vibe chip took short words, no label reaches 8 characters and this
+// returns the full size every time. It is kept because the alternative is an
+// invisible rule that a chip label must stay under eight characters, which the
+// next person to add a vibe or a setting would have no way of knowing. This way
+// a longer word costs a smaller row rather than a clipped word, and the steps
+// below say so out loud.
+//
+// The chips also keep adjustsFontSizeToFit underneath, as a backstop for a
+// narrower screen than the ones tested. There, losing the even row is a better
+// failure than losing the end of a word.
+function statValueSize(labels: string[]): number {
+  const longest = Math.max(...labels.map((label) => label.length));
+
+  if (longest <= 8) return T.fontSize.subtitle;
+  if (longest <= 10) return 13;
+
+  return 11;
 }
 
 const styles = StyleSheet.create({
