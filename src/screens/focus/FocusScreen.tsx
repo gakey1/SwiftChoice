@@ -127,6 +127,7 @@ export function FocusScreen() {
   const [energyLevel, setEnergyLevel] = useState<EnergyLevel>("medium");
   const [vibe, setVibe] = useState<FocusVibe>("background");
   const [hasRerolled, setHasRerolled] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   const [recommendation, setRecommendation] = useState<FocusOption | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
@@ -172,6 +173,7 @@ export function FocusScreen() {
         setRecommendation(null);
       }
 
+      setCurrentIndex(0);
       setHasRerolled(false);
       setHasSearched(true);
     } finally {
@@ -187,7 +189,7 @@ export function FocusScreen() {
     let active = true;
 
     async function checkConditions() {
-      if (recommendation === null) {
+      if (recommendation === null || recommendation.outdoor !== true) {
         setConditions(null);
         return;
       }
@@ -225,19 +227,45 @@ export function FocusScreen() {
       return;
     }
 
-    if (matchList.length > 1) {
-      const nextItem = matchList[1];
+    const nextIndex = currentIndex + 1;
+    const nextItem = matchList[nextIndex];
 
-      if (nextItem) {
-        setRecommendation(nextItem);
-        setHasRerolled(true);
-        // Acknowledges the reroll, per the design. It matters here more than it
-        // looks: the card swaps in place, so without this the only sign anything
-        // happened is that the name changed, which is easy to miss.
-        showToast("Reroll used");
-      }
+    if (nextItem) {
+      setCurrentIndex(nextIndex);
+      setRecommendation(nextItem);
+      setHasRerolled(true);
+
+      // The result card changes in place, so this gives the user clear feedback
+      // that the alternative recommendation has been shown and their one reroll
+      // has now been used.
+      showToast("Reroll used");
     }
   }
+
+  // Returns from the result card to the Focus inputs so the user can change
+  // energy or vibe and start a fresh recommendation request.
+  function handleAdjustFilters() {
+    setRecommendation(null);
+    setMatchList([]);
+    setCurrentIndex(0);
+    setHasRerolled(false);
+    setHasSearched(false);
+    setConditions(null);
+  }
+
+  // Lets the user return to the recommendation shown before the reroll.
+  // Going back does not restore the reroll, because the one-reroll limit has
+  // already been used for this recommendation request.
+  function handlePreviousRecommendation() {
+    const previousIndex = currentIndex - 1;
+    const previousItem = matchList[previousIndex];
+
+    if (previousItem) {
+      setCurrentIndex(previousIndex);
+      setRecommendation(previousItem);
+    }
+  }
+
 
   if (recommendation) {
     // Drives both the wording and whether the strip shows at all. Anything not
@@ -381,6 +409,25 @@ export function FocusScreen() {
             </View>
           </GlassCard>
 
+          {/* Shows the user's reroll allowance before they act, then changes state after
+    the reroll is used. This makes the one-reroll rule visible instead of only
+    disabling the button without explanation. */}
+          {/* Shows the reroll allowance only when an alternative actually exists.
+    A single-match result uses the separate no-more-matches state below instead. */}
+          {matchList.length > 1 && (
+            <View style={styles.rerollIndicator}>
+              <View
+                style={[
+                  styles.rerollDot,
+                  { backgroundColor: hasRerolled ? colors.cardLine : primaryColor },
+                ]}
+              />
+              <Text style={[styles.rerollIndicatorText, { color: colors.ink2 }]}>
+                {hasRerolled ? "0 rerolls remaining" : "1 reroll remaining"}
+              </Text>
+            </View>
+          )}
+
           <View style={styles.actionRow}>
             <TouchableOpacity
               style={[styles.acceptBtn, { backgroundColor: primaryColor, shadowColor: primaryColor }]}
@@ -436,6 +483,33 @@ export function FocusScreen() {
             </TouchableOpacity>
           </View>
 
+          {matchList.length <= 1 ? (
+            <View style={styles.rerollStatus}>
+              <Text style={[styles.rerollStatusText, { color: colors.ink2 }]}>
+                No more matches for these filters.
+              </Text>
+
+              <TouchableOpacity onPress={handleAdjustFilters} activeOpacity={0.7}>
+                <Text style={[styles.adjustFiltersText, { color: primaryColor }]}>
+                  Adjust filters
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : hasRerolled ? (
+            <View style={styles.rerollStatus}>
+              <Text style={[styles.rerollStatusText, { color: colors.ink2 }]}>
+                No rerolls left
+              </Text>
+
+              {currentIndex > 0 && (
+                <TouchableOpacity onPress={handlePreviousRecommendation} activeOpacity={0.7}>
+                  <Text style={[styles.adjustFiltersText, { color: primaryColor }]}>
+                    Previous recommendation
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          ) : null}
           {/* US34. Sits under Accept rather than after it, so it is read before
               the copy is made and not as an announcement afterwards. */}
           <DataNotice>
@@ -523,11 +597,11 @@ export function FocusScreen() {
           </Text>
         </TouchableOpacity>
 
-        {/* US34. Every recommendation, not only outdoor ones: the check runs
-            each time, and what changes is whether the answer is worth showing. */}
+        {/* US34. Location is only sent for outdoor recommendations, because indoor
+        spots do not need a weather lookup. */}
         <DataNotice>
-          Checks the weather where you are, so we can say if you need a jacket or an umbrella.
-          Your location goes to a weather service. Nothing identifying you goes with it.
+          For outdoor spots, we check the weather using your current location. Your location goes
+          to a weather service for that check only. Nothing identifying you goes with it.
         </DataNotice>
 
         {recommendation === null && hasSearched && (
@@ -798,5 +872,35 @@ const styles = StyleSheet.create({
     fontFamily: T.font.regular,
     fontSize: T.fontSize.body,
     textAlign: "center",
+  },
+
+  rerollStatus: {
+    alignItems: "center",
+    gap: 6,
+  },
+  rerollStatusText: {
+    fontFamily: T.font.regular,
+    fontSize: T.fontSize.body,
+    textAlign: "center",
+  },
+  adjustFiltersText: {
+    fontFamily: T.font.bold,
+    fontSize: T.fontSize.body,
+  },
+
+  rerollIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+  },
+  rerollDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  rerollIndicatorText: {
+    fontFamily: T.font.regular,
+    fontSize: T.fontSize.caption,
   },
 });

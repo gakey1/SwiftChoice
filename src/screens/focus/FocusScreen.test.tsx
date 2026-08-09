@@ -91,11 +91,13 @@ async function findOutdoorSpot(utils: ReturnType<typeof render>) {
   fireEvent.press(utils.getByText("Find My Spot"));
   // The pool read is async now, so the result arrives a tick after the press.
   await waitFor(() => expect(utils.getByText("Saved Courtyard Table")).toBeTruthy());
-  await act(async () => {});
+  await act(async () => { });
   return utils;
 }
 
 beforeEach(() => {
+  (getCurrentPosition as jest.Mock).mockClear();
+  (getOutdoorConditions as jest.Mock).mockClear();
   (getCurrentPosition as jest.Mock).mockResolvedValue({ ok: true, latitude: -37.8, longitude: 144.9 });
   (getOutdoorConditions as jest.Mock).mockResolvedValue(conditions());
 });
@@ -186,6 +188,69 @@ describe("FocusScreen", () => {
     expect(utils.getByText("Reroll used")).toBeTruthy();
   });
 
+  // Shows the reroll allowance clearly before and after the alternative is used,
+  // so the user is not expected to infer the limit from a disabled button.
+  it("shows the remaining reroll allowance", async () => {
+    const utils = render(<FocusScreen />);
+
+    fireEvent.press(utils.getByText("Find My Spot"));
+
+    await waitFor(() =>
+      expect(utils.getByText("1 reroll remaining")).toBeTruthy()
+    );
+
+    fireEvent.press(utils.getByText("Reroll"));
+
+    expect(utils.getByText("0 rerolls remaining")).toBeTruthy();
+    expect(utils.getByText("No rerolls left")).toBeTruthy();
+  });
+
+  // After using the one reroll, the user can return to the first recommendation
+  // without restoring another reroll.
+  it("returns to the previous recommendation after rerolling", async () => {
+    const utils = render(<FocusScreen />);
+
+    fireEvent.press(utils.getByText("Find My Spot"));
+
+    await waitFor(() => expect(utils.getByText("Reroll")).toBeTruthy());
+
+    const firstRecommendation = utils.getByText(/Saved (Corner Cafe|Reading Nook)/).props
+      .children;
+
+    fireEvent.press(utils.getByText("Reroll"));
+
+    await waitFor(() =>
+      expect(utils.getByText("Previous recommendation")).toBeTruthy()
+    );
+
+    fireEvent.press(utils.getByText("Previous recommendation"));
+
+    expect(utils.getByText(firstRecommendation)).toBeTruthy();
+    expect(utils.getByText("0 rerolls remaining")).toBeTruthy();
+  });
+
+  // When the chosen filters produce only one matching spot, the screen explains
+  // that there is no alternative and gives the user a direct way back to the
+  // filters instead of leaving a disabled reroll button with no explanation.
+  it("offers Adjust filters when there is no alternative recommendation", async () => {
+    const utils = render(<FocusScreen />);
+
+    fireEvent.press(utils.getByText("Collaborative"));
+    fireEvent.press(utils.getByText("Find My Spot"));
+
+    await waitFor(() =>
+      expect(utils.getByText("Saved Courtyard Table")).toBeTruthy()
+    );
+
+    expect(utils.getByText("No more matches for these filters.")).toBeTruthy();
+    expect(utils.getByText("Adjust filters")).toBeTruthy();
+
+    fireEvent.press(utils.getByText("Adjust filters"));
+
+    expect(utils.getByText("Find My Spot")).toBeTruthy();
+    expect(utils.queryByText("Saved Courtyard Table")).toBeNull();
+  });
+
   it("says whether the spot is indoors or outdoors, which is stored on every spot", async () => {
     const utils = render(<FocusScreen />);
     await findOutdoorSpot(utils);
@@ -212,12 +277,14 @@ describe("FocusScreen", () => {
     expect(getByText(/Your location goes to a weather service/i)).toBeTruthy();
   });
 
-  it("does not limit that notice to outdoor spots, because the check is not limited either", async () => {
-    // Wording left over from the outdoor-only version would understate what the
-    // app collects, which is the wrong direction to be wrong in.
-    const { queryByText } = render(<FocusScreen />);
+  // US34. Focus only shares the user's location when the recommended spot is
+  // outdoors, because indoor spots do not need a weather lookup.
+  it("states that weather location sharing only applies to outdoor spots", () => {
+    const { getByText } = render(<FocusScreen />);
 
-    expect(queryByText(/outdoor spots only/i)).toBeNull();
+    expect(
+      getByText(/For outdoor spots, we check the weather using your current location/i)
+    ).toBeTruthy();
   });
 
   it("warns about rain on an outdoor spot when rain is likely", async () => {
@@ -264,32 +331,18 @@ describe("FocusScreen", () => {
     expect(utils.queryByText(/degrees/i)).toBeNull();
   });
 
-  it("stays quiet on an indoor spot when there is nothing to carry", async () => {
-    // A strip on every indoor result is noise. The lookup still happens, because
-    // it is the only way to know there is nothing worth saying.
+  it("does not request location for an indoor spot", async () => {
     const utils = render(<FocusScreen />);
+
     fireEvent.press(utils.getByText("High"));
     fireEvent.press(utils.getByText("Silent"));
     fireEvent.press(utils.getByText("Find My Spot"));
 
     await waitFor(() => expect(utils.getByText("Saved Basement Carrel")).toBeTruthy());
-    await act(async () => {});
+    await act(async () => { });
 
-    expect(utils.queryByText(/degrees/i)).toBeNull();
-  });
-
-  it("warns an indoor spot about the trip when rain is likely", async () => {
-    // You still have to walk to the library.
-    (getOutdoorConditions as jest.Mock).mockResolvedValue(
-      conditions({ rainLikely: true, rainChancePercent: 80, weatherCode: 61 })
-    );
-
-    const utils = render(<FocusScreen />);
-    fireEvent.press(utils.getByText("High"));
-    fireEvent.press(utils.getByText("Silent"));
-    fireEvent.press(utils.getByText("Find My Spot"));
-
-    await waitFor(() => expect(utils.getByText(/on the way there/i)).toBeTruthy());
+    expect(getCurrentPosition).not.toHaveBeenCalled();
+    expect(getOutdoorConditions).not.toHaveBeenCalled();
   });
 
   it("shows nothing when the phone will not give a position", async () => {
