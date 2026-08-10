@@ -1,24 +1,17 @@
 // The one place the app asks the phone where it is. Everything else calls
-// getCurrentPosition() and never imports expo-location directly, the same
-// wrapper-module pattern as localdb and historyStorage, so the permission dance
-// and the "it might fail" handling live in one spot.
-//
-// This is US17 step 1: the free, no-key, no-card half of live discovery. It only
-// reports the position; taking that position and asking "what restaurants are
-// near here" is the later, paid-service step behind the recommendation engine's
-// place seam.
+// getCurrentPosition() and never imports expo-location, so the permission dance
+// and the failure handling live in one spot (US17 step 1).
 
 import * as Location from "expo-location";
 
-// A tagged result rather than a bare {lat,lng} or a thrown error: callers branch
-// on `ok` and always have a reason when it fails, so a screen can show "we could
+// A tagged union rather than a bare {lat,lng} or a thrown error: callers branch
+// on `ok` and always have a reason when it fails, so a screen can say "we could
 // not get your location" instead of hanging or crashing.
-// `stale` is present, and only ever true, when the position came from the
-// last-resort tier below rather than from a recent or fresh reading. It is
-// optional so that the ordinary paths keep the shape they always had and a
-// caller that does not care is unaffected. A caller that shows distances or
-// says "near you" should check it, because an hour-old position can be a
-// suburb away from where the phone is now.
+//
+// `stale` is set only when the position came from the last-resort tier below.
+// It is optional so the ordinary paths keep the shape they always had. Anything
+// showing distances should check it, since an hour-old position can be a suburb
+// away from where the phone is now.
 export type LocationResult =
   | { ok: true; latitude: number; longitude: number; stale?: true }
   | { ok: false; reason: LocationFailure };
@@ -37,30 +30,23 @@ const LAST_KNOWN_MAX_AGE_MS = 5 * 60 * 1000;
 // How old a position may be and still be worth offering as a last resort, once
 // a fresh reading has already failed.
 //
-// The five minutes above is the bar for using a cached position *instead of*
-// asking the phone. It is deliberately tight, because within that window the
-// cache is as good as a fresh reading and much faster. It is the wrong bar for
-// the end of the chain, though: treating a six-minute-old position as no
-// position at all threw away a usable answer and sent the screen to "we could
-// not get your location", which is a worse outcome than a slightly old one.
-// Nobody choosing somewhere to eat has moved far enough in six minutes to
-// matter against a search radius measured in kilometres.
+// The five minutes above is the bar for skipping the phone entirely, and is
+// deliberately tight. It is the wrong bar for the end of the chain: treating a
+// six-minute-old position as none at all throws away a usable answer for "we
+// could not get your location", which is the worse outcome.
 //
-// An hour is a bound rather than a guess at how long a position stays true. It
-// is there because unbounded staleness is its own wrong answer: a position from
-// this morning could be in a different city, and searching it would be
-// confidently incorrect rather than merely approximate.
+// An hour is a bound, not a guess at how long a position stays true. Unbounded
+// staleness is its own wrong answer, since a position from this morning could
+// be in another city and would be confidently incorrect rather than merely old.
 const STALE_MAX_AGE_MS = 60 * 60 * 1000;
 
 // How long to wait for a fresh fix before giving up and letting the screen ask
 // where the user is.
 //
-// The number matters more than it looks. Without a cap, getCurrentPositionAsync
-// waits as long as the operating system takes, which indoors or on an emulator
-// with no fix set is tens of seconds or never. During that the screen shows
-// nothing at all, so the app reads as frozen rather than busy, and the person
-// gives up before the fallback they needed ever appears. Five seconds is longer
-// than a good fix takes and shorter than a person will sit staring at nothing.
+// Without a cap, getCurrentPositionAsync waits as long as the operating system
+// takes, which indoors or on an emulator is tens of seconds or never. The screen
+// shows nothing meanwhile, so the app reads as frozen and the person gives up
+// before the fallback appears. Five seconds beats a good fix and beats waiting.
 const FRESH_FIX_TIMEOUT_MS = 5000;
 
 // Rejects if the wrapped promise has not settled in time. The timer is always

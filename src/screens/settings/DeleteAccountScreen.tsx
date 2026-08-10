@@ -1,15 +1,9 @@
 // Deleting the account and everything with it (US33). A screen rather than a
-// confirmation box, for two reasons: it needs a password field, and the list of
-// what is about to go is too long to read inside an alert.
+// confirmation box, because it needs a password field and the list of what goes
+// is too long for an alert.
 //
-// The wording rule this follows is the one the clear-data flow established. That
-// screen had to say "on this phone", because the cloud copy of a decision
-// survives it. This one deletes that copy too, so it can say everything, and it
-// says so plainly. What it must not do is round up: the two lines about what
-// SwiftChoice cannot reach are there because a promise to delete data held by
-// Google or the weather service would be a promise we are not in a position to keep.
-//
-// A universal screen, so teal only. No module colour belongs here.
+// This one really does delete everything, so it says so, but it must not round
+// up: what SwiftChoice cannot reach is named. A universal screen, so teal only.
 
 import { useState } from "react";
 import {

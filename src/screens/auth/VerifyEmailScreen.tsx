@@ -17,14 +17,26 @@ import { useTheme } from "@/theme/ThemeProvider";
 export function VerifyEmailScreen() {
   const { colors } = useTheme();
   const { user, refreshEmailVerified } = useAuth();
+
+  // One flag per button rather than one shared "busy". The two actions are
+  // independent, and a single flag would disable both while either ran.
   const [checking, setChecking] = useState(false);
   const [resending, setResending] = useState(false);
+
+  // One status line shared by both actions, since only the most recent outcome
+  // is worth showing and two stacked messages would contradict each other.
   const [status, setStatus] = useState<string | null>(null);
 
+  // Falls back to wording that still reads correctly in the sentences below,
+  // rather than printing an empty gap where the address should be.
   const email = user?.email ?? "your email";
 
-  // Runs when "I have verified" is pressed. Asks Firebase again. If the email is
-  // now verified the app opens on its own; if not, the user is asked to try again.
+  // Verification happens in the user's inbox, outside the app, so there is
+  // nothing to listen for. This re-asks Firebase on demand: the user says they
+  // have clicked the link, and the app checks rather than takes their word.
+  //
+  // Nothing here navigates. A verified result re-renders RootNavigator, which
+  // swaps this screen for the app, the same one-way-in rule login follows.
   async function handleCheckVerified() {
     setStatus(null);
     setChecking(true);
@@ -42,8 +54,9 @@ export function VerifyEmailScreen() {
     }
   }
 
-  // Runs when "Resend link" is pressed. Sends the email again and tells them
-  // where to look for it.
+  // Resends the link. The confirmation names the address and mentions spam,
+  // because a link that arrived but was filtered looks identical to one that
+  // never sent, and that is the most common reason people get stuck here.
   async function handleResend() {
     setStatus(null);
     setResending(true);

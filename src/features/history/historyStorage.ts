@@ -1,14 +1,8 @@
-// This is where a saved decision gets written. When a user accepts a
-// recommendation on the Fuel or Focus screen, that screen calls logDecision
-// here and this file saves it. The screens do not need to know how or where it
-// is stored, they just call this one function. Right now it is saved in the
-// on-device database.
+// Where an accepted decision gets written. Screens call logDecision and never
+// need to know where it lands.
 //
-// Each saved decision keeps a frozen copy of the chosen item (its name and some
-// details) in itemSnapshot. That way the history stays correct even if the
-// original item is later changed or deleted. The fuelId, focusId and taskId are
-// just an optional link back to the original item, and reading the history never
-// relies on them.
+// Each record keeps a frozen copy of the chosen item in itemSnapshot, so the
+// history stays true even if the original is later edited or deleted.
 
 import { doc, setDoc } from "firebase/firestore";
 

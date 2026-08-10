@@ -1,10 +1,8 @@
-// The sign up screen. It checks what the user typed, creates the account, and
-// then lets the auth listener move them into the app.
+// The sign up screen. Validates what was typed, creates the account, and lets
+// the auth listener move the user into the app.
 //
-// The design system only covers the logged-in screens, so this screen is built
-// in the same style: the warm background, the logo, DM Sans, the shared
-// TextField, and the Button. Sign up uses the teal look that is allowed
-// everywhere, so the module colours do not apply here.
+// The design system covers only the logged-in screens, so this is built to
+// match them. Teal throughout, since no module owns a sign-up screen.
 
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View, TouchableOpacity } from "react-native";
@@ -28,12 +26,16 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  // Per-field errors from local validation, and one whole-form error from
+  // Firebase. Kept apart so each is rendered where the user can act on it.
   const [errors, setErrors] = useState<RegisterErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Runs when Create account is pressed. Checks the form first and stops if
-  // anything is wrong. Otherwise creates the account and shows a message if it fails.
+  // Validate locally first, so an obviously bad form never costs a round trip.
+  // Unlike login, sign-up errors can be specific: somebody whose email is
+  // already registered has to be told, or they are stuck with no way forward.
   async function handleRegister() {
     const nextErrors = validateRegisterForm({ email, password, confirmPassword });
     setErrors(nextErrors);
@@ -61,6 +63,8 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
       >
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
 
+         {/* Back to Login. goBack() rather than navigate("Login"), so returning
+             pops this screen instead of stacking a second Login on top of it. */}
          <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}

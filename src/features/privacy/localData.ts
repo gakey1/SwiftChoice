@@ -1,13 +1,8 @@
 // Clears everything this app has stored on the phone (US31), in one place so
-// there is a single answer to "what is actually on my device".
+// there is a single answer to "what is on my device", and so deleting an
+// account (US33) is this plus the cloud rather than a second list that drifts.
 //
-// This is deliberately the on-device half of deleting an account (US33). Doing
-// it separately means the account flow is this, plus the cloud copies, plus
-// signing the user out, rather than a second list that could drift from this one.
-//
-// It does NOT touch the cloud. Accepted decisions are mirrored to Firestore
-// (D-008), and that copy survives this. Anything shown to the user about this
-// action has to say so, or we are claiming more than we did. See D-011.
+// It does NOT touch the cloud. What the user is told has to say so (D-011).
 
 import { clearFocusPool } from "@/features/focus/focusPoolStorage";
 import { clearFuelPool } from "@/features/fuel/fuelPoolStorage";

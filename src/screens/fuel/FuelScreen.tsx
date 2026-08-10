@@ -1,13 +1,8 @@
-// Fuel module screen. It shows the meal filters (eat in or out, budget, prep
-// time, and distance), asks the recommendation engine for matches, then shows
-// one result card at a time with Accept and a single Reroll. Accept saves the
-// choice to history and goes back home. Fuel uses the amber module colour, taken
-// from the active theme; the whole screen wears the Arcade glass look (ambient
-// background, glass result card, mono on the coded bits) and follows the
-// dark/light toggle.
+// Fuel module screen. Meal filters (eat in or out, budget, prep time, distance)
+// go to the recommendation engine, which returns matches shown one card at a
+// time with Accept and a single Reroll. Accept saves to history and goes home.
 //
-// Styling only: the filter state, the recommendation call, the one-reroll cap,
-// and the accept-to-history wiring are exactly as written; only the look changed.
+// Amber, since this is a Fuel screen and the colour is scoped to it.
 
 import React, { useCallback, useRef, useState } from "react";
 import * as Crypto from "expo-crypto";

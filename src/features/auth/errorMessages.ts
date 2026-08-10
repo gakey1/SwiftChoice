@@ -53,21 +53,17 @@ export function loginErrorMessage(err: unknown): string {
   }
 }
 
-// Password reset hides whether an account exists, for the same reason login does.
-// The login form spent effort refusing to say which emails are registered, and a
-// reset form that answered "no account with that email" would give away the same
-// thing through a different screen.
+// Password reset hides whether an account exists, for the same reason login
+// does: a reset form answering "no account with that email" would leak through
+// a second screen what the login form refuses to say.
 //
-// Returning null means "do not show an error". The screen then shows the same
-// confirmation it shows after a real send, so a registered address and an
-// unregistered one look identical from the outside. Only faults that are true
-// whether or not the account exists get a message, because those are things the
-// user can actually act on.
+// null means "show no error", so the screen shows its ordinary confirmation and
+// a registered address looks identical to an unregistered one. Only faults that
+// hold either way get a message, since those are the ones a user can act on.
 //
-// auth/invalid-email is included in the null case because validateEmail has
-// already caught malformed addresses on the device and shown a field error. By
-// the time Firebase disagrees, saying so would only narrow down what counts as
-// a real address here.
+// auth/invalid-email returns null too: validateEmail has already caught
+// malformed addresses on the device, so repeating it here would only narrow
+// down what counts as a real address.
 // Deleting an account re-checks the password first (US33). This one is specific
 // where login is deliberately vague, and the difference is worth spelling out.
 //

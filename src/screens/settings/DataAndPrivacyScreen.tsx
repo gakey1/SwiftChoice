@@ -1,13 +1,8 @@
 // The full account of what SwiftChoice collects, where it goes, and what stays
-// on the phone. Reached from the Your data row in Settings, and the place the
-// short notices around the app are the summary of (US34).
+// on the phone. The long form of the short notices shown around the app (US34).
 //
-// The rule this screen is written to: say exactly what the app does, and no
-// more. The clear-data screen had to say "on this phone" because the cloud copy
-// of a decision survives, and claiming to delete more than we delete would be
-// the fastest way to lose someone's trust on the one screen they came to
-// looking for it. The same applies here, in the other direction: every line
-// below is checkable against the code, and nothing is softened.
+// Written to one rule: every line is checkable against the code, and nothing is
+// softened. This is the screen someone opens looking for the truth.
 
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";

@@ -1,17 +1,6 @@
 // A short line saying what leaves the phone, shown next to the control that
-// causes it. Used for US34.
-//
-// Two rules shape this component.
-//
-// It carries no module colour. The same notice appears on Fuel, Focus and
-// Priority, and amber, green and purple are each scoped to one module, so a
-// notice that picked one up would break that scoping the moment it was reused.
-// Everything here is neutral.
-//
-// It is deliberately quiet. The WBS asks for unobtrusive, and the reason is not
-// tidiness: a notice people dismiss without reading looks like consent and is
-// not. So this is small text under the control rather than a dialog in front of
-// it, and there is nothing to dismiss.
+// causes it (US34). Quiet by design, because a notice people dismiss without
+// reading looks like consent and is not. Neutral, since all three modules use it.
 
 import { StyleSheet, Text, View } from "react-native";
 

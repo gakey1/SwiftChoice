@@ -1,11 +1,8 @@
-// The list of the three modules (Fuel, Focus, Priority) with their colours and
-// wording, all kept in one place. Each module has its own colour: amber for
-// Fuel, green for Focus, and purple for Priority. Teal is the one colour used on
-// screens shared across all modules.
+// The three modules with their colours and wording: amber for Fuel, green for
+// Focus, purple for Priority, and teal on anything shared between them.
 //
-// Screens that belong to a single module take a module and use only that
-// module's colour, and the types below make a wrong module fail to build.
-// Screens shared across all modules take no module and use teal.
+// The types below are what enforce the module-colour rule. A single-module
+// screen takes a Module and gets only that colour; a wrong one fails to build.
 
 import { colors } from "@/theme/tokens";
 

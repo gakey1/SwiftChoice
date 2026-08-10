@@ -1,11 +1,8 @@
-// All the login and sign up actions that talk to Firebase live here in one
-// place, so the screens just call these functions and never deal with Firebase
-// directly. Keeping them together also makes them easy to fake in tests.
+// Every login and sign-up action that talks to Firebase, so screens call these
+// and never touch Firebase directly, which also makes them easy to fake.
 //
-// None of these functions hide errors. If a Firebase call fails, the error is
-// thrown so the screen that called it can catch it and show the user a friendly
-// message (see features/auth/errorMessages). Having that in one spot keeps the
-// wording consistent instead of scattered around.
+// Nothing here swallows an error. Failures are thrown for the caller to turn
+// into wording, which keeps every message in features/auth/errorMessages.
 
 import {
   createUserWithEmailAndPassword,

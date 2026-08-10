@@ -1,13 +1,6 @@
-// Pure aggregations over the decision history, the numbers the History dashboard
-// shows: this-week count, reroll rate, the most active time of day, per-module
-// counts, and a seven-day bar series. They are plain functions of a decision
-// list (and, where time matters, an explicit "now"), so they never read the
-// clock during render and are trivial to unit test.
-//
-// These are the canonical definitions of "this week", "reroll rate" and so on.
-// When Bikash's dashboard backend (US27) produces an aggregated summary, it
-// should return these same field names so there is one definition, not two (see
-// briefs/sprint-3/gamification-data-shape-for-dashboard.md).
+// Pure aggregations over the decision history, and the canonical definitions of
+// "this week", "reroll rate" and the rest. Every one is a plain function of a
+// decision list plus an explicit "now", so none reads the clock during render.
 
 import type { DecisionModuleType, DecisionRecord } from "@/features/history/historyStorage";
 
@@ -131,16 +124,12 @@ export function computeHistoryStats(decisions: DecisionRecord[], now: number): H
 }
 
 // How long the average decision took, in seconds, or null when nothing can be
-// measured. Not shown on any screen itself; it is the measured half of the
-// saved-time figure below, and is exported separately so US27's dashboard can
-// report the raw decide time without recomputing it. Only decisions that recorded a start are counted, which is why this
-// returns null rather than 0: no data and "instant" are different answers, and
-// showing 0s for the second would be a claim the app cannot support.
+// measured. null rather than 0, because no data and "instant" are different
+// answers and 0s would be a claim the app cannot support.
 //
-// Decisions saved before started_at existed have none, and are skipped rather
-// than guessed at. A negative or absurd gap is skipped too: those can only come
-// from the device clock moving between the two stamps, and one bad row would
-// otherwise drag the average somewhere meaningless.
+// Rows with no start stamp are skipped rather than guessed at, as are negative
+// or absurd gaps: those come from the device clock moving between the two
+// stamps, and one bad row would drag the average somewhere meaningless.
 export function averageDecideSeconds(decisions: DecisionRecord[]): number | null {
   const gaps: number[] = [];
 

@@ -1,13 +1,6 @@
-// Changing your password while signed in, reached from the Account section of
-// Settings.
-//
-// Three fields rather than two: the current password, the new one, and a
-// confirmation. The confirmation is here for the same reason it is on the
-// registration form, and matters more here, because a typo in a new password
-// that nobody checks locks you out of your own account and the only way back is
-// the reset email.
-//
-// A universal screen, so teal only.
+// Changing your password while signed in, from the Account section of Settings.
+// Three fields, because an unchecked typo in a new password locks you out of
+// your own account. A universal screen, so teal only.
 
 import { useState } from "react";
 import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
@@ -37,8 +30,15 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
+
+  // Errors are keyed by field so a message can be shown against the input that
+  // caused it, with "form" for anything that belongs to the attempt as a whole.
   const [errors, setErrors] = useState<FieldErrors>({});
   const [saving, setSaving] = useState(false);
+
+  // Non-null once the change has succeeded, which switches the screen to its
+  // confirmation state. An object rather than a boolean, because the
+  // confirmation needs to know whether the second factor went with it.
   const [done, setDone] = useState<{ twoFactorWasReset: boolean } | null>(null);
 
   async function handleSubmit(): Promise<void> {
@@ -50,6 +50,8 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
       confirm: validateConfirmPassword(next, confirm),
     };
 
+    // All three are collected before any is reported, so a form with two
+    // problems shows both at once instead of surfacing them one press at a time.
     if (local.current ?? local.next ?? local.confirm) {
       setErrors(local);
       return;
@@ -60,6 +62,8 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
     try {
       const result = await changePassword(current, next);
 
+      // changePassword names the field it failed on, so a wrong current
+      // password lands under that input rather than as a general form error.
       if (!result.ok) {
         setErrors({ [result.field]: result.message });
         return;
@@ -69,6 +73,9 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
       // two-factor notice below is the only place the user is told their
       // authenticator no longer works.
       setDone({ twoFactorWasReset: result.twoFactorWasReset });
+
+      // Cleared so the old and new passwords are not left sitting in component
+      // state behind the confirmation.
       setCurrent("");
       setNext("");
       setConfirm("");

@@ -1,13 +1,7 @@
 // Finds real places to eat near the user through the Google Places API (New).
-// This replaces the mock that stood in for it while the module was being built.
 //
-// Cost note, because it is decided here rather than in the console. Google bills
-// by which fields are asked for, not only by how many calls are made. Asking for
-// the rating or the price level puts the call in the dearest tier, which has the
-// smallest free monthly allowance. The field list below is therefore the whole
-// cost control for this project, so do not add fields to it without checking
-// what tier they fall into first. One call returns a list, and rerolls read
-// from that list rather than calling again.
+// Google bills by which fields are requested, not just by call count, so the
+// field mask below is this project's whole cost control. See FIELD_MASK.
 
 const NEARBY_ENDPOINT = "https://places.googleapis.com/v1/places:searchNearby";
 const TEXT_ENDPOINT = "https://places.googleapis.com/v1/places:searchText";
@@ -36,19 +30,13 @@ export class MissingPlacesKeyError extends Error {
 // The kinds of place the Fuel module looks for.
 const INCLUDED_TYPES = ["restaurant", "cafe", "meal_takeaway"];
 
-// Only these fields are requested. Adding to this list can move every call into
-// a more expensive tier, so treat it as a deliberate decision, not a detail.
+// Only these fields are requested. Google bills a request once, at the highest
+// tier any single requested field belongs to, so adding one can move every call
+// into a dearer tier. Treat this list as a decision, not a detail.
 //
-// Checked before the address fields were added, 2026-08-08. Google bills a
-// request once, at the highest tier any requested field belongs to: "You are
-// then billed at the highest SKU applicable to your request." displayName,
-// location and both address fields are Pro; rating and priceLevel are
-// Enterprise. This call already asked for rating and priceLevel, so it was
-// already billed at Enterprise and the addresses cost nothing extra. Adding an
-// Enterprise field would be the expensive mistake, not a Pro one.
-//
-// Both address forms are requested because the short one is the readable one and
-// Google omits it on some records, so the long one is the fallback.
+// rating and priceLevel are Enterprise and already set the tier here; the rest
+// are Pro and cost nothing extra. Both address forms are asked for because the
+// short one is more readable and Google omits it on some records.
 const FIELD_MASK = [
   "places.displayName",
   "places.location",

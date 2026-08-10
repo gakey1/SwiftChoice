@@ -1,16 +1,9 @@
-// Live nearby-place discovery via the OpenStreetMap Overpass API. This is the
-// real, cardless replacement for the Google Places mock (see D-009): given a
-// position and a radius, it asks Overpass for restaurants, cafes and fast-food
-// nearby and returns them nearest-first.
+// Live nearby-place discovery via the OpenStreetMap Overpass API, the cardless
+// alternative to Google Places (D-009). Given a position and radius, it returns
+// restaurants, cafes and fast-food nearest-first.
 //
-// OpenStreetMap has no ratings and no price, and we deliberately do NOT invent
-// either (that would break the app's transparency principle). This module
-// returns only what OSM actually knows - name, position, distance, and the raw
-// cuisine tag - so a fabricated rating can never leak in downstream. The budget
-// meaning is supplied separately as honest labelled bands, not per-place price.
-//
-// OSM's usage policy asks callers to identify themselves with a User-Agent and
-// to show attribution, so we send one and export OSM_ATTRIBUTION for the UI.
+// OSM knows no rating or price, and neither is invented here: this returns only
+// what OSM actually holds, so a fabricated rating cannot leak downstream.
 
 // Shown on any screen that displays OpenStreetMap results, per the OSM licence.
 export const OSM_ATTRIBUTION = "© OpenStreetMap contributors";

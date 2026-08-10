@@ -1,15 +1,10 @@
-// Priority module screen. You add tasks with an urgency and an importance, then
-// tap "Rank my tasks" to sort them so you know what to do first. The screen wears
-// the Arcade look (dark/light theme, DM Mono on the coded stats), with a light
-// gamification layer on top: an XP bar, levels, and small confetti + toast
-// rewards that react to what you do.
+// Priority module screen. Add tasks with an urgency and an importance, then tap
+// "Rank my tasks" to sort them. Gamification (XP, levels, confetti) is a
+// presentation-only layer that reacts to actions and never changes their result.
 //
-// IMPORTANT: the decision logic below - the Task type, addTask, completeTask and
-// handleRankTasks (Tracy's US22-24 work) - is kept exactly as she wrote it. The
-// gamification is a separate presentation-only layer (awardXp / celebrate) that
-// reacts to those actions; it never changes what her functions do.
-// IMPORTANT: Tracy's Priority screen and task-management flow remain intact.
-// The ranking handler now integrates Bikash's assigned tie-breaking feature.
+// Ranking runs deterministically first and asks the tie-break layer only for
+// groups that are still level, so the board is never left waiting on it.
+
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
@@ -45,7 +40,7 @@ import { isPriorityTieBreakEnabled } from "@/features/priority/priorityAI";
 import { rankTasksWithAI } from "@/features/priority/priorityAIRanking";
 import { loadTaskBoard, saveTaskBoard } from "@/services/localdb/taskStorage";
 // ---------------------------------------------------------------------------
-// Tracy's decision logic (US22-24). Kept verbatim - do not change.
+// The decision logic (US22-24): the task shape and the actions that change it.
 // ---------------------------------------------------------------------------
 
 export interface Task {
@@ -79,7 +74,7 @@ export function PriorityScreen() {
   const primaryColor = accent.color;
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
 
-  // ----- Tracy's state (kept) -----
+  // ----- The task board's own state -----
   const [taskName, setTaskName] = useState<string>("");
   const [urgency, setUrgency] = useState<Level>("Medium");
   const [importance, setImportance] = useState<Level>("Medium");
@@ -121,7 +116,7 @@ export function PriorityScreen() {
   // Start of this decision, for the Avg. decide figure on Home.
   const decisionStartedAt = useDecisionStart();
 
-  // ----- Tracy's logic (kept verbatim) -----
+  // ----- Adding, completing and ranking tasks -----
   const addTask = () => {
     if (taskName.trim() === "") return;
     const newTask: Task = {
@@ -139,9 +134,11 @@ export function PriorityScreen() {
 
 
   const completeTask = (taskId: number) => {
-    // Filter out the task by ID to remove it from the list
+    // Filter by id rather than splice by index, so the removal is unaffected by
+    // the list having been reordered by a rank since it was rendered.
     setTaskList(taskList.filter((t) => t.taskId !== taskId));
-    // Tracy left a hook here for XP; the gamification layer below supplies it.
+    // XP for completing is awarded by the gamification layer below, which
+    // reacts to this rather than being wired into it.
   };
 
   const handleRankTasks = async () => {

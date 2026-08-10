@@ -1,16 +1,9 @@
-// Turning two-factor authentication on or off. Reached from the Security row in
-// Settings, and also shown straight after a sign-in where a password change
-// invalidated an existing enrolment (D-012), with a banner explaining why.
+// Turning two-factor authentication on or off, from the Security row in
+// Settings. Also shown after a sign-in where a password change invalidated an
+// existing enrolment (D-012), with a banner explaining why.
 //
-// What this protects, stated plainly because it is easy to overclaim: the secret
-// is stored in this phone's keychain and nowhere else, so the code is asked for
-// when signing in on this phone. Signing in on a different phone is not
-// challenged, because there is no secret there to check against. It is a
-// same-device step-up factor, not account-level two-factor authentication.
-//
-// The current code is shown on screen during setup on purpose. It makes the
-// feature demonstrable on a simulator, or from a zip with no second device,
-// which is what the marking and the panel demo need.
+// A same-device step-up factor, not account-level two-factor authentication:
+// the secret lives in this phone's keychain and nowhere else.
 
 import { useCallback, useEffect, useState } from "react";
 import { Linking, ScrollView, StyleSheet, Text, View } from "react-native";

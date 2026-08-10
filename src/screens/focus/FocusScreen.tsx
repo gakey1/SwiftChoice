@@ -1,13 +1,8 @@
-// Focus module screen. It shows the workspace filters (energy level and vibe),
-// asks the recommendation engine for matching spots, then shows one result card
-// at a time with Accept and a single Reroll. Accept saves the choice to history
-// and goes back home. Focus uses the green module colour, taken from the active
-// theme; the whole screen wears the Arcade glass look (ambient background, glass
-// result card, mono on the coded bits) and follows the dark/light toggle.
+// Focus module screen. Workspace filters (energy level and vibe) go to the
+// recommendation engine, which returns spots shown one card at a time with
+// Accept and a single Reroll. Accept saves to history and goes home.
 //
-// Styling only: the energy/vibe state, the recommendation call, the one-reroll
-// cap, and the accept-to-history wiring are exactly as written; only the look
-// changed.
+// Green, since this is a Focus screen and the colour is scoped to it.
 
 import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";

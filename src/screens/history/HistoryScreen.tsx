@@ -1,21 +1,15 @@
-// The History screen, rebuilt as the Arcade "mental-energy dashboard" from the
-// design mockup. Six stacked blocks, all fed from data this slice already owns:
+// The History screen: the Arcade "mental-energy dashboard", six stacked blocks
+// fed entirely from data this slice already owns.
 //
-//   1. Level card    - level ring + XP-to-next bar (the shared progress store)
-//   2. This week      - decisions, reroll rate, most active time (decision history)
-//   3. Seven-day bars - decisions per day, today highlighted (decision history)
-//   4. Module counts  - Fuel / Focus / Priority totals (decision history)
+//   1. Level card     - level ring + XP-to-next bar (shared progress store)
+//   2. This week      - decisions, reroll rate, most active time (history)
+//   3. Seven-day bars - decisions per day, today highlighted (history)
+//   4. Module counts  - Fuel / Focus / Priority totals (history)
 //   5. Achievements   - the eight-badge gallery (progress + history)
-//   6. Recent         - the newest accepted decisions (decision history)
+//   6. Recent         - the newest accepted decisions (history)
 //
-// It wears the Arcade shell (ambient glow + frosted glass), reads the active
-// theme so it follows the dark/light toggle, and reloads the history each time
-// the tab gains focus so a just-accepted decision shows immediately. Progress
-// (level, XP, badges) comes live from the shared provider, so it needs no reload.
-//
-// Module colours appear only as data encoding on the per-module count tiles and
-// stat figures (the same pattern Home uses); the screen's own chrome, the level
-// ring and the earned badges stay teal, the universal colour, per the brand law.
+// Module colours appear only as data encoding on the per-module tiles; the
+// screen's own chrome stays teal, per the brand law.
 
 import { useCallback, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
@@ -87,6 +81,9 @@ export function HistoryScreen() {
   // Reload on every focus rather than once on mount, so the dashboard is fresh
   // after the user accepts a new recommendation. Stats are derived here (not
   // during render) with an explicit "now", so no clock is read while rendering.
+  //
+  // Only the history needs this. Level, XP and badges come live from the shared
+  // progress provider, which re-renders consumers on its own.
   useFocusEffect(
     useCallback(() => {
       let active = true;

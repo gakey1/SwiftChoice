@@ -1,18 +1,6 @@
 // The short pill that rises, holds, and fades after an action worth
-// acknowledging. The design uses it for a reroll; the Priority screen has its
-// own older copy of the same idea.
-//
-// The timings come straight from the design's toastRise keyframes rather than
-// being invented: 1150ms end to end, with a slight overshoot on the way in so it
-// arrives with a bit of life instead of sliding flatly into place.
-//
-//   0%    6px below, 90 percent size, invisible
-//   18%   in place, 105 percent size, fully visible
-//   78%   10px above, back to full size
-//   100%  26px above, 96 percent size, gone
-//
-// Nothing here is interactive and it must never intercept a tap, so it is
-// pointerEvents="none" and sits above the card it belongs to.
+// acknowledging, such as a reroll. pointerEvents="none", so it can sit above
+// the card without eating taps.
 
 import { useCallback, useEffect, useState } from "react";
 import { Animated, Easing, StyleSheet, Text } from "react-native";
@@ -80,6 +68,14 @@ export function RewardToast({ text, progress, color, textColor }: RewardToastPro
         styles.toast,
         {
           backgroundColor: color,
+          // Opacity, lift and scale share one 0-to-1 value and one set of stops,
+          // taken from the design's toastRise keyframes rather than invented:
+          //
+          //   0     6px below, 90 percent size, invisible
+          //   0.18  in place, 105 percent size, fully visible (a slight
+          //         overshoot, so it arrives with some life)
+          //   0.78  10px above, back to full size
+          //   1     26px above, 96 percent size, gone
           opacity: progress.interpolate({
             inputRange: [0, 0.18, 0.78, 1],
             outputRange: [0, 1, 1, 0],

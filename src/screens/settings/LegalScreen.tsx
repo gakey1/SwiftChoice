@@ -1,23 +1,8 @@
-// The privacy policy and the terms of use, reached from the Data and privacy
-// screen. US34 asks for working links to both.
+// The privacy policy and the terms of use, held in the app rather than linked
+// out, because there is no website and a dead link is worse than none (US34).
 //
-// They are held in the app rather than linked out to a website, because there is
-// no website. A link to a page that does not exist is worse than no link: it
-// looks like the document exists and has been checked.
-//
-// The rule every line below is written to: say only what is true of the code as
-// it stands. That rules out a great deal of what a normal policy contains, and
-// the omissions are deliberate rather than oversights.
-//
-//  - No claim of compliance with the Privacy Act, the GDPR or anything else.
-//    Nobody has assessed the app against any of them, and saying otherwise
-//    would be the one outright falsehood available here.
-//  - No retention periods, because nothing enforces one.
-//  - No promises about encryption or security beyond what Firebase does by
-//    default, because we have added nothing on top of it.
-//  - No company, no address, no ABN. There is no entity behind this.
-//  - Nothing in the future tense. A student project cannot promise what it will
-//    do after the unit ends, so it says what it does now and stops.
+// Every line is written to one rule: say only what is true of the code as it
+// stands. The omissions below are deliberate, not oversights.
 
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -33,6 +18,15 @@ type LegalScreenProps = NativeStackScreenProps<AppStackParamList, "Legal">;
 type Section = { heading: string; body: readonly string[] };
 type LegalDocument = { title: string; updated: string; intro: string; sections: readonly Section[] };
 
+// What both documents deliberately leave out, and why:
+//
+//  - No claim of compliance with the Privacy Act, the GDPR or anything else.
+//    Nobody has assessed the app against any of them.
+//  - No retention periods, because nothing enforces one.
+//  - No promises about encryption beyond Firebase's defaults, since we have
+//    added nothing on top of them.
+//  - No company, address or ABN. There is no entity behind this.
+//  - Nothing in the future tense. It says what the app does now and stops.
 const PRIVACY: LegalDocument = {
   title: "Privacy policy",
   updated: "Last updated August 2026",

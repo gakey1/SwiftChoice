@@ -1,19 +1,8 @@
 // Turns a set of readings into the two lines the Focus card shows: what it is
 // like, and what to do about it.
 //
-// Both kinds of spot are covered, for different reasons.
-//
-//  - An outdoor spot always shows the strip, because the weather decides whether
-//    the spot is usable at all.
-//  - An indoor spot shows it only when there is something worth carrying, and
-//    the wording is about the trip rather than the spot. Somebody walking to a
-//    library still gets rained on, but a strip on every indoor result would be
-//    noise, and noise is how a notice earns being ignored.
-//
-// Kept separate from weatherService and free of any network or React so every
-// band can be tested directly. The rules below are the whole feature as far as a
-// user is concerned, so they are worth being able to check exhaustively without
-// stubbing a fetch.
+// Free of network and React, so every band below can be tested directly. These
+// rules are the whole feature as far as a user is concerned.
 
 // Type-only, so nothing here needs weatherService at runtime. That matters: the
 // Focus screen test mocks weatherService, and a threshold imported from it would

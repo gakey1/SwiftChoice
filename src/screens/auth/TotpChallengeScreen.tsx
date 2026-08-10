@@ -1,15 +1,9 @@
-// The six-digit code asked for after signing in on a phone that has two-factor
-// authentication switched on. RootNavigator shows this between the sign-in and
-// the app, the same way VerifyEmailScreen sits in front of an unconfirmed
-// account: the app screens are not loaded until this passes.
+// The six-digit code asked for after signing in on an enrolled phone.
+// RootNavigator shows this between sign-in and the app, so no app screen loads
+// until it passes.
 //
-// The pass is held in memory only, never saved. Closing and reopening the app
-// asks again, which is the point of a step-up factor. Saving "already passed"
-// would reduce it to a one-time formality.
-//
-// The escape is Log out, not Skip. Somebody who cannot produce a code needs a
-// way off this screen that does not walk past the factor, and signing out is the
-// honest one: it returns them to the login screen with nothing gained.
+// The pass is held in memory only. Reopening the app asks again, which is the
+// point of a step-up factor, and the escape is Log out rather than Skip.
 
 import { useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -48,6 +42,12 @@ export function TotpChallengeScreen({ onPassed }: TotpChallengeScreenProps) {
   // features/auth/demoCode.ts for why setup keeps it and this screen does not.
   const showDemoCode = showsDemoCodeOnChallenge();
 
+  // Recomputes the demo code and its countdown once a second, so the screen
+  // shows a code that visibly rotates rather than a frozen number.
+  //
+  // `active` guards against the async tick landing after the screen has gone,
+  // which would set state on an unmounted component. The cleanup clears both
+  // the flag and the interval, so nothing survives the screen.
   useEffect(() => {
     if (!showDemoCode) return undefined;
 
@@ -81,9 +81,13 @@ export function TotpChallengeScreen({ onPassed }: TotpChallengeScreenProps) {
         return;
       }
 
+      // verifyCode accepts the neighbouring time windows as well as the current
+      // one, so a slow typist or a slightly wrong device clock still passes.
       if (verifyCode(secret, accountLabel, typedCode)) {
         onPassed();
       } else {
+        // One message for every wrong code. There is nothing more specific to
+        // say, and the code is gone in 30 seconds either way.
         setError("That code is not right. Check your authenticator and try again.");
       }
     } finally {

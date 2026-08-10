@@ -1,18 +1,6 @@
-// A dashed rounded-rectangle outline, drawn with SVG because React Native
-// cannot draw one itself.
-//
-// Setting borderStyle "dashed" together with a borderRadius is broken on both
-// platforms and has been for years: iOS draws the straight edges dashed and the
-// corners solid, and Android drops the corner arcs altogether, so the outline
-// reads as four separate lines with gaps where the corners should be. Nothing
-// warns about it, and it looks like a styling mistake rather than a platform
-// limitation.
-//
-// SVG has no such problem: strokeDasharray follows the path around the corners,
-// so the dashes stay evenly spaced the whole way round.
-//
-// Drop it inside any container as the last child. It fills the parent, ignores
-// touches, and draws nothing until it has been measured.
+// A dashed rounded-rectangle outline, drawn with SVG because borderStyle
+// "dashed" with a borderRadius is broken on both platforms and fails silently.
+// Drop it in as a container's last child; it fills the parent and ignores taps.
 
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
@@ -44,18 +32,13 @@ export function DashedOutline({
     );
   }
 
-  // A stroke straddles its path, so the path has to be inset or the outer half
-  // of every dash is clipped by the parent's overflow: hidden.
+  // A stroke straddles its path, so the path is inset or the outer half of
+  // every dash is clipped by the parent's overflow: hidden.
   //
-  // Inset by a whole thickness rather than the half that geometry alone calls
-  // for. Half puts the outer edge of the stroke exactly on the canvas boundary,
-  // and a layout in points is rarely a whole number of pixels, so Android
-  // truncates the last fraction of a pixel and takes most of the stroke with
-  // it. The bottom edge of the daily quest card was drawing one pixel tall
-  // against four along the top, which reads as a grey line rather than a teal
-  // one in light mode and disappears almost entirely in dark. A full thickness
-  // leaves half a stroke of slack, so nothing lands on the boundary. The
-  // outline sits half a point further in, which is not visible.
+  // Inset by a whole thickness, not the half geometry calls for: half lands the
+  // stroke's edge exactly on the boundary, where Android truncates it to a
+  // fraction of its width. A full thickness leaves slack, and costs half a
+  // point of position, which is not visible.
   const inset = thickness;
 
   return (

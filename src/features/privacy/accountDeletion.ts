@@ -1,23 +1,8 @@
 // Deletes the account and everything belonging to it (US33): the cloud copies,
 // everything on this phone, and the Firebase account itself.
 //
-// This is the sibling of localData.ts, and the difference between the two is the
-// whole point of this file.
-//
-// localData.ts (US31) keeps going when a step fails and reports what did not
-// clear, because a partial local wipe is recoverable: the user is still signed
-// in, still has the button, and can press it again.
-//
-// This one STOPS at the first failure and never reaches the last step. The
-// Firestore rule is `request.auth.uid == uid`, so every permission to delete this
-// user's documents is derived from the account existing. Delete the account
-// first, or carry on past a failed cloud step, and whatever is left in Firestore
-// can never be deleted by anyone: no client can authenticate as that uid again,
-// and under D-011 there is no Cloud Function with admin rights to sweep up.
-//
-// Hence: data first, account last, abort on failure. A failed attempt leaves the
-// user signed in and able to try again, which is recoverable. Orphaned cloud
-// data is not, and it is exactly what US33 promises will not happen.
+// Data first, account last, abort on the first failure. Unlike localData.ts,
+// which carries on past a failed step, this one must not: see deleteAccount().
 
 import { deleteAccountErrorMessage } from "@/features/auth/errorMessages";
 import { clearLocalData } from "@/features/privacy/localData";
@@ -56,6 +41,13 @@ export type DeleteAccountResult =
 // Runs the whole deletion. The password is taken here rather than being checked
 // by the screen beforehand, so the order can never be skipped by a caller: proof
 // of identity is step one, and nothing is destroyed until it passes.
+//
+// Every step aborts on failure, and the account is always last. The Firestore
+// rule is `request.auth.uid == uid`, so permission to delete these documents
+// exists only while the account does. Deleting it early, or pushing past a
+// failed cloud step, would strand data nobody can ever reach: no client can
+// authenticate as that uid again, and D-011 leaves no admin function to sweep
+// up. A refused attempt is recoverable; orphaned cloud data is not.
 export async function deleteAccount(password: string): Promise<DeleteAccountResult> {
   // Step 1. Prove it is really them, before anything is destroyed.
   //

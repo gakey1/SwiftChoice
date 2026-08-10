@@ -245,7 +245,7 @@ describe("fetchNearbyPlaces", () => {
   });
 });
 
-// The street address, added on Tracy's suggestion 2026-08-08.
+// The street address shown on a result card.
 describe("readableAddress", () => {
   function place(fields: Partial<GooglePlaceResult>): GooglePlaceResult {
     return { displayName: { text: "Somewhere" }, ...fields };

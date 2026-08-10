@@ -1,26 +1,8 @@
-// Changing your password from inside the app.
+// Changing your password from inside the app, for a signed-in user.
 //
-// The app already had two of the three: registration sets a password, and the
-// forgot-password link resets one for somebody locked out. It had no way for a
-// signed-in person to simply change theirs, which meant the only route was to
-// log out and pretend to have forgotten it.
-//
-// Two rules live here rather than on the screen, so neither can be skipped by a
-// caller.
-//
-// First, the current password is checked before the new one is set. Firebase
-// insists on a recent login for this anyway, but only at the moment of the
-// update; asking first means somebody who walked away from an unlocked phone
-// does not come back to a password they no longer know.
-//
-// Second, D-012: a password change invalidates the second factor on this device.
-// The secret and the password vouch for the same person, so once the password is
-// replaced the app cannot tell whether the person who replaced it is the one who
-// enrolled. Wiping the enrolment does not stop a determined attacker, who would
-// enrol their own authenticator; it guarantees the real owner is asked to set it
-// up again and therefore finds out something happened. That is done here and
-// immediately, rather than through the reset flag, because the user stays signed
-// in and there is no next sign-in to catch it.
+// Two rules live here rather than on the screen, so a caller cannot skip
+// either: the current password is checked first, and a successful change
+// invalidates the second factor on this device (D-012).
 
 import { changePasswordErrorMessage } from "@/features/auth/errorMessages";
 import { reauthenticate, updateCurrentPassword } from "@/services/auth";
@@ -53,6 +35,9 @@ export async function changePassword(
     };
   }
 
+  // Firebase requires a recent login for an update anyway, but only at the
+  // moment of the update. Asking up front means somebody who walked away from
+  // an unlocked phone does not come back to a password they no longer know.
   try {
     await reauthenticate(currentPassword);
   } catch (error) {
@@ -68,6 +53,9 @@ export async function changePassword(
     return { ok: false, field: "form", message: changePasswordErrorMessage(error) };
   }
 
+  // D-012, applied here and immediately rather than through the reset flag: the
+  // user stays signed in, so there is no next sign-in to catch it.
+  //
   // Only after the password is definitely changed. Clearing first would drop
   // somebody's second factor for a change that then failed.
   const wasEnrolled = await isTotpEnrolled();

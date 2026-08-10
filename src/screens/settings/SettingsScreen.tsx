@@ -1,6 +1,5 @@
-// Settings screen. Everything here is grouped into labelled cards, ordered from
-// who you are, through how the app behaves, to what it holds about you, and
-// finally the one action that cannot be undone:
+// Settings screen. Labelled cards ordered from who you are, through how the app
+// behaves, to what it holds about you, ending with the one irreversible action:
 //
 //   ACCOUNT           the email, two-factor, log out
 //   PREFERENCES       diet, budget, work hours, saved via preferencesStorage
@@ -9,23 +8,7 @@
 //   ABOUT             privacy policy, terms of use
 //   DANGER ZONE       delete the account
 //
-// Every action that happens in place rather than opening a screen has no
-// chevron, because a chevron is a promise of somewhere to go.
-//
-// Neither destructive row carries a caption. Both used to, and both said the
-// same thing the user is about to be told anyway: Clear Local Data opens a
-// confirmation, and Delete Account opens a whole screen whose job is to spell
-// out what goes and ask for a password first. A warning printed where it cannot
-// be acted on is read past, and it trains people to read past the one that
-// matters.
-//
-// Deleting the account is kept out of Data and privacy on purpose. Clearing this
-// phone and deleting everything are one tap apart in wording and nothing alike in
-// consequence, so they do not share a card.
-//
-// Settings is a universal screen, so only the teal accent is used here, with the
-// single exception of the delete row's label. Colours come from the active theme
-// via useTheme(); section labels use the mono font.
+// A universal screen, so teal only, the one exception being the delete label.
 
 import { useCallback, useState } from "react";
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";

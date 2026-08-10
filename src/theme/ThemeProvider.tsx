@@ -1,12 +1,9 @@
-// Holds the app's active colour theme and hands it to every screen below it.
-// This is the single source of truth for which theme is showing. It mirrors the
-// shape of AuthProvider: one provider near the top of the tree, one hook
-// (useTheme) that screens read from.
+// The single source of truth for which colour theme is showing, shaped like
+// AuthProvider: one provider near the top, one useTheme() hook below it. The
+// choice is loaded on boot and saved on change.
 //
-// On boot it loads the saved choice from the device; when the theme changes it
-// saves the new choice. Screens read colours with useTheme().colors, so flipping
-// the theme re-renders the whole app in the new palette. Only colours live here;
-// spacing, radii and font names never change between themes and stay in tokens.ts.
+// Colours only. Spacing, radii and font names do not vary by theme, so they
+// stay in tokens.ts.
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 

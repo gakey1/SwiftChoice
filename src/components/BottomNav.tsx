@@ -2,10 +2,8 @@
 // The tab you are on is shown in teal. This bar shows on every main screen, so
 // it always uses teal rather than one module's colour.
 //
-// It uses the solid card surface (a dark purple in dark mode, near-white in
-// light mode) with a clear top border, matching the mockup's dark nav bar and
-// staying visible instead of washing out. A translucent blur was tried first but
-// read too light over dark content, so a solid surface is used deliberately.
+// A solid card surface with a clear top border, deliberately not a translucent
+// blur, which read too light over dark content and washed the bar out.
 
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
