@@ -1,8 +1,9 @@
-// Saves a copy of the new user in the Firestore database after they sign up.
-// Firebase already handles the actual login details, so this document is just
-// the app's own record of the user. It is used to show their info and to link
-// their data to them later.
+// The app's own record of a user in Firestore. Firebase already handles the
+// login details, so this document holds what the app needs on top of them: the
+// id, the email, the sign-up date and the budget level, plus the decisions
+// mirrored under it.
 
+// The Firestore calls used below: reads, writes, and the batched delete.
 import {
   collection,
   deleteDoc,
@@ -14,11 +15,13 @@ import {
   writeBatch,
 } from "firebase/firestore";
 
+// The configured Firestore instance.
 import { db } from "@/services/firebase";
 
 // The three spending levels the budget survey offers.
 export type BudgetTier = "budget" | "moderate" | "premium";
 
+// The same three as a runtime list, for the check below.
 const BUDGET_TIERS: readonly string[] = ["budget", "moderate", "premium"];
 
 // Checks that a value is one of the three levels, so an older setting saved in
@@ -36,7 +39,8 @@ const tierCache = new Map<string, BudgetTier | null>();
 // the location is always predictable, and so the database rules can make sure a
 // user can only read or change their own document.
 export async function createUserDocument(uid: string, email: string): Promise<void> {
-  // Store the user's id, their email, and the time the account was created.
+  // serverTimestamp rather than the device clock, so the date does not depend on
+  // a phone whose time is wrong.
   await setDoc(doc(db, "users", uid), {
     userId: uid,
     email,
@@ -60,6 +64,9 @@ export async function saveBudgetTier(uid: string, tier: BudgetTier): Promise<voi
 
 // Reads the saved level back. Returns null when the user has never answered the
 // survey, which is what the navigator uses to decide whether to show it.
+//
+// null is cached as well as a real tier, so a user who has not answered does not
+// re-read the profile on every Fuel open.
 export async function getBudgetTier(uid: string): Promise<BudgetTier | null> {
   const cached = tierCache.get(uid);
   if (cached !== undefined) {
@@ -88,10 +95,10 @@ export function clearBudgetTierCache(): void {
 // removes what is left and does nothing to what has already gone.
 const BATCH_LIMIT = 500;
 
-// Deletes every decision saved to this user's account (US33). Firestore has no
-// "delete this collection" call at any tier, because a collection is not a real
-// object, just the shape left by documents existing at a path. So the documents
-// are listed and removed, and the collection stops existing once the last one does.
+// Deletes every decision saved to this user's account. Firestore has no "delete
+// this collection" call at any tier, because a collection is not a real object,
+// just the shape left by documents existing at a path. So the documents are
+// listed and removed, and the collection stops existing once the last one does.
 //
 // Returns how many were deleted, so the caller can say something true about what
 // happened rather than guessing.

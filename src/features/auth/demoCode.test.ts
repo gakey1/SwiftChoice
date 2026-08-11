@@ -1,13 +1,12 @@
 // Tests for the switch that decides whether the sign-in gate prints the answer
-// on itself.
-//
-// Worth testing rather than trusting to a one-line read of __DEV__, because the
-// failure is silent and in the wrong direction: a release build that still
-// shows the code looks completely normal, and the factor quietly stops nobody.
+// on itself. Worth pinning rather than trusting a one-line read of __DEV__,
+// because a release build that still shows the code looks completely normal.
 
+// The switch under test.
 import { showsDemoCodeOnChallenge } from "@/features/auth/demoCode";
 
 describe("showsDemoCodeOnChallenge", () => {
+  // __DEV__ is global, so each test restores whatever the suite ran with.
   const original = __DEV__;
 
   afterEach(() => {

@@ -3,8 +3,12 @@
 // that the rain threshold behaves at its edges, and above all that every failure
 // reports "unavailable" rather than letting a wrong claim reach the user.
 
+// The function under test, plus the threshold its rainLikely flag is derived
+// from, imported rather than typed in again.
 import { getOutdoorConditions, RAIN_LIKELY_PERCENT } from "./weatherService";
 
+// A complete "current" block, which every case starts from and then breaks in
+// one specific way.
 const CURRENT = {
   temperature_2m: 17.4,
   apparent_temperature: 15.1,
@@ -12,6 +16,7 @@ const CURRENT = {
   wind_speed_10m: 12,
 };
 
+// A full Open-Meteo response, with either half replaced by a case.
 function payload(overrides: { hourly?: unknown; current?: unknown } = {}) {
   return {
     hourly: { precipitation_probability: [10] },

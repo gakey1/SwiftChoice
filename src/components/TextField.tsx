@@ -1,12 +1,18 @@
 // A text box with a label above it and room for an error below, used on the
 // login and register forms. Themed, except the error red, which stays fixed.
 
+// The label, the box itself, and the wrapper that holds them with the error.
 import { StyleSheet, Text, TextInput, View } from "react-native";
+// Used to borrow TextInput's own keyboard and autofill types.
 import type { TextInputProps } from "react-native";
 
+// Design tokens: fonts, spacing, radii, and the error red.
 import { T } from "@/theme/tokens";
+// The active theme's colours.
 import { useTheme } from "@/theme/ThemeProvider";
 
+// The label, the value and its change handler are required; the rest tune the
+// keyboard, the error state and the testID.
 export type TextFieldProps = {
   label: string;
   value: string;
@@ -73,6 +79,9 @@ export function TextField({
   );
 }
 
+// The field's spacing, its label, the box, and the two error styles. The error
+// red is a token rather than a theme colour, so it stays the same in both
+// themes and always reads as a warning.
 const styles = StyleSheet.create({
   field: {
     marginBottom: T.spacing[4],

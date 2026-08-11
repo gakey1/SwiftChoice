@@ -3,10 +3,15 @@
 // putting each error on the field that caused it, and telling the user what
 // happened to their second factor.
 
+// Renders the screen and waits for the async submit to settle.
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 
+// The screen under test.
 import { ChangePasswordScreen } from "@/screens/settings/ChangePasswordScreen";
+// The change itself, mocked below: it has its own tests, and these cover the
+// screen's job of putting each failure on the right field.
 import { changePassword } from "@/features/auth/passwordChange";
+// The real provider, so the screen gets the colours it reads on render.
 import { ThemeProvider } from "@/theme/ThemeProvider";
 
 jest.mock("@/components/Icon", () => ({ Icon: () => null }));

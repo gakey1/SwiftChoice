@@ -2,11 +2,16 @@
 // "dashed" with a borderRadius is broken on both platforms and fails silently.
 // Drop it in as a container's last child; it fills the parent and ignores taps.
 
+// Holds the measured size of the parent.
 import { useState } from "react";
+// The absolute-filled wrapper that does the measuring.
 import { StyleSheet, View } from "react-native";
+// The type of the measurement event.
 import type { LayoutChangeEvent } from "react-native";
+// The rectangle the dashes are drawn on.
 import Svg, { Rect } from "react-native-svg";
 
+// Everything a caller can set. Only the colour is required.
 export type DashedOutlineProps = {
   color: string;
   // Match the parent's borderRadius, or the outline will not sit on its edge.
@@ -16,6 +21,7 @@ export type DashedOutlineProps = {
   dash?: [number, number];
 };
 
+// Measures the parent, then draws the dashed rectangle at that size.
 export function DashedOutline({
   color,
   radius = 20,
@@ -24,6 +30,8 @@ export function DashedOutline({
 }: DashedOutlineProps) {
   const [size, setSize] = useState({ width: 0, height: 0 });
 
+  // SVG needs pixel dimensions, so the size has to be measured rather than
+  // inherited the way a percentage width would be.
   function handleLayout(event: LayoutChangeEvent): void {
     const { width, height } = event.nativeEvent.layout;
     // Only update on a real change, so measuring cannot loop.

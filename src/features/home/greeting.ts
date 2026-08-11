@@ -1,6 +1,7 @@
 // The greeting at the top of Home. The mockup has "Good morning!" typed into
 // it, which shipped literally would greet somebody at eleven at night.
 
+// The three parts of the day the greeting distinguishes.
 export type GreetingPeriod = "morning" | "afternoon" | "evening";
 
 // A pure function of the hour rather than something that reads the clock, so
@@ -13,6 +14,8 @@ export function greetingPeriod(hour: number): GreetingPeriod {
   return "evening";
 }
 
+// The words for each period. Keyed by GreetingPeriod, so adding a period
+// without wording is a compile error rather than an empty greeting.
 const GREETINGS: Record<GreetingPeriod, string> = {
   morning: "Good morning!",
   afternoon: "Good afternoon!",

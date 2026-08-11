@@ -3,10 +3,14 @@
 // recent-decisions empty state, and that an accepted decision shows in the
 // recent list with its module and name.
 
+// Renders the screen into a tree the assertions can query.
 import { render, screen } from "@testing-library/react-native";
 
+// The screen under test.
 import { HistoryScreen } from "./HistoryScreen";
 
+// One accepted decision, complete enough to survive the aggregations, so the
+// recent list has something real to show.
 const fuelDecision = {
   historyId: "dh_fuel",
   moduleType: "fuel" as const,

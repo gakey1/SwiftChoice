@@ -1,19 +1,28 @@
 // The full account of what SwiftChoice collects, where it goes, and what stays
-// on the phone. The long form of the short notices shown around the app (US34).
+// on the phone. The long form of the short notices shown around the app.
 //
 // Written to one rule: every line is checkable against the code, and nothing is
 // softened. This is the screen someone opens looking for the truth.
 
+// The scrolling layout, the text, and the two tappable document links.
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+// Keeps the content clear of the notch.
 import { SafeAreaView } from "react-native-safe-area-context";
+// The type for this screen's navigation prop.
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
+// The colour wash behind the content.
 import { AmbientBackground } from "@/components/AmbientBackground";
+// The arrow, phone and chevron glyphs used in the lists below.
 import { Icon } from "@/components/Icon";
+// The screen names this stack can navigate to.
 import type { AppStackParamList } from "@/navigation/types";
+// Design tokens: fonts, spacing, radii.
 import { T } from "@/theme/tokens";
+// The active theme's colours.
 import { useTheme } from "@/theme/ThemeProvider";
 
+// Takes no route params; it is reached from Settings.
 type DataAndPrivacyScreenProps = NativeStackScreenProps<
   AppStackParamList,
   "DataAndPrivacy"
@@ -58,6 +67,7 @@ const STAYS_ON_THE_PHONE: readonly string[] = [
   "Your Priority tasks, except the tied ones sent to break a draw",
 ];
 
+// Renders the two lists, the caveats, and the links to the full documents.
 export function DataAndPrivacyScreen({ navigation }: DataAndPrivacyScreenProps) {
   const { colors } = useTheme();
 

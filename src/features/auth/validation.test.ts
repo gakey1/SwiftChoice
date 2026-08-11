@@ -1,7 +1,8 @@
-// Tests for the sign up and login form checks. These run without React or
-// Firebase, so they are quick and only check the plain rules: a valid email, a
-// long enough password, matching passwords, and the login behaviour.
+// Tests for the sign up and login form checks. No React and no Firebase, so
+// these are quick and cover only the rules: a valid email, a long enough
+// password, matching passwords, and the looser login behaviour.
 
+// The checks under test.
 import {
   hasErrors,
   MIN_PASSWORD_LENGTH,
@@ -12,7 +13,7 @@ import {
   validateRegisterForm,
 } from "@/features/auth/validation";
 
-// Email check: empty and malformed values fail, a proper address passes.
+// Email: empty and malformed values fail, a proper address passes.
 describe("validateEmail", () => {
   it("rejects an empty value", () => {
     expect(validateEmail("")).toBeDefined();
@@ -28,7 +29,8 @@ describe("validateEmail", () => {
   });
 });
 
-// Password check: empty or too short fails, the minimum length passes.
+// Password: the boundary is asserted from the constant, so changing the minimum
+// cannot leave the tests passing against the old number.
 describe("validatePassword", () => {
   it("rejects an empty value", () => {
     expect(validatePassword("")).toBeDefined();
@@ -41,7 +43,7 @@ describe("validatePassword", () => {
   });
 });
 
-// Confirm-password check: it has to match the first password.
+// Confirm password: it has to match the first one exactly.
 describe("validateConfirmPassword", () => {
   it("rejects a mismatch", () => {
     expect(validateConfirmPassword("password123", "password124")).toBeDefined();
@@ -51,7 +53,8 @@ describe("validateConfirmPassword", () => {
   });
 });
 
-// The whole sign up form: valid input passes, and every bad field is flagged.
+// The whole sign up form: valid input passes, and every bad field is flagged in
+// one go rather than one per attempt.
 describe("validateRegisterForm", () => {
   it("returns no errors for valid input", () => {
     const errors = validateRegisterForm({
@@ -74,7 +77,7 @@ describe("validateRegisterForm", () => {
   });
 });
 
-// The login form: it needs a valid email and a password, but not a long one.
+// The login form: a valid email and a password, but no length rule.
 describe("validateLoginForm", () => {
   it("returns no errors for valid input", () => {
     const errors = validateLoginForm({ email: "a@b.com", password: "anything" });
@@ -85,9 +88,10 @@ describe("validateLoginForm", () => {
     expect(validateLoginForm({ email: "bad", password: "anything" }).email).toBeDefined();
   });
 
+  // A short password is fine on login, since an older account may predate the
+  // length rule and rejecting it here would lock the owner out.
   it("requires a non-empty password but does not enforce length", () => {
     expect(validateLoginForm({ email: "a@b.com", password: "" }).password).toBeDefined();
-    // A short password is fine on login; the length policy is registration-only.
     expect(validateLoginForm({ email: "a@b.com", password: "x" }).password).toBeUndefined();
   });
 });

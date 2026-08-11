@@ -1,6 +1,7 @@
 // Stamps when the user opened a module, which is the start of a decision. The
 // gap between this and accepting is the Avg. decide figure on Home.
 
+// Holds the stamp for the life of the screen.
 import { useState } from "react";
 
 // A reroll deliberately does not reset the clock, because rerolling is part of

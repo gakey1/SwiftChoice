@@ -5,8 +5,10 @@
 // The whole board is one record rather than three, because the tasks, the
 // is-ranked flag and the explanation only make sense together.
 
+// The on-device key-value store.
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+// One key, namespaced like every other store in this folder.
 const BOARD_KEY = "swiftchoice.priorityBoard";
 
 // Structurally the screen's Task, declared here rather than imported from it.
@@ -22,6 +24,7 @@ export type StoredTask = {
   status: "Pending" | "InProgress" | "Completed";
 };
 
+// The board as one unit: the list, whether it has been ranked, and why.
 export type TaskBoard = {
   tasks: StoredTask[];
   isRanked: boolean;
@@ -30,8 +33,10 @@ export type TaskBoard = {
   reasons: string[];
 };
 
+// What a first run, or an unreadable store, falls back to.
 export const EMPTY_BOARD: TaskBoard = { tasks: [], isRanked: false, reasons: [] };
 
+// The allowed values for the three enum-ish fields, used by the check below.
 const LEVELS = ["High", "Medium", "Low"] as const;
 const STATUSES = ["Pending", "InProgress", "Completed"] as const;
 

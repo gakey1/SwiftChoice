@@ -2,9 +2,12 @@
 // both platforms. Not part of any real navigation flow; wired temporarily into
 // App.tsx and removed once the real screens land.
 
+// The scrolling layout the samples are stacked in.
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+// Holds the state for the two interactive samples below.
 import { useState } from "react";
 
+// Every primitive this screen exists to exercise.
 import { BottomNav } from "@/components/BottomNav";
 import type { BottomNavKey } from "@/components/BottomNav";
 import { Button } from "@/components/Button";
@@ -14,12 +17,16 @@ import { ImagePlaceholder } from "@/components/ImagePlaceholder";
 import { ModuleIcon } from "@/components/ModuleIcon";
 import { OptionGroup } from "@/components/OptionGroup";
 import { SectionLabel } from "@/components/SectionLabel";
+// The three modules, so each one's colours can be shown side by side.
 import { MODULES } from "@/theme/modules";
+// Design tokens: fonts, spacing.
 import { T } from "@/theme/tokens";
 
+// Stand-in options for the OptionGroup sample, matching the Fuel budget filter.
 type Budget = "$" | "$$" | "$$$";
 const BUDGET_OPTIONS: readonly Budget[] = ["$", "$$", "$$$"] as const;
 
+// Renders one of everything, in the order the design system lists them.
 export function DesignSystemDemo() {
   const [nav, setNav] = useState<BottomNavKey>("home");
   const [budget, setBudget] = useState<Budget>("$$");

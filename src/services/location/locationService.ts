@@ -1,7 +1,8 @@
 // The one place the app asks the phone where it is. Everything else calls
 // getCurrentPosition() and never imports expo-location, so the permission dance
-// and the failure handling live in one spot (US17 step 1).
+// and the failure handling live in one spot.
 
+// The only import of the platform location API in the app.
 import * as Location from "expo-location";
 
 // A tagged union rather than a bare {lat,lng} or a thrown error: callers branch

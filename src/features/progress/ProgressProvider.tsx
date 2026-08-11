@@ -4,6 +4,7 @@
 // all read from here, so earning XP on one screen updates it everywhere at once,
 // and it is persisted so it survives a restart.
 
+// React itself, plus the hooks the provider is built from.
 import React, {
   createContext,
   useCallback,
@@ -13,7 +14,9 @@ import React, {
   useState,
 } from "react";
 
+// The level curve, which decides when XP rolls over into a new level.
 import { capFor } from "@/features/progress/progress";
+// The stored shape, and the reads and writes that persist it.
 import {
   DEFAULT_PROGRESS,
   loadProgress,
@@ -21,6 +24,8 @@ import {
   type Progress,
 } from "@/services/localdb/progressStorage";
 
+// What every consumer of useProgress() gets: the current state, whether it has
+// finished loading, and the three ways to change it.
 type ProgressContextValue = {
   progress: Progress;
   hydrated: boolean;
@@ -32,8 +37,11 @@ type ProgressContextValue = {
   markRanked: () => void;
 };
 
+// undefined rather than a default value, so useProgress below can tell "outside
+// a provider" apart from "inside one that happens to hold the defaults".
 const ProgressContext = createContext<ProgressContextValue | undefined>(undefined);
 
+// Wraps the app, owns the progress, and persists every change.
 export function ProgressProvider({ children }: { children: React.ReactNode }) {
   const [progress, setProgress] = useState<Progress>(DEFAULT_PROGRESS);
   const [hydrated, setHydrated] = useState(false);
@@ -58,6 +66,8 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
     void saveProgress(progress);
   }, [hydrated, progress]);
 
+  // Adds XP and rolls the level over as many times as the amount covers, so a
+  // single large award cannot leave the bar past its cap.
   const awardXp = useCallback((amount: number) => {
     setProgress((prev) => {
       let xp = prev.xp + amount;
@@ -74,14 +84,19 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  // One more completed task.
   const bumpCompleted = useCallback(() => {
     setProgress((prev) => ({ ...prev, completedCount: prev.completedCount + 1 }));
   }, []);
 
+  // Set once and never unset, so the achievement cannot flicker. Returns the
+  // same object when already true, which avoids a pointless re-render.
   const markRanked = useCallback(() => {
     setProgress((prev) => (prev.ranked ? prev : { ...prev, ranked: true }));
   }, []);
 
+  // Memoised because a context value rebuilt on every render re-renders every
+  // consumer, which here is every screen in the app.
   const value = useMemo<ProgressContextValue>(
     () => ({ progress, hydrated, awardXp, bumpCompleted, markRanked }),
     [progress, hydrated, awardXp, bumpCompleted, markRanked]

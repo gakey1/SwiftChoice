@@ -1,5 +1,5 @@
 // Live nearby-place discovery via the OpenStreetMap Overpass API, the cardless
-// alternative to Google Places (D-009). Given a position and radius, it returns
+// alternative to Google Places. Given a position and radius, it returns
 // restaurants, cafes and fast-food nearest-first.
 //
 // OSM knows no rating or price, and neither is invented here: this returns only
@@ -16,6 +16,8 @@ const USER_AGENT = "SwiftChoice/0.1 (student project; contact via app)";
 
 // The amenity kinds we treat as "somewhere to eat out".
 const EAT_OUT_AMENITIES = ["restaurant", "cafe", "fast_food"] as const;
+
+// Derived from the list above, so the query and the type cannot disagree.
 export type PlaceCategory = (typeof EAT_OUT_AMENITIES)[number];
 
 // A place exactly as OSM knows it, with the distance we computed. No rating and
@@ -32,6 +34,7 @@ export type NearbyPlace = {
   category: PlaceCategory;
 };
 
+// Where to search and how far out.
 export type NearbyPlacesParams = {
   latitude: number;
   longitude: number;
@@ -51,6 +54,8 @@ type OverpassElement = {
   tags?: Record<string, string>;
 };
 
+// The envelope around those elements. Optional, because a query matching
+// nothing comes back without the key at all.
 type OverpassResponse = { elements?: OverpassElement[] };
 
 // Builds the Overpass QL query: eat-out amenities within `radius` metres of the
@@ -65,7 +70,8 @@ function buildQuery(latitude: number, longitude: number, radiusMeters: number): 
 // to sort results by how near they are and to show a real distance. Exported so
 // the Google path measures distance the same way rather than duplicating it.
 export function distanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6_371_000; // Earth radius in metres
+  // Earth radius in metres.
+  const R = 6_371_000;
   const toRad = (deg: number) => (deg * Math.PI) / 180;
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);

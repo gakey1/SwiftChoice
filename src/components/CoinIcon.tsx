@@ -1,19 +1,22 @@
-// The coin in the XP heads-up display, drawn as vector art because an emoji is
-// the operating system's font rather than artwork the app owns, so it cannot be
+// The coin in the XP heads-up display, drawn as vector art. An emoji is the
+// operating system's font rather than artwork the app owns, so it cannot be
 // styled into matching across platforms. Rendered on Android only.
 
+// The SVG primitives the coin is built from.
 import Svg, { Circle, Defs, Ellipse, LinearGradient, Stop } from "react-native-svg";
 
+// The only thing a caller sets is how big the coin is.
 export type CoinIconProps = {
-  // Larger than the font size the emoji used, deliberately. A font size sets an
+  // Larger than the font size the emoji uses, deliberately. A font size sets an
   // em box rather than the glyph inside it, so matching the two numbers yields
   // a visibly smaller coin.
   size?: number;
 };
 
+// Draws the coin: body, rim, inner face, highlight.
 export function CoinIcon({ size = 19 }: CoinIconProps) {
-  // A 24-unit viewBox decouples the drawing from the display size: coordinates
-  // below are written once against a 24-unit grid and scale to any size prop.
+  // A 24-unit viewBox decouples the drawing from the display size: the
+  // coordinates below are written once and scale to any size prop.
   return (
     <Svg testID="coin-icon" width={size} height={size} viewBox="0 0 24 24">
       <Defs>
@@ -33,7 +36,7 @@ export function CoinIcon({ size = 19 }: CoinIconProps) {
       </Defs>
 
       {/* The coin body, filling almost the whole viewBox so none of the box is
-          wasted on padding the emoji does not have. */}
+          wasted on padding. */}
       <Circle cx="12" cy="12" r="11.3" fill="url(#coin-face)" />
       {/* The rim: a darker ring just inside the edge, which is what stops the
           disc reading as a flat dot at this size. */}

@@ -1,8 +1,10 @@
-// The D-012 policy in one place: a password change invalidates the second
-// factor on this device. Friction rather than a lockout, since re-enrolment
-// mints a fresh secret and needs nothing from the old one.
+// One rule, in one place: a password change invalidates the second factor on
+// this device. Friction rather than a lockout, since re-enrolment mints a fresh
+// secret and needs nothing from the old one.
 
+// Reads and clears the stored TOTP secret.
 import { clearTotpSecret, isTotpEnrolled } from "@/services/localdb/totpStorage";
+// The flag ForgotPasswordScreen sets when a reset link goes out.
 import {
   clearPasswordResetRequested,
   wasPasswordResetRequested,

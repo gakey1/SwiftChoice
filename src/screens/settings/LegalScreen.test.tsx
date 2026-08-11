@@ -1,4 +1,4 @@
-// Tests for the privacy policy and terms of use (US34).
+// Tests for the privacy policy and terms of use.
 //
 // Most of these assert what the documents do NOT say. That is the point: the
 // risk with a policy written for a student project is not leaving something out,

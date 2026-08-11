@@ -3,12 +3,17 @@
 // that keeps the user signed in. A theme choice is an ordinary preference, not a
 // secret, so it does not belong in Secure Store.
 
+// The on-device key-value store.
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+// The valid theme names and the fallback, so this file never hardcodes either.
 import { DEFAULT_THEME, THEME_NAMES, type ThemeName } from "@/theme/themes";
 
+// One key, namespaced like every other store in this folder.
 const THEME_KEY = "swiftchoice.theme";
 
+// Narrows a stored string to a real theme name, so a value left behind by an
+// older build cannot reach the theme provider.
 function isThemeName(value: string | null): value is ThemeName {
   return value !== null && (THEME_NAMES as readonly string[]).includes(value);
 }

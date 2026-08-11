@@ -1,20 +1,30 @@
 // The privacy policy and the terms of use, held in the app rather than linked
-// out, because there is no website and a dead link is worse than none (US34).
+// out, because there is no website and a dead link is worse than none.
 //
 // Every line is written to one rule: say only what is true of the code as it
 // stands. The omissions below are deliberate, not oversights.
 
+// The scrolling layout and the text.
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+// Keeps the content clear of the notch.
 import { SafeAreaView } from "react-native-safe-area-context";
+// The type for this screen's navigation and route props.
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
+// The colour wash behind the document.
 import { AmbientBackground } from "@/components/AmbientBackground";
+// The screen names this stack can navigate to.
 import type { AppStackParamList } from "@/navigation/types";
+// Design tokens: fonts, spacing.
 import { T } from "@/theme/tokens";
+// The active theme's colours.
 import { useTheme } from "@/theme/ThemeProvider";
 
+// route.params.document decides which of the two below is shown.
 type LegalScreenProps = NativeStackScreenProps<AppStackParamList, "Legal">;
 
+// Both documents are plain data rather than JSX, so the wording can be read and
+// checked without reading a render tree.
 type Section = { heading: string; body: readonly string[] };
 type LegalDocument = { title: string; updated: string; intro: string; sections: readonly Section[] };
 
@@ -86,6 +96,8 @@ const PRIVACY: LegalDocument = {
   ],
 };
 
+// The terms. Same rule as the policy above: nothing here promises anything the
+// code does not do.
 const TERMS: LegalDocument = {
   title: "Terms of use",
   updated: "Last updated August 2026",
@@ -140,6 +152,8 @@ const TERMS: LegalDocument = {
   ],
 };
 
+// Picks the document from the route and renders it: title, date, intro, then
+// each section's heading and paragraphs.
 export function LegalScreen({ navigation, route }: LegalScreenProps) {
   const { colors } = useTheme();
   const document = route.params.document === "terms" ? TERMS : PRIVACY;

@@ -4,6 +4,8 @@
 // different local day depending on the machine's timezone, so offsets from now
 // keep the test correct in any zone.
 
+// The functions under test, plus the baseline constant the saved-time figure
+// rests on.
 import {
   ASSUMED_MINUTES_WITHOUT_APP,
   averageDecideSeconds,
@@ -11,8 +13,10 @@ import {
   computeHistoryStats,
   formatDuration,
 } from "./historyStats";
+// The record shape the fixtures below build.
 import type { DecisionModuleType, DecisionRecord } from "./historyStorage";
 
+// The two offsets the fixtures are expressed in.
 const DAY = 24 * 60 * 60 * 1000;
 const HOUR = 60 * 60 * 1000;
 
@@ -41,6 +45,8 @@ function decision(
 }
 
 describe("computeHistoryStats", () => {
+  // A new install is the first thing anybody sees, so it has to be a clean zero
+  // rather than a crash on an empty list.
   it("returns an all-zero summary for an empty history", () => {
     const s = computeHistoryStats([], NOW);
     expect(s.weekCount).toBe(0);
@@ -52,6 +58,7 @@ describe("computeHistoryStats", () => {
     expect(s.weekBars.every((b) => b.count === 0)).toBe(true);
   });
 
+  // The module split is all-time, so the 400-day-old row still counts here.
   it("counts per module across all time", () => {
     const s = computeHistoryStats(
       [
@@ -66,23 +73,24 @@ describe("computeHistoryStats", () => {
     expect(s.allTime).toBe(4);
   });
 
+  // The weekly figures are not, so the same old row must be excluded from both
+  // the count and the rate. One of two weekly decisions rerolled gives 50%.
   it("counts only the last seven days for the weekly figure and reroll rate", () => {
     const s = computeHistoryStats(
       [
-        decision("fuel", 0, true), // this week, rerolled
-        decision("focus", -3 * DAY, false), // this week
-        decision("fuel", -400 * DAY, true), // old, ignored by week
+        decision("fuel", 0, true),
+        decision("focus", -3 * DAY, false),
+        decision("fuel", -400 * DAY, true),
       ],
       NOW
     );
     expect(s.weekCount).toBe(2);
-    // One of the two weekly decisions was rerolled -> 50%.
     expect(s.rerollRate).toBe(50);
   });
 
+  // Two decisions in the same clock hour, one three hours before. The expected
+  // label is derived rather than hardcoded, so the test holds in any timezone.
   it("reports the most active hour as a short label", () => {
-    // Two decisions in the same clock hour (now and exactly a day earlier), one
-    // three hours before that.
     const s = computeHistoryStats(
       [decision("fuel", 0), decision("focus", -1 * DAY), decision("priority", -1 * DAY - 3 * HOUR)],
       NOW
@@ -92,19 +100,20 @@ describe("computeHistoryStats", () => {
     expect(s.mostActive).toBe(expected);
   });
 
+  // The chart reads left to right ending on today, so today must be the last bar
+  // and today's decision must land in it.
   it("marks the last of the seven day bars as today", () => {
     const s = computeHistoryStats([decision("fuel", 0)], NOW);
     expect(s.weekBars[6]?.isToday).toBe(true);
     expect(s.weekBars.slice(0, 6).every((b) => b.isToday === false)).toBe(true);
-    // Today's decision lands in the last bucket.
     expect(s.weekBars[6]?.count).toBe(1);
   });
 });
 
 // Decide time. Not shown on any screen today, but the start times are still
-// recorded and cannot be backfilled, so this stays covered rather than rotting
-// until US27 wants it.
+// recorded and cannot be backfilled, so this stays covered rather than rotting.
 describe("averageDecideSeconds", () => {
+  // A decision that took the given time, or one with no start recorded at all.
   function withGap(startedMsAgo: number | null): DecisionRecord {
     const decidedAt = new Date(NOW).toISOString();
     return {
@@ -125,9 +134,9 @@ describe("averageDecideSeconds", () => {
     expect(averageDecideSeconds([withGap(20_000), withGap(40_000)])).toBe(30);
   });
 
+  // The distinction that matters: no data and "every decision was instant" are
+  // different claims, and only one of them is true.
   it("returns null rather than zero when nothing recorded a start", () => {
-    // The distinction that matters: no data and "every decision was instant"
-    // are different claims, and only one of them is true.
     expect(averageDecideSeconds([withGap(null), withGap(null)])).toBeNull();
   });
 
@@ -139,9 +148,9 @@ describe("averageDecideSeconds", () => {
     expect(averageDecideSeconds([withGap(30_000), withGap(null)])).toBe(30);
   });
 
+  // That is somebody leaving the screen open, not deliberating, and one such row
+  // would drag the average somewhere meaningless.
   it("discards a gap longer than an hour", () => {
-    // That is somebody leaving the screen open, not deliberating, and one such
-    // row would drag the average somewhere meaningless.
     expect(averageDecideSeconds([withGap(30_000), withGap(3 * 60 * 60 * 1000)])).toBe(30);
   });
 
@@ -168,6 +177,7 @@ describe("formatDuration", () => {
 describe("averageSavedSeconds", () => {
   const ASSUMED_SECONDS = ASSUMED_MINUTES_WITHOUT_APP * 60;
 
+  // A decision that took the given number of seconds, or one with no start.
   function tookSeconds(seconds: number | null): DecisionRecord {
     const decidedAt = new Date(NOW).toISOString();
     return {
@@ -193,36 +203,36 @@ describe("averageSavedSeconds", () => {
     expect(saved).toBe(ASSUMED_SECONDS - 90);
   });
 
+  // Somebody who laboured for half an hour did not save minus twenty minutes.
+  // Floored at zero, so the card cannot show a figure that reads as a penalty.
   it("never reports a negative saving", () => {
-    // Somebody who laboured for half an hour did not save minus twenty minutes.
-    // Floored at zero, so the card cannot show a figure that reads as a penalty.
     expect(averageSavedSeconds([tookSeconds(30 * 60)])).toBe(0);
   });
 
+  // There is nothing to subtract from, and assuming the full baseline was saved
+  // would be claiming the decision took no time at all.
   it("returns null when no decision recorded a start", () => {
-    // There is nothing to subtract from, and assuming the full baseline was
-    // saved would be claiming the decision took no time at all.
     expect(averageSavedSeconds([tookSeconds(null)])).toBeNull();
   });
 
+  // Counting them as zero-length would silently inflate the average towards the
+  // full baseline, which is the exact overstatement this figure must avoid.
   it("ignores rows with no start rather than treating them as instant", () => {
-    // Counting them as zero-length would silently inflate the average towards
-    // the full baseline, which is the exact overstatement this figure must avoid.
     expect(averageSavedSeconds([tookSeconds(60), tookSeconds(null)])).toBe(ASSUMED_SECONDS - 60);
   });
 
+  // Both aggregations share one definition of a countable row, so they can never
+  // disagree about which decisions exist.
   it("discards an implausible gap, the same rows the decide time discards", () => {
-    // Both aggregations share one definition of a countable row, so they can
-    // never disagree about which decisions exist.
     expect(averageSavedSeconds([tookSeconds(60), tookSeconds(3 * 60 * 60)])).toBe(
       ASSUMED_SECONDS - 60
     );
   });
 
+  // The survey figure is 20 minutes for 38% of respondents. The baseline is
+  // deliberately well under it, because the claim should understate. If somebody
+  // raises this later, the number has to stay defensible.
   it("keeps the baseline conservative against the survey it cites", () => {
-    // The survey figure is 20 minutes for 38% of respondents. The baseline is
-    // deliberately well under it, because the claim should understate. If
-    // somebody raises this later, the number has to stay defensible.
     expect(ASSUMED_MINUTES_WITHOUT_APP).toBeLessThan(20);
     expect(ASSUMED_MINUTES_WITHOUT_APP).toBeGreaterThan(0);
   });

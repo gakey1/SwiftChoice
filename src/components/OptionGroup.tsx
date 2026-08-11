@@ -2,11 +2,16 @@
 // buttons. Used for the Fuel choices (budget, prep time, distance). The chosen
 // button is tinted in its module's colour, which the type system enforces.
 
+// Tap handling, the labels, and the row layout.
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+// The module type, which carries the key the accent is looked up by.
 import type { Module } from "@/theme/modules";
+// Looks up a module's accent in the active theme.
 import { moduleAccent } from "@/theme/themes";
+// The active theme's colours.
 import { useTheme } from "@/theme/ThemeProvider";
+// Design tokens: fonts, spacing, radii.
 import { T } from "@/theme/tokens";
 
 // Generic over the option type, so a caller passing budget levels gets back a
@@ -75,6 +80,8 @@ export function OptionGroup<TValue extends string>({
   );
 }
 
+// The label-and-value header, the row of buttons, and one button. Colours are
+// set above, since they depend on which option is selected.
 const styles = StyleSheet.create({
   header: {
     flexDirection: "row",

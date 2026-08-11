@@ -4,8 +4,11 @@
 // so the checks focus on the task behaviour it wraps.
 
 import React from "react";
+// Renders the screen, drives it, and flushes the state updates it causes.
 import { render, fireEvent, act } from "@testing-library/react-native";
+// Spied on, since completing and clearing both go through a confirmation.
 import { Alert } from "react-native";
+// The screen under test.
 import { PriorityScreen } from "./PriorityScreen";
 
 // Stub the native icon set so this test does not pull in expo-font / expo-asset.

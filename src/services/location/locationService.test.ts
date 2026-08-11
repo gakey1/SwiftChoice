@@ -3,8 +3,10 @@
 // good fix, and granted-but-no-fix - and that each returns the tagged result
 // shape rather than throwing.
 
+// The platform API, mocked below so these run without a device.
 import * as Location from "expo-location";
 
+// The function under test.
 import { getCurrentPosition } from "./locationService";
 
 jest.mock("expo-location", () => ({
@@ -14,6 +16,7 @@ jest.mock("expo-location", () => ({
   getLastKnownPositionAsync: jest.fn(),
 }));
 
+// Typed handles on the mocks, so each case can choose which tier answers.
 const mockRequest = Location.requestForegroundPermissionsAsync as jest.Mock;
 const mockGetPosition = Location.getCurrentPositionAsync as jest.Mock;
 const mockLastKnown = Location.getLastKnownPositionAsync as jest.Mock;

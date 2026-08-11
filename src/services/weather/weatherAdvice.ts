@@ -58,6 +58,7 @@ const CONDITION_LABELS: ReadonlyMap<number, string> = new Map([
   [99, "Thunderstorms"],
 ]);
 
+// The word for a code, or null when the code is not one of the grouped set.
 export function conditionLabel(weatherCode: number): string | null {
   return CONDITION_LABELS.get(weatherCode) ?? null;
 }

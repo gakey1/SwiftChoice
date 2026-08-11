@@ -1,7 +1,8 @@
 // Records that a password reset was requested from this phone, so the next
-// sign-in can invalidate the TOTP enrolment (D-012). The reset finishes in the
-// browser, which Firebase gives the app no way to detect afterwards.
+// sign-in can invalidate the TOTP enrolment. The reset finishes in the browser,
+// which Firebase gives the app no way to detect afterwards.
 
+// The ordinary on-device store, not the keychain. See the key below.
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // AsyncStorage, not the keychain: this is an ordinary flag, and setting it

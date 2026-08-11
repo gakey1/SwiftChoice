@@ -4,13 +4,19 @@
 // Each record keeps a frozen copy of the chosen item in itemSnapshot, so the
 // history stays true even if the original is later edited or deleted.
 
+// The Firestore calls used for the cloud mirror.
 import { doc, setDoc } from "firebase/firestore";
 
+// The on-device SQLite handle, which is the source of truth here.
 import { getDb } from "@/services/localdb/db";
+// The Firestore instance and the session the mirror is written under.
 import { db as firestore, auth } from "@/services/firebase";
 
+// Which module a decision came from.
 export type DecisionModuleType = "fuel" | "focus" | "priority";
 
+// The frozen copy of the chosen item. details is deliberately open, since each
+// module records different things about what it recommended.
 export interface ItemSnapshot {
   name: string;
   details: Record<string, unknown>;
@@ -52,6 +58,8 @@ export interface DecisionRecord {
   startedAt: string | null;
 }
 
+// Checked at the door, since moduleType decides which column the soft foreign
+// key belongs in.
 const MODULE_TYPES: readonly DecisionModuleType[] = ["fuel", "focus", "priority"];
 
 // Raw row shape as stored in SQLite (snake_case columns, JSON-encoded objects,
@@ -72,6 +80,9 @@ interface DecisionRow {
 // Records an accepted or completed decision. Returns the stored record, with the
 // generated id and timestamp, so the caller can confirm what was written.
 export async function logDecision(input: DecisionInput): Promise<DecisionRecord> {
+  // Both guards throw rather than writing a row that cannot be read back
+  // meaningfully: an unknown module has no column, and a nameless item leaves
+  // the history list with a blank entry nobody can identify.
   if (!MODULE_TYPES.includes(input.moduleType)) {
     throw new Error(`Unknown decision module type: ${input.moduleType}`);
   }
@@ -80,6 +91,8 @@ export async function logDecision(input: DecisionInput): Promise<DecisionRecord>
     throw new Error("A decision must record the accepted item's name.");
   }
 
+  // The optional ids are normalised to null here, so the row is fully specified
+  // and a reader never has to distinguish undefined from null.
   const record: DecisionRecord = {
     historyId: generateHistoryId(),
     moduleType: input.moduleType,
@@ -142,7 +155,7 @@ async function mirrorToCloud(record: DecisionRecord): Promise<void> {
 }
 
 // Returns every saved decision, newest first. This is what the History screen
-// reads to show the list.
+// reads to show the list, and what the dashboard aggregates over.
 export async function getDecisions(): Promise<DecisionRecord[]> {
   const db = await getDb();
 
@@ -178,7 +191,8 @@ function rowToRecord(row: DecisionRow): DecisionRecord {
 }
 
 // Makes a unique id for a saved decision, built from the current time plus a bit
-// of randomness, so two decisions never end up with the same id.
+// of randomness, so two decisions never end up with the same id. The id is also
+// the cloud document id, which is what makes the mirror idempotent.
 function generateHistoryId(): string {
   const random = Math.random().toString(36).slice(2, 10);
 

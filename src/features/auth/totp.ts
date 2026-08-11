@@ -3,9 +3,12 @@
 //
 // TOTP is time-based one-time password: both sides hash a shared secret with
 // the current 30-second window, so matching digits prove the other side holds
-// the secret without it ever being sent. Same-device only, per D-012.
+// the secret without it ever being sent. Same-device only: the secret lives on
+// this phone and is never mirrored to the cloud.
 
+// Supplies the random bytes for a new secret.
 import * as Crypto from "expo-crypto";
+// Builds the codes and the otpauth URI an authenticator app reads.
 import * as OTPAuth from "otpauth";
 
 // What an authenticator app shows next to the code.
@@ -33,15 +36,16 @@ const VALIDATION_WINDOW = 1;
 // authenticator apps and otpauth URIs both use.
 //
 // The bytes come from expo-crypto, not otpauth's own helper, which needs
-// globalThis.crypto.getRandomValues and throws without it on React Native.
-// Node has it, so the helper would have passed every test and failed on the
-// first real enrolment.
+// globalThis.crypto.getRandomValues and throws without it on React Native. Node
+// has it, so the helper would pass every test and fail on the first real
+// enrolment.
 export function generateSecret(): string {
   const bytes = Crypto.getRandomBytes(SECRET_BYTES);
   return new OTPAuth.Secret({ buffer: bytes.buffer as ArrayBuffer }).base32;
 }
 
-// Builds the otpauth object used for both generating and checking codes.
+// Builds the otpauth object used for both generating and checking codes, so the
+// settings above are applied in exactly one place.
 function buildTotp(secretBase32: string, accountLabel: string): OTPAuth.TOTP {
   return new OTPAuth.TOTP({
     issuer: ISSUER,

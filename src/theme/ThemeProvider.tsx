@@ -5,16 +5,21 @@
 // Colours only. Spacing, radii and font names do not vary by theme, so they
 // stay in tokens.ts.
 
+// React itself, plus the hooks the provider is built from.
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
+// The palettes, their names, and the one that applies before a choice loads.
 import {
   DEFAULT_THEME,
   themes,
   type ThemeColors,
   type ThemeName,
 } from "@/theme/themes";
+// Where the choice is persisted between app opens.
 import { loadThemeName, saveThemeName } from "@/services/localdb/themeStorage";
 
+// What every consumer of useTheme() gets: the active colours, which theme they
+// belong to, and the two ways to change it.
 type ThemeContextValue = {
   // The active theme's colours. This is what screens read.
   colors: ThemeColors;
@@ -43,6 +48,7 @@ const DEFAULT_VALUE: ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue>(DEFAULT_VALUE);
 
+// Wraps the app, owns the current theme, and persists every change.
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [name, setName] = useState<ThemeName>(DEFAULT_THEME);
 
@@ -71,6 +77,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  // Memoised because a context value rebuilt on every render re-renders every
+  // consumer, which here is every screen in the app.
   const value = useMemo<ThemeContextValue>(
     () => ({
       colors: themes[name],

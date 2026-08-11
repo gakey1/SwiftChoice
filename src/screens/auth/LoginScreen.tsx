@@ -1,23 +1,37 @@
 // The login screen. Validates what was typed, signs the user in, and lets the
 // auth listener move them into the app. Built like the register screen.
 
+// Holds the two field values and the three flags below.
 import { useState } from "react";
+// The layout, the keyboard handling and the text.
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+// Keeps the content clear of the notch and the home indicator.
 import { SafeAreaView } from "react-native-safe-area-context";
+// The type for this screen's navigation prop.
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
+// The colour wash behind the form.
 import { AmbientBackground } from "@/components/AmbientBackground";
+// The shared button and text field.
 import { Button } from "@/components/Button";
 import { TextField } from "@/components/TextField";
+// Turns a Firebase failure into the one generic sign-in message.
 import { loginErrorMessage } from "@/features/auth/errorMessages";
+// The on-device form checks.
 import { hasErrors, validateLoginForm, type LoginErrors } from "@/features/auth/validation";
+// The screen names this stack can navigate to.
 import type { AuthStackParamList } from "@/navigation/types";
+// The Firebase sign-in call.
 import { loginWithEmail } from "@/services/auth";
+// Design tokens: fonts, spacing, radii.
 import { T } from "@/theme/tokens";
+// The active theme's colours.
 import { useTheme } from "@/theme/ThemeProvider";
 
+// navigation comes from the stack; this screen takes no route params.
 type LoginScreenProps = NativeStackScreenProps<AuthStackParamList, "Login">;
 
+// Draws the form and owns the sign-in attempt.
 export function LoginScreen({ navigation }: LoginScreenProps) {
   const { colors } = useTheme();
   const [email, setEmail] = useState("");
@@ -153,6 +167,10 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
   );
 }
 
+// The page frame, the wordmark, the headings, the error line and the two links.
+// Shared with the register and reset screens by being copied rather than
+// extracted, since each screen owns its own layout. Colours are applied above,
+// so all of this follows the dark/light toggle.
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   flex: { flex: 1 },

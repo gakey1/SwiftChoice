@@ -11,33 +11,48 @@
 // Module colours appear only as data encoding on the per-module tiles; the
 // screen's own chrome stays teal, per the brand law.
 
+// Holds the loaded decisions, and reloads them each time the tab is opened.
 import { useCallback, useState } from "react";
+// The scrolling layout and the text.
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+// Keeps the content clear of the notch.
 import { SafeAreaView } from "react-native-safe-area-context";
+// Fires when the tab is focused, which is what keeps the dashboard current.
 import { useFocusEffect } from "@react-navigation/native";
 
+// The colour wash behind the dashboard.
 import { AmbientBackground } from "@/components/AmbientBackground";
+// The badge glyphs, the card surface, the module glyphs and the level ring.
 import { GameIcon } from "@/components/GameIcon";
 import { GlassCard } from "@/components/GlassCard";
 import { ModuleGlyph } from "@/components/ModuleGlyph";
 import { ProgressRing } from "@/components/ProgressRing";
+// How much top padding clears the floating coin HUD.
 import { HUD_CLEARANCE } from "@/components/XpHud";
+// The saved decisions, and the aggregations over them.
 import { getDecisions, type DecisionModuleType, type DecisionRecord } from "@/features/history/historyStorage";
 import { computeHistoryStats, type HistoryStats } from "@/features/history/historyStats";
+// The badge set and the level maths, shared with Home and Priority.
 import { galleryAchievements } from "@/features/progress/achievements";
 import { capFor, levelTitle, xpFraction, XP_PER_DECISION } from "@/features/progress/progress";
 import { useProgress } from "@/features/progress/ProgressProvider";
+// The module keys and their accents, used only to tint the per-module tiles.
 import type { ModuleKey } from "@/theme/modules";
 import { moduleAccent } from "@/theme/themes";
+// The active theme's colours.
 import { useTheme } from "@/theme/ThemeProvider";
+// Design tokens: fonts, spacing, radii.
 import { T } from "@/theme/tokens";
 
+// The words shown on the per-module tiles.
 const MODULE_LABEL: Record<DecisionModuleType, string> = {
   fuel: "Fuel",
   focus: "Focus",
   priority: "Priority",
 };
 
+// The order the module tiles appear in, fixed rather than derived from the
+// counts, so the tiles do not reshuffle as the numbers change.
 const MODULE_ORDER: readonly ModuleKey[] = ["fuel", "focus", "priority"];
 
 // How many recent decisions the list shows. The dashboard is a summary, not the
@@ -48,6 +63,9 @@ const RECENT_LIMIT = 6;
 // figure comes from the progress module, which is also what the Fuel and Focus
 // Accept handlers award, so the pill and the running total cannot drift apart.
 
+// What the dashboard shows before the decisions have loaded, and on a fresh
+// install. Seven blank bars rather than none, so the chart does not jump into
+// place once the data arrives.
 const EMPTY_STATS: HistoryStats = {
   weekCount: 0,
   allTime: 0,
@@ -72,6 +90,7 @@ function formatDecidedAt(iso: string): string {
   });
 }
 
+// Loads the decisions on focus, aggregates them, and renders the six blocks.
 export function HistoryScreen() {
   const { colors } = useTheme();
   const { progress } = useProgress();
@@ -270,6 +289,7 @@ export function HistoryScreen() {
 }
 
 // One stat column in the THIS WEEK card: a big mono number over a small label.
+// One figure with its caption, used across the weekly summary row.
 function Stat({
   value,
   label,

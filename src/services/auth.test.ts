@@ -1,8 +1,9 @@
-// Tests for the auth service functions. Firebase is mocked so nothing real is
-// called: the tests just check that each function trims the email, writes the
-// user record when it should, passes errors through, and handles the cases
-// where no one is signed in.
+// Tests for the auth service. Firebase is mocked, so nothing real is called:
+// these check that each function trims the email, writes the user record when it
+// should, passes errors through rather than swallowing them, and refuses when
+// nobody is signed in.
 
+// Mocked below; imported so the tests can assert what was called.
 import {
   createUserWithEmailAndPassword,
   deleteUser,
@@ -14,7 +15,9 @@ import {
   signOut,
 } from "firebase/auth";
 
+// The faked auth instance, whose currentUser each test sets.
 import { auth } from "@/services/firebase";
+// The functions under test.
 import {
   deleteCurrentUser,
   loginWithEmail,
@@ -25,10 +28,12 @@ import {
   resendVerificationEmail,
   sendPasswordReset,
 } from "@/services/auth";
+// The Firestore write registration performs, mocked below.
 import { createUserDocument } from "@/services/firestore/users";
 
 // Replace the real Firebase and Firestore calls with fakes, so the tests can
-// check what was called without touching the network.
+// check what was called without touching the network. EmailAuthProvider returns
+// its inputs, so the credential can be asserted on.
 jest.mock("firebase/auth", () => ({
   createUserWithEmailAndPassword: jest.fn(),
   deleteUser: jest.fn(),
@@ -44,6 +49,8 @@ jest.mock("@/services/firestore/users", () => ({
   createUserDocument: jest.fn(),
 }));
 
+// Typed handles on the mocks, so the tests can set return values and assert
+// calls without casting at every use.
 const mockCreate = createUserWithEmailAndPassword as jest.Mock;
 const mockSendVerification = sendEmailVerification as jest.Mock;
 const mockSignIn = signInWithEmailAndPassword as jest.Mock;
@@ -58,8 +65,8 @@ const mockCredential = EmailAuthProvider.credential as unknown as jest.Mock;
 // directly through this typed handle.
 const mutableAuth = auth as unknown as { currentUser: unknown };
 
-// Sign up: creates the account with a trimmed email and saves the user record,
-// and does not save a record if Firebase fails.
+// Sign up: the account, the profile document and the verification email are one
+// unit, and a failed account must not leave a document behind.
 describe("registerWithEmail", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -87,7 +94,8 @@ describe("registerWithEmail", () => {
   });
 });
 
-// Login: signs in with a trimmed email, and passes Firebase errors through.
+// Login: trims the email, returns the uid, and lets errors through for the
+// screen to word.
 describe("loginWithEmail", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -111,7 +119,7 @@ describe("loginWithEmail", () => {
   });
 });
 
-// Logout: calls Firebase sign out.
+// Logout: one call, no cleverness.
 describe("logout", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -126,7 +134,7 @@ describe("logout", () => {
   });
 });
 
-// Resend link: throws if no one is signed in, otherwise emails the current user.
+// Resend link: refuses with nobody signed in, otherwise emails the current user.
 describe("resendVerificationEmail", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -150,8 +158,8 @@ describe("resendVerificationEmail", () => {
   });
 });
 
-// Verify check: false when no one is signed in, otherwise reloads the user and
-// returns the fresh verified value.
+// Verify check: the reload is the point, since the local user goes stale the
+// moment the link is clicked in a browser.
 describe("reloadAndCheckVerified", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -204,9 +212,9 @@ describe("reauthenticate", () => {
     mutableAuth.currentUser = { email: "a@b.com" };
   });
 
+  // Taking the email as an argument would let a screen re-authenticate against
+  // an address the session does not belong to.
   it("rebuilds the credential from the session's own email, not one passed in", async () => {
-    // Taking the email as an argument would let a screen re-authenticate against
-    // an address the session does not belong to.
     mockReauthWithCredential.mockResolvedValue(undefined);
 
     await reauthenticate("hunter2");
@@ -232,8 +240,9 @@ describe("reauthenticate", () => {
   });
 });
 
-// Deleting the Firebase account. This is the last step of US33 and the one that
-// cannot be undone, so it does nothing clever: it deletes, or it throws.
+// Deleting the Firebase account. This is the last step of deleting an account
+// and the one that cannot be undone, so it does nothing clever: it deletes, or
+// it throws.
 describe("deleteCurrentUser", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -255,9 +264,9 @@ describe("deleteCurrentUser", () => {
     expect(mockDeleteUser).not.toHaveBeenCalled();
   });
 
+  // auth/requires-recent-login is the one the caller has to turn into an
+  // instruction the user can follow, so it must arrive intact.
   it("passes a stale-session refusal through rather than swallowing it", async () => {
-    // auth/requires-recent-login is the one the caller has to turn into an
-    // instruction the user can follow, so it must arrive intact.
     mockDeleteUser.mockRejectedValue({ code: "auth/requires-recent-login" });
 
     await expect(deleteCurrentUser()).rejects.toEqual({ code: "auth/requires-recent-login" });

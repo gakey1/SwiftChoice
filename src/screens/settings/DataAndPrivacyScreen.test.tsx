@@ -1,4 +1,4 @@
-// Tests for the data and privacy screen (US34).
+// Tests for the data and privacy screen.
 //
 // These are unusual in that they assert on wording. That is deliberate: the
 // whole value of this screen is that it is accurate, and an accurate screen
@@ -68,7 +68,7 @@ describe("DataAndPrivacyScreen", () => {
     expect(getByText(/stay there until the account itself is deleted/i)).toBeTruthy();
   });
 
-  it("links to both full documents, which US34 asks for", () => {
+  it("links to both full documents", () => {
     const { getByText } = renderScreen();
 
     fireEvent.press(getByText("Privacy policy"));

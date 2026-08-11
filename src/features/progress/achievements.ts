@@ -5,10 +5,15 @@
 // The core badges are computed only from the shared progress store, so they read
 // identically on every screen. Streak is always present (listed first).
 
+// The icon names a badge may use.
 import type { GameGlyph } from "@/components/GameIcon";
+// Per-module decision counts, which only the fuller gallery needs.
 import type { ModuleCounts } from "@/features/history/historyStats";
+// The shared progress store the core badges are derived from.
 import type { Progress } from "@/services/localdb/progressStorage";
 
+// One badge. `earned` is computed on read rather than stored, so a badge can
+// never be stale relative to the progress it describes.
 export type Achievement = {
   id: string;
   name: string;
@@ -16,7 +21,8 @@ export type Achievement = {
   earned: boolean;
 };
 
-// The four core achievements shown on Home and Priority.
+// The four core achievements shown on Home and Priority. Progress-only, so the
+// two screens agree without needing the history.
 export function coreAchievements(p: Progress): Achievement[] {
   return [
     { id: "streak", name: "Streak", glyph: "fire", earned: p.completedCount >= 3 },

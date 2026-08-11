@@ -2,12 +2,17 @@
 //
 // Two rules live here rather than on the screen, so a caller cannot skip
 // either: the current password is checked first, and a successful change
-// invalidates the second factor on this device (D-012).
+// invalidates the second factor on this device.
 
+// Turns a Firebase error code into wording for the screen.
 import { changePasswordErrorMessage } from "@/features/auth/errorMessages";
+// The two Firebase calls this orders: prove, then replace.
 import { reauthenticate, updateCurrentPassword } from "@/services/auth";
+// Reads and clears the stored TOTP secret, for the second-factor step below.
 import { clearTotpSecret, isTotpEnrolled } from "@/services/localdb/totpStorage";
 
+// Either it worked, or it failed with a message and the field to attach it to.
+// A discriminated union, so the screen cannot read `message` off a success.
 export type ChangePasswordResult =
   | {
       ok: true;
@@ -53,8 +58,9 @@ export async function changePassword(
     return { ok: false, field: "form", message: changePasswordErrorMessage(error) };
   }
 
-  // D-012, applied here and immediately rather than through the reset flag: the
-  // user stays signed in, so there is no next sign-in to catch it.
+  // The second factor goes here and now, rather than through the reset flag the
+  // sign-in path uses: the user stays signed in, so there is no next sign-in for
+  // that flag to be read on.
   //
   // Only after the password is definitely changed. Clearing first would drop
   // somebody's second factor for a change that then failed.

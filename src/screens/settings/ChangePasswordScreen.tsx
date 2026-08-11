@@ -2,21 +2,36 @@
 // Three fields, because an unchecked typo in a new password locks you out of
 // your own account. A universal screen, so teal only.
 
+// Holds the three fields, the errors and the two flags below.
 import { useState } from "react";
+// The scrolling layout, the text and the password inputs.
 import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+// Keeps the content clear of the notch.
 import { SafeAreaView } from "react-native-safe-area-context";
+// The type for this screen's navigation prop.
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
+// The colour wash behind the form.
 import { AmbientBackground } from "@/components/AmbientBackground";
+// The shared button.
 import { Button } from "@/components/Button";
+// The ordering and the second-factor rule, which live outside this screen so a
+// caller cannot skip either.
 import { changePassword } from "@/features/auth/passwordChange";
+// The on-device checks, shared with the sign up form.
 import { validateConfirmPassword, validatePassword } from "@/features/auth/validation";
+// The screen names this stack can navigate to.
 import type { AppStackParamList } from "@/navigation/types";
+// Design tokens: fonts, spacing, radii.
 import { T } from "@/theme/tokens";
+// The active theme's colours.
 import { useTheme } from "@/theme/ThemeProvider";
 
+// Takes no route params; it is reached from Settings.
 type ChangePasswordScreenProps = NativeStackScreenProps<AppStackParamList, "ChangePassword">;
 
+// One optional message per field, plus "form" for anything belonging to the
+// attempt as a whole. The keys match what changePassword reports back.
 type FieldErrors = {
   current?: string | undefined;
   next?: string | undefined;
@@ -24,6 +39,7 @@ type FieldErrors = {
   form?: string | undefined;
 };
 
+// Shows the three fields, then swaps to a confirmation once the change lands.
 export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) {
   const { colors } = useTheme();
 
@@ -41,6 +57,8 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
   // confirmation needs to know whether the second factor went with it.
   const [done, setDone] = useState<{ twoFactorWasReset: boolean } | null>(null);
 
+  // Validates locally, calls the shared change, then either attaches the failure
+  // to the field that caused it or switches the screen to its done state.
   async function handleSubmit(): Promise<void> {
     // Checked on the device first, so an obviously bad password never costs a
     // round trip and the message points at the field that caused it.
@@ -84,6 +102,8 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
     }
   }
 
+  // The themed colours shared by all three inputs, built once rather than
+  // repeated at each call site below.
   const fieldStyle = {
     backgroundColor: colors.card,
     borderColor: colors.cardLine,

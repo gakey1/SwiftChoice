@@ -2,7 +2,10 @@
 // check that this module uses it correctly and, importantly, that the secret
 // goes to the keychain rather than anywhere else.
 
+// The keychain wrapper, mocked below. Asserting against it is what proves the
+// secret goes to the keychain and not to ordinary storage.
 import { clearItem, getItem, setItem } from "@/services/localdb/secureStorage";
+// The functions under test.
 import {
   clearTotpSecret,
   getTotpSecret,

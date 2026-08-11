@@ -12,12 +12,16 @@
 // SQLite is faked here. These check the migration and the failure handling
 // around it, which is where that bug lived.
 
+// The platform database, mocked below so no real file is opened.
 import * as SQLite from "expo-sqlite";
 
+// The connection under test, plus the hook that drops the cached handle between
+// cases so each one starts from a database of its own age.
 import { getDb, resetDbForTests } from "@/services/localdb/db";
 
 jest.mock("expo-sqlite", () => ({ openDatabaseAsync: jest.fn() }));
 
+// Typed handle on the mock, so each case can hand back its own fake database.
 const mockOpen = SQLite.openDatabaseAsync as jest.Mock;
 
 // Columns each table reports through PRAGMA table_info. Set per test to stand in
@@ -29,6 +33,8 @@ type FakeDbOptions = {
   failCount?: boolean;
 };
 
+// A database at whatever age the options describe. It records the ALTERs and
+// INSERTs it receives, which is what the migration cases assert on.
 function fakeDb(options: FakeDbOptions = {}) {
   const altered: string[] = [];
   const inserted: unknown[][] = [];

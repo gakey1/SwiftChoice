@@ -3,8 +3,10 @@
 // read back, that missing or corrupt values fall back to a fresh default, and
 // that a save writes the key as JSON.
 
+// The store behind it, mocked below.
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+// The functions under test, plus the fresh-player default they fall back to.
 import {
   DEFAULT_PROGRESS,
   loadProgress,
@@ -16,6 +18,7 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
   setItem: jest.fn(),
 }));
 
+// Typed handles on the mocks, so each case can set what is stored.
 const mockGetItem = AsyncStorage.getItem as jest.Mock;
 const mockSetItem = AsyncStorage.setItem as jest.Mock;
 

@@ -4,8 +4,8 @@
 
 // Open-Meteo rather than a paid weather product: no key, no account, no card,
 // so it adds no billing surface and keeps working even if the Google billing
-// Fuel uses ever lapses (D-010). Asking for more fields costs nothing here,
-// being the same endpoint and the same single request.
+// Fuel uses ever lapses. Asking for more fields costs nothing here, being the
+// same endpoint and the same single request.
 const ENDPOINT = "https://api.open-meteo.com/v1/forecast";
 
 // At or above this chance of rain, the umbrella advice is worth giving. Below it
@@ -13,7 +13,8 @@ const ENDPOINT = "https://api.open-meteo.com/v1/forecast";
 export const RAIN_LIKELY_PERCENT = 50;
 
 // A tagged result rather than an exception, matching locationService, so callers
-// never need a try and catch and a failed lookup simply shows nothing.
+// never need a try and catch and a failed lookup simply shows nothing. There is
+// one failure reason, because the caller does the same thing for all of them.
 export type OutdoorConditions =
   | {
       ok: true;
@@ -29,6 +30,7 @@ export type OutdoorConditions =
     }
   | { ok: false; reason: "unavailable" };
 
+// Where to look. The caller gets these from locationService.
 export type OutdoorConditionsParams = {
   latitude: number;
   longitude: number;

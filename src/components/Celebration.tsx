@@ -2,9 +2,12 @@
 // navigator, so a screen can fire one through useCelebration() and navigate
 // away in the same handler without the animation going with it.
 
+// React itself, plus the hooks the provider and the burst are built from.
 import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
+// The animation driver, its easing curves, and the views the particles use.
 import { Animated, Easing, StyleSheet, View } from "react-native";
 
+// The active theme's colours, which the particles are tinted with.
 import { useTheme } from "@/theme/ThemeProvider";
 
 // All three module colours plus teal. The same overlay fires for Fuel, Focus
@@ -12,27 +15,31 @@ import { useTheme } from "@/theme/ThemeProvider";
 // module-colour rule the moment another module reused it.
 const CELEBRATION_COLORS = ["priority", "teal", "fuel", "focus"] as const;
 
+// How many pieces are in one burst.
 const PARTICLE_COUNT = 14;
 
 // How long the slowest particle can take, plus a margin. Used to clear the
 // burst so the overlay is not left holding finished views.
 const BURST_LIFETIME_MS = 2000;
 
+// What the context hands out: one function, which fires a burst.
 type CelebrationContextValue = {
   celebrate: () => void;
 };
 
 // A no-op default rather than a thrown error. This is decoration, so a screen
-// rendered without the provider (a unit test, say) should lose the animation
-// and nothing else. App.tsx mounts the real one.
+// rendered without the provider, a unit test say, should lose the animation and
+// nothing else. App.tsx mounts the real one.
 const CelebrationContext = createContext<CelebrationContextValue>({
   celebrate: () => {},
 });
 
+// How a screen fires a burst.
 export function useCelebration(): CelebrationContextValue {
   return useContext(CelebrationContext);
 }
 
+// Wraps the app, holds the current burst, and renders it above the children.
 export function CelebrationProvider({ children }: { children: React.ReactNode }) {
   // Bumped per burst, then used as the overlay's key. Changing a key remounts
   // the component, which is what gives each burst fresh random positions.
@@ -61,8 +68,8 @@ function ConfettiBurst() {
   const { colors } = useTheme();
   const [done, setDone] = useState(false);
 
-  // Each piece gets its own randomised position, size, drift, spin and speed, so
-  // the burst does not read as fourteen identical things falling in step.
+  // Each piece gets its own position, size, drift, spin and speed, so the burst
+  // does not read as fourteen identical things falling in step.
   //
   // useState with a function initialiser, not a plain value: the function runs
   // on the first render only, so re-renders during the animation do not reroll
@@ -81,11 +88,12 @@ function ConfettiBurst() {
     }))
   );
 
+  // Starts the fall, schedules the cleanup, and tears both down on unmount.
   React.useEffect(() => {
     // Animated.parallel drives all fourteen from one composite animation, so
-    // they are started and stopped together rather than tracked individually.
-    // useNativeDriver hands the whole thing to the UI thread, which keeps the
-    // burst smooth while JavaScript is busy navigating back to Home.
+    // they start and stop together rather than being tracked individually.
+    // useNativeDriver hands the work to the UI thread, which keeps the burst
+    // smooth while JavaScript is busy navigating back to Home.
     const composite = Animated.parallel(
       particles.map((particle) =>
         Animated.timing(particle.anim, {
@@ -102,8 +110,8 @@ function ConfettiBurst() {
     // finished Animated.Views alive on an overlay that never unmounts.
     const timer = setTimeout(() => setDone(true), BURST_LIFETIME_MS);
 
-    // Cleanup stops the animation and cancels the timer. Without it, a burst
-    // interrupted mid-flight would keep running against an unmounted tree.
+    // Without this, a burst interrupted mid-flight would keep running against
+    // an unmounted tree.
     return () => {
       composite.stop();
       clearTimeout(timer);
@@ -119,7 +127,7 @@ function ConfettiBurst() {
     <View pointerEvents="none" style={styles.layer} testID="celebration-layer">
       {/* Every particle is driven by one 0-to-1 value. interpolate maps that
           single number onto fall, drift, spin and fade at once, so the four
-          are guaranteed to stay in step with each other. */}
+          stay in step with each other. */}
       {particles.map((particle, index) => (
         <Animated.View
           key={index}
@@ -162,9 +170,9 @@ function ConfettiBurst() {
   );
 }
 
+// The overlay covers the app and never takes a touch. Nothing here is
+// interactive, and a layer that swallowed taps would make the whole screen
+// dead for the length of the burst.
 const styles = StyleSheet.create({
-  // Covers the app and never takes a touch. Nothing here is interactive, and a
-  // layer that swallowed taps would make the whole screen dead for the length
-  // of the burst.
   layer: { position: "absolute", left: 0, right: 0, top: 0, bottom: 0 },
 });

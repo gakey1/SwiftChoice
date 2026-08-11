@@ -1,20 +1,25 @@
-// The bar of three tabs at the bottom of the app: Home, History and Settings.
-// The tab you are on is shown in teal. This bar shows on every main screen, so
-// it always uses teal rather than one module's colour.
-//
-// A solid card surface with a clear top border, deliberately not a translucent
-// blur, which read too light over dark content and washed the bar out.
+// The bottom tab bar: Home, History and Settings. It shows on every main
+// screen, so the active tab is teal rather than any one module's colour.
+// A solid surface with a top border, not a translucent blur.
 
+// Row layout, tap handling and the labels.
 import { Pressable, StyleSheet, Text, View } from "react-native";
+// The bottom inset, so the labels clear the system navigation.
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+// The app's icon component.
 import { Icon } from "@/components/Icon";
+// The icon names Icon accepts, so a wrong name fails to compile.
 import type { IconName } from "@/components/Icon";
+// Design tokens: fonts, spacing, sizes.
 import { T } from "@/theme/tokens";
+// The active theme's colours.
 import { useTheme } from "@/theme/ThemeProvider";
 
+// Which tab is showing. Screens pass one of these to say where they are.
 export type BottomNavKey = "home" | "history" | "settings";
 
+// One tab: its key, the word under the icon, and which icon to draw.
 type Item = {
   key: BottomNavKey;
   label: "Home" | "History" | "Settings";
@@ -28,6 +33,7 @@ const ITEMS: readonly Item[] = [
   { key: "settings", label: "Settings", icon: "settings" },
 ] as const;
 
+// active is the tab to highlight; onNavigate fires with the tab that was tapped.
 export type BottomNavProps = {
   active: BottomNavKey;
   onNavigate: (key: BottomNavKey) => void;
@@ -37,12 +43,10 @@ export type BottomNavProps = {
 export function BottomNav({ active, onNavigate }: BottomNavProps) {
   const { colors } = useTheme();
 
-  // This bar is a custom tabBar, so react-navigation hands it no safe-area
-  // padding of its own. Android has drawn edge to edge since SDK 35, which puts
-  // the system navigation directly over the bottom of the app: on a gesture
-  // phone that is a 24dp pill, but on three-button navigation it is a 48dp bar,
-  // and the labels sat underneath it. The 18 is kept as a floor so the bar keeps
-  // its designed breathing room on a device that reports no inset at all.
+  // This bar is a custom tabBar, so react-navigation gives it no safe-area
+  // padding of its own, and Android draws edge to edge, which puts the system
+  // navigation over the bottom of the app: 24dp for gestures, 48dp for
+  // three-button. The 18 is a floor for a device reporting no inset at all.
   const insets = useSafeAreaInsets();
 
   return (
@@ -79,6 +83,7 @@ export function BottomNav({ active, onNavigate }: BottomNavProps) {
   );
 }
 
+// Layout for the bar itself, the equal-width tabs, and the label under an icon.
 const styles = StyleSheet.create({
   bar: {
     flexDirection: "row",

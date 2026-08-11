@@ -5,24 +5,39 @@
 // The confirmation is the same whether or not the address has an account, so
 // this screen cannot undo the work login does to hide which emails exist.
 
+// Holds the typed email, the two error slots, and the two flags below.
 import { useState } from "react";
+// The layout, the keyboard handling and the text.
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+// Keeps the content clear of the notch and the home indicator.
 import { SafeAreaView } from "react-native-safe-area-context";
+// The type for this screen's navigation prop.
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
+// The colour wash behind the form.
 import { AmbientBackground } from "@/components/AmbientBackground";
+// The shared button and text field.
 import { Button } from "@/components/Button";
 import { TextField } from "@/components/TextField";
+// Returns null for the failures that would reveal a registered address.
 import { passwordResetErrorMessage } from "@/features/auth/errorMessages";
+// The on-device email check.
 import { validateEmail } from "@/features/auth/validation";
+// The screen names this stack can navigate to.
 import type { AuthStackParamList } from "@/navigation/types";
+// The Firebase reset-email call.
 import { sendPasswordReset } from "@/services/auth";
+// Records the reset on this phone, so the next sign-in drops the enrolment.
 import { markPasswordResetRequested } from "@/services/localdb/passwordResetFlag";
+// Design tokens: fonts, spacing, radii.
 import { T } from "@/theme/tokens";
+// The active theme's colours.
 import { useTheme } from "@/theme/ThemeProvider";
 
+// navigation comes from the stack; this screen takes no route params.
 type ForgotPasswordScreenProps = NativeStackScreenProps<AuthStackParamList, "ForgotPassword">;
 
+// Draws the form, then the confirmation once a link has gone out.
 export function ForgotPasswordScreen({ navigation }: ForgotPasswordScreenProps) {
   const { colors } = useTheme();
   const [email, setEmail] = useState("");
@@ -63,7 +78,7 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordScreenProps) 
   }
 
   // Records that a reset may be in flight, so the next sign-in invalidates the
-  // two-factor enrolment (D-012). This is the only moment the app sees it: the
+  // two-factor enrolment. This is the only moment the app sees it: the
   // reset completes in the browser and leaves no timestamp to check later.
   //
   // Also set in the enumeration branch above, where the account may not exist,
@@ -134,6 +149,8 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordScreenProps) 
                 testID="forgot-password-email"
               />
 
+              {/* Only the faults that hold whether or not the account exists
+                  reach here, so showing one gives nothing away. */}
               {formError ? (
                 <Text style={styles.formError} testID="forgot-password-form-error">
                   {formError}
@@ -166,6 +183,9 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordScreenProps) 
   );
 }
 
+// The page frame, the wordmark, the headings, the error line and the footer
+// link, matching the login screen so the two read as one flow. Colours are
+// applied above, so all of this follows the dark/light toggle.
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   flex: { flex: 1 },

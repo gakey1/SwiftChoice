@@ -2,8 +2,10 @@
 // renders under Jest. These check that the greeting and the three module cards
 // show, and that the weekly snapshot shows its empty state.
 
+// Renders the screen and drives its module cards.
 import { fireEvent, render, screen } from "@testing-library/react-native";
 
+// The screen under test.
 import { HomeScreen } from "@/screens/home/HomeScreen";
 
 // Stub the native icon set so this test does not pull in expo-font / expo-asset,

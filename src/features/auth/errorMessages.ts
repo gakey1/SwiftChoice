@@ -1,10 +1,11 @@
 // Turns Firebase's error codes into plain messages the user can read.
 //
-// Sign up messages can be specific. If someone's email is already taken the form
-// has to say so, or they are stuck. Login is different (see below): every error
-// becomes the same message, so no one can work out which emails are registered.
+// The split that runs through this file is who is asking. Nobody is signed in on
+// login and password reset, so those hide which emails are registered. The
+// signed-in screens name the failure, since the app already knows the address.
 
-// Checks that an unknown error is really a Firebase error that has a code.
+// Narrows an unknown throw to something with a Firebase code, so every function
+// below can switch on it safely.
 export function isFirebaseError(err: unknown): err is { code: string } {
   return (
     typeof err === "object" &&
@@ -14,7 +15,8 @@ export function isFirebaseError(err: unknown): err is { code: string } {
   );
 }
 
-// Picks the message to show on the sign up form for a given Firebase error.
+// Sign up can be specific. Somebody whose email is already registered has to be
+// told, or they are stuck with no way forward.
 export function registerErrorMessage(err: unknown): string {
   if (!isFirebaseError(err)) return "Something went wrong. Please try again.";
   switch (err.code) {
@@ -33,9 +35,9 @@ export function registerErrorMessage(err: unknown): string {
   }
 }
 
-// Login always shows the same message no matter what went wrong. Telling apart
-// "wrong password" from "no such account" would let someone probe which emails
-// are registered, so that difference is hidden on purpose.
+// Login says the same thing whatever went wrong. Telling apart "wrong password"
+// from "no such account" would let somebody probe which emails are registered,
+// so the four credential codes deliberately collapse to one message.
 export function loginErrorMessage(err: unknown): string {
   if (!isFirebaseError(err)) return "Something went wrong. Please try again.";
   switch (err.code) {
@@ -53,24 +55,10 @@ export function loginErrorMessage(err: unknown): string {
   }
 }
 
-// Password reset hides whether an account exists, for the same reason login
-// does: a reset form answering "no account with that email" would leak through
-// a second screen what the login form refuses to say.
-//
-// null means "show no error", so the screen shows its ordinary confirmation and
-// a registered address looks identical to an unregistered one. Only faults that
-// hold either way get a message, since those are the ones a user can act on.
-//
-// auth/invalid-email returns null too: validateEmail has already caught
-// malformed addresses on the device, so repeating it here would only narrow
-// down what counts as a real address.
-// Deleting an account re-checks the password first (US33). This one is specific
-// where login is deliberately vague, and the difference is worth spelling out.
-//
-// Login hides which error occurred so nobody can work out which emails are
-// registered. That reasoning does not apply here: the person is already signed
-// in, the app already knows their address, and they are being asked to confirm
-// a password the account definitely has. Telling them plainly that it was wrong
+// Deleting an account re-checks the password first. This one is specific
+// where login is vague, and the difference is worth spelling out: the person is
+// already signed in, the app already knows their address, and they are being
+// asked to confirm a password the account definitely has. Naming the failure
 // gives away nothing and saves them guessing on a screen where the alternative
 // is abandoning something they meant to do.
 export function deleteAccountErrorMessage(err: unknown): string {
@@ -95,9 +83,9 @@ export function deleteAccountErrorMessage(err: unknown): string {
   }
 }
 
-// Changing a password from inside the app. Specific for the same reason
-// deleting an account is: the person is already signed in, so naming the failure
-// reveals nothing they do not already know.
+// Changing a password from inside the app. Specific for the same reason deleting
+// an account is: the person is already signed in, so naming the failure reveals
+// nothing they do not already know.
 export function changePasswordErrorMessage(err: unknown): string {
   if (!isFirebaseError(err)) return "Something went wrong. Please try again.";
   switch (err.code) {
@@ -117,6 +105,17 @@ export function changePasswordErrorMessage(err: unknown): string {
   }
 }
 
+// Password reset hides whether an account exists, for the same reason login
+// does: a reset form answering "no account with that email" would leak through a
+// second screen what the login form refuses to say.
+//
+// null means "show no error", so the screen shows its ordinary confirmation and
+// a registered address looks identical to an unregistered one. Only faults that
+// hold either way get a message, since those are the ones a user can act on.
+//
+// auth/invalid-email returns null too: validateEmail has already caught
+// malformed addresses on the device, so repeating it here would only narrow
+// down what counts as a real address.
 export function passwordResetErrorMessage(err: unknown): string | null {
   if (!isFirebaseError(err)) return "Something went wrong. Please try again.";
   switch (err.code) {

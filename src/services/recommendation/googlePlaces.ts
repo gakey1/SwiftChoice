@@ -3,6 +3,8 @@
 // Google bills by which fields are requested, not just by call count, so the
 // field mask below is this project's whole cost control. See FIELD_MASK.
 
+// The four Places endpoints used here: search near a point, search by typed
+// text, suggest areas while typing, and resolve a chosen suggestion.
 const NEARBY_ENDPOINT = "https://places.googleapis.com/v1/places:searchNearby";
 const TEXT_ENDPOINT = "https://places.googleapis.com/v1/places:searchText";
 const AUTOCOMPLETE_ENDPOINT = "https://places.googleapis.com/v1/places:autocomplete";
@@ -82,6 +84,8 @@ export function readableAddress(place: GooglePlaceResult): string | undefined {
   return full ? full : undefined;
 }
 
+// Where to search and how far out. The caller gets the point from
+// locationService, or from a resolved area suggestion.
 export type NearbyPlacesParams = {
   latitude: number;
   longitude: number;

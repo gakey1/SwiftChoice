@@ -3,15 +3,20 @@
 // that it gets a history id and timestamp, that unused ids default to null, and
 // that bad input is rejected.
 
+// The two Firestore calls the cloud mirror makes, mocked below so they can be
+// asserted on without touching the network.
 import { doc, setDoc } from "firebase/firestore";
 
+// The functions under test, and the input shape the fixtures build.
 import {
   clearDecisions,
   getDecisions,
   logDecision,
   type DecisionInput,
 } from "@/features/history/historyStorage";
+// The SQLite handle, replaced with an in-memory fake below.
 import { getDb } from "@/services/localdb/db";
+// The session the mirror is written under.
 import { auth } from "@/services/firebase";
 
 jest.mock("@/services/localdb/db", () => ({
@@ -30,10 +35,13 @@ jest.mock("@/services/firebase", () => ({
   auth: { currentUser: { uid: "user_1" } },
 }));
 
+// Typed handles on the mocks, so the tests can assert what was called.
 const mockGetDb = getDb as jest.Mock;
 const mockDoc = doc as jest.Mock;
 const mockSetDoc = setDoc as jest.Mock;
 
+// The raw row shape the fake database stores, matching the real schema so a
+// column rename would show up here.
 interface DecisionRow {
   history_id: string;
   module_type: string;

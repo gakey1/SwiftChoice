@@ -1,7 +1,8 @@
 // Keeps the TOTP secret in the device keychain. The secret is the whole of the
-// second factor, so keychain-only is also what makes this factor same-device
-// (D-012): a fresh phone has nothing to be challenged against.
+// second factor, so keychain-only is also what makes this factor same-device:
+// a fresh phone has nothing to be challenged against.
 
+// The keychain wrapper, so this file never names the platform store directly.
 import { clearItem, getItem, setItem } from "@/services/localdb/secureStorage";
 
 // Never AsyncStorage, and never mirrored to Firestore, where the user and
@@ -19,8 +20,8 @@ export async function getTotpSecret(): Promise<string | null> {
 }
 
 // Removes the enrolment. Called when the user turns 2FA off, and by the
-// password-change path in D-012, which invalidates the enrolment so a stale
-// secret cannot outlive the credentials it was set up alongside.
+// password-change path, which invalidates the enrolment so a stale secret
+// cannot outlive the credentials it was set up alongside.
 export async function clearTotpSecret(): Promise<void> {
   await clearItem(TOTP_SECRET_KEY);
 }

@@ -2,13 +2,15 @@
 // running count of completed tasks) on the device, so the reward bar, level and
 // badges carry over between app opens. It uses AsyncStorage, the same on-device
 // store as the theme choice and the sign-in session; progress is an ordinary
-// preference, not a secret, so it does not belong in Secure Store. Part of the
-// on-device storage slice.
+// preference, not a secret, so it does not belong in Secure Store.
 
+// The on-device key-value store.
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+// One key, namespaced like every other store in this folder.
 const PROGRESS_KEY = "swiftchoice.priorityProgress";
 
+// The whole reward state, saved and loaded as one object.
 export type Progress = {
   xp: number;
   level: number;
@@ -51,6 +53,9 @@ function hasValidNumbers(value: unknown): value is Record<string, unknown> {
 // Returns the saved progress, or a fresh default if nothing valid is stored.
 // Never throws: any storage or parse error just falls back to the default so
 // the screen still opens.
+//
+// coins and ranked are read defensively rather than through the check above,
+// since both were added after the first release and older saves lack them.
 export async function loadProgress(): Promise<Progress> {
   try {
     const stored = await AsyncStorage.getItem(PROGRESS_KEY);

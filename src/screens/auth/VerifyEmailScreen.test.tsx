@@ -1,18 +1,20 @@
 // Tests for the verify-email screen. The auth hook and service are mocked, so
-// these check the screen's behaviour: it shows the pending message with the
-// user's email, re-checks when asked, resends the link, and logs out.
+// these cover the screen's behaviour: it names the address, re-checks when
+// asked, resends the link, and offers a way out.
 
 import React from "react";
+// Drives the buttons and waits for the async handlers to settle.
 import { render, fireEvent, waitFor } from "@testing-library/react-native";
 
+// The screen under test.
 import { VerifyEmailScreen } from "./VerifyEmailScreen";
 
+// Declared before the mocks below, which close over them.
 const mockRefresh = jest.fn();
 const mockResend = jest.fn();
 const mockLogout = jest.fn();
 
-// Fake the signed-in user and the auth actions, so the screen can be checked
-// without real Firebase.
+// A fixed signed-in user, so the address in the copy is predictable.
 jest.mock("@/hooks/useAuth", () => ({
   useAuth: () => ({
     user: { email: "test@swiftchoice.com" },
@@ -20,6 +22,7 @@ jest.mock("@/hooks/useAuth", () => ({
   }),
 }));
 
+// The two Firebase calls the screen offers.
 jest.mock("@/services/auth", () => ({
   resendVerificationEmail: (...args: unknown[]) => mockResend(...args),
   logout: (...args: unknown[]) => mockLogout(...args),
@@ -30,6 +33,7 @@ describe("VerifyEmailScreen", () => {
     jest.clearAllMocks();
   });
 
+  // The address has to appear, or the user cannot tell which inbox to open.
   it("shows the pending-verification message with the user's email", () => {
     const { getByText } = render(<VerifyEmailScreen />);
 
@@ -37,6 +41,7 @@ describe("VerifyEmailScreen", () => {
     expect(getByText(/test@swiftchoice.com/)).toBeTruthy();
   });
 
+  // The app checks with Firebase rather than taking the user's word.
   it("re-checks verification when 'I have verified' is pressed", async () => {
     mockRefresh.mockResolvedValue(false);
     const { getByText } = render(<VerifyEmailScreen />);
@@ -57,6 +62,7 @@ describe("VerifyEmailScreen", () => {
     expect(getByText(/New link sent/)).toBeTruthy();
   });
 
+  // A mistyped address must not be a trap, so signing out is the way back.
   it("logs out when the wrong-email escape is pressed", () => {
     const { getByText } = render(<VerifyEmailScreen />);
 

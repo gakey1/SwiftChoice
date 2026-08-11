@@ -5,8 +5,10 @@
 // it is a half-built task reaching the screen where a missing urgency sorts as
 // undefined rather than failing loudly.
 
+// The store behind it, mocked in this suite.
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+// The functions under test, and the task shape the fixtures build.
 import {
   EMPTY_BOARD,
   clearTaskBoard,
@@ -15,6 +17,8 @@ import {
 } from "@/services/localdb/taskStorage";
 import type { StoredTask } from "@/services/localdb/taskStorage";
 
+// Asserted literally rather than imported, so a renamed key shows up here as a
+// failure instead of passing silently on both sides.
 const KEY = "swiftchoice.priorityBoard";
 
 const TASK: StoredTask = {

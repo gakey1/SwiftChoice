@@ -2,6 +2,7 @@
 // than derived from its vibe, because two spots can share a vibe and still
 // want different pictures.
 
+// The icon component's own name type, so an unchecked string cannot reach it.
 import type { IconName } from "@/components/Icon";
 
 // The names a spot may use. Deliberately short: a handful that cover the kinds
@@ -20,6 +21,7 @@ export const SPOT_ICONS = [
   "map-pin",
 ] as const;
 
+// Derived from the list above, so adding a name in one place is enough.
 export type SpotIcon = (typeof SPOT_ICONS)[number];
 
 // Used when a spot has no icon, or one this build does not know. A pin says

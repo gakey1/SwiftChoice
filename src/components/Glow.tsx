@@ -2,10 +2,14 @@
 // rather than a shadow, because Android ignores shadowColor and falls back to
 // elevation, which is grey and renders a circle as an octagonal band.
 
+// Gives each glow a unique gradient id.
 import { useId } from "react";
+// The absolute-fill helper, so the glow sits behind its parent's content.
 import { StyleSheet } from "react-native";
+// The SVG primitives the glow is built from.
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 
+// Colour and size are required; the two falloff knobs have sensible defaults.
 export type GlowProps = {
   color: string;
   // Total width of the glow, including the empty space it fades out into. Make
@@ -18,6 +22,7 @@ export type GlowProps = {
   innerStop?: number;
 };
 
+// Draws one gradient and paints it across a square the size of the glow.
 export function Glow({ color, size, opacity = 0.5, innerStop = 0.42 }: GlowProps) {
   // Gradient ids share one document-wide namespace, so two glows on a screen
   // would otherwise collide and both take the first one's colour.
