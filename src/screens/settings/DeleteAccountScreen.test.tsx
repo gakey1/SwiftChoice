@@ -1,4 +1,4 @@
-// Tests for the delete-account screen (US33). The deletion itself is mocked, so
+// Tests for the delete-account screen. The deletion itself is mocked, so
 // these cover the screen's own job: refusing to act without a password, asking
 // twice, showing failures where they can be read, and not navigating on success.
 //

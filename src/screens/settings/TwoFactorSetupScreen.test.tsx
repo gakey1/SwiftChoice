@@ -3,13 +3,21 @@
 // The real TOTP maths runs, so "enrols on a valid code" means a code actually
 // derived from the new secret was accepted. The keychain is mocked.
 
+// Used to type the fake navigation prop.
 import type { ComponentProps } from "react";
+// Spied on, to check the key is handed to an authenticator app correctly.
 import { Linking } from "react-native";
+// Renders the screen and waits for its async reads to settle.
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+// Spied on, for the copy-the-key path.
 import * as Clipboard from "expo-clipboard";
 
+// The real code generator, so an accepted code is genuinely derived from the
+// new secret rather than from a stub.
 import { generateCode } from "@/features/auth/totp";
+// The screen under test.
 import { TwoFactorSetupScreen } from "@/screens/settings/TwoFactorSetupScreen";
+// The keychain, mocked below so each case chooses what is enrolled.
 import {
   clearTotpSecret,
   getTotpSecret,

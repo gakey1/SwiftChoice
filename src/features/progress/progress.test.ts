@@ -2,6 +2,9 @@
 // Home player card: the level cap curve, the level titles, and the XP-bar
 // fraction (which must stay clamped between 0 and 1).
 
+// The three functions under test, plus the title list, imported rather than
+// typed in again so an added title cannot leave these passing against the old
+// set.
 import { capFor, levelTitle, LEVEL_TITLES, xpFraction } from "@/features/progress/progress";
 
 describe("progress maths", () => {

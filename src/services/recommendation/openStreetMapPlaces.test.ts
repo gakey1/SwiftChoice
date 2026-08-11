@@ -4,12 +4,15 @@
 // elements are dropped, that the limit is honoured, and that a failed request
 // throws for the caller to handle.
 
+// The function under test, plus the attribution the licence requires.
 import { fetchNearbyPlaces, OSM_ATTRIBUTION } from "./openStreetMapPlaces";
 
 // Melbourne CBD, the point we query around in these tests.
 const LAT = -37.8136;
 const LNG = 144.9631;
 
+// Replaces fetch with one that answers with the given body, so these run
+// offline.
 function mockFetchOnce(body: unknown, ok = true, status = 200) {
   globalThis.fetch = jest.fn().mockResolvedValue({
     ok,

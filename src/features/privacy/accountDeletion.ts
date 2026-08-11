@@ -1,33 +1,26 @@
-// Deletes the account and everything belonging to it (US33): the cloud copies,
+// Deletes the account and everything belonging to it: the cloud copies,
 // everything on this phone, and the Firebase account itself.
 //
-// This is the sibling of localData.ts, and the difference between the two is the
-// whole point of this file.
-//
-// localData.ts (US31) keeps going when a step fails and reports what did not
-// clear, because a partial local wipe is recoverable: the user is still signed
-// in, still has the button, and can press it again.
-//
-// This one STOPS at the first failure and never reaches the last step. The
-// Firestore rule is `request.auth.uid == uid`, so every permission to delete this
-// user's documents is derived from the account existing. Delete the account
-// first, or carry on past a failed cloud step, and whatever is left in Firestore
-// can never be deleted by anyone: no client can authenticate as that uid again,
-// and under D-011 there is no Cloud Function with admin rights to sweep up.
-//
-// Hence: data first, account last, abort on failure. A failed attempt leaves the
-// user signed in and able to try again, which is recoverable. Orphaned cloud
-// data is not, and it is exactly what US33 promises will not happen.
+// Data first, account last, abort on the first failure. Unlike localData.ts,
+// which carries on past a failed step, this one must not: see deleteAccount().
 
+// Turns a Firebase failure into wording, which is specific here because the
+// user is signed in.
 import { deleteAccountErrorMessage } from "@/features/auth/errorMessages";
+// The on-device wipe, reused rather than restated.
 import { clearLocalData } from "@/features/privacy/localData";
+// The proof of identity, and the final irreversible step.
 import { deleteCurrentUser, reauthenticate } from "@/services/auth";
+// The session the uid is read from at each step.
 import { auth } from "@/services/firebase";
+// The cloud data: the mirrored decisions, the profile document, and the cached
+// budget tier that would otherwise outlive both.
 import {
   clearBudgetTierCache,
   deleteAllDecisions,
   deleteUserDocument,
 } from "@/services/firestore/users";
+// The two account-scoped secrets that survive an ordinary on-device wipe.
 import { clearPasswordResetRequested } from "@/services/localdb/passwordResetFlag";
 import { clearTotpSecret } from "@/services/localdb/totpStorage";
 
@@ -42,6 +35,8 @@ export type DeletionStep =
   | "your two-factor key"
   | "your account";
 
+// Success carries the count so the screen can confirm what went; failure carries
+// enough for the screen to tell the user where they now stand.
 export type DeleteAccountResult =
   | { ok: true; decisionsDeleted: number }
   // Which step stopped it, and whether anything was destroyed before it did.
@@ -56,6 +51,13 @@ export type DeleteAccountResult =
 // Runs the whole deletion. The password is taken here rather than being checked
 // by the screen beforehand, so the order can never be skipped by a caller: proof
 // of identity is step one, and nothing is destroyed until it passes.
+//
+// Every step aborts on failure, and the account is always last. The Firestore
+// rule is `request.auth.uid == uid`, so permission to delete these documents
+// exists only while the account does. Deleting it early, or pushing past a
+// failed cloud step, would strand data nobody can ever reach: no client can
+// authenticate as that uid again, and there is no admin function to sweep up.
+// A refused attempt is recoverable; orphaned cloud data is not.
 export async function deleteAccount(password: string): Promise<DeleteAccountResult> {
   // Step 1. Prove it is really them, before anything is destroyed.
   //
@@ -105,19 +107,20 @@ export async function deleteAccount(password: string): Promise<DeleteAccountResu
     return stopped("your account record", anythingDeleted);
   }
 
-  // Step 4. Everything this app stored on the phone. Reusing US31's list rather
-  // than writing a second one is deliberate: two lists would drift, and the one
-  // that drifted would be this one, silently leaving data behind.
+  // Step 4. Everything this app stored on the phone. Reusing the on-device
+  // wipe's list rather than writing a second one is deliberate: two lists would
+  // drift, and the one that drifted would be this one, silently leaving data
+  // behind.
   const local = await clearLocalData();
   anythingDeleted = true;
   if (!local.ok) {
     return stopped("the data on this phone", anythingDeleted);
   }
 
-  // Step 5. The account-scoped secrets US31 deliberately leaves alone, because
-  // there the account survives. Here it does not, so they have to go too, or the
-  // next person to register on this phone inherits a second factor belonging to
-  // an account that no longer exists.
+  // Step 5. The account-scoped secrets the on-device wipe deliberately leaves
+  // alone, because there the account survives. Here it does not, so they have to
+  // go too, or the next person to register on this phone inherits a second
+  // factor belonging to an account that no longer exists.
   try {
     await clearTotpSecret();
     await clearPasswordResetRequested();
@@ -128,8 +131,8 @@ export async function deleteAccount(password: string): Promise<DeleteAccountResu
 
   // Step 6. The account itself, last, once nothing is left that needs its
   // permissions. Deleting it signs the user out, which the listener in useAuth
-  // notices and returns them to the login screen on its own (US33 33.2). No
-  // navigation happens here.
+  // notices and returns them to the login screen on its own. No navigation
+  // happens here.
   try {
     await deleteCurrentUser();
   } catch (error) {

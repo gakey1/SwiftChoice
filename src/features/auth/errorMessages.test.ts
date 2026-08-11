@@ -1,7 +1,8 @@
-// Tests for the friendly error messages shown on the auth forms. Sign up can be
-// specific about what went wrong, while login always returns the same message so
-// no one can tell which emails are registered.
+// Tests for the wording shown on the auth forms. The line these draw is who is
+// asking: the signed-out screens must not reveal which emails are registered,
+// and the signed-in ones must name the failure.
 
+// The four message builders under test.
 import {
   deleteAccountErrorMessage,
   loginErrorMessage,
@@ -9,7 +10,7 @@ import {
   registerErrorMessage,
 } from "@/features/auth/errorMessages";
 
-// Sign up messages: each Firebase code maps to its own message, with a fallback.
+// Sign up: each code maps to its own message, with a fallback for new ones.
 describe("registerErrorMessage", () => {
   it("keeps the existing-account case specific, unlike login", () => {
     expect(registerErrorMessage({ code: "auth/email-already-in-use" })).toMatch(/already exists/i);
@@ -32,8 +33,8 @@ describe("registerErrorMessage", () => {
   });
 });
 
-// Login messages: the credential codes all collapse to one message, and it
-// never says which field was wrong.
+// Login: the credential codes collapse to one message, and nothing ever names
+// which field was wrong.
 describe("loginErrorMessage", () => {
   it("collapses all four credential codes to one generic message", () => {
     const codes = [
@@ -59,9 +60,9 @@ describe("loginErrorMessage", () => {
   });
 });
 
-// Password reset messages: null means "show the normal confirmation anyway", so
-// the codes that would reveal whether an account exists return null, and the
-// codes the user can act on return a real message.
+// Password reset: null means "show the normal confirmation anyway", so the codes
+// that would reveal whether an account exists return null, and the codes the
+// user can act on return a real message.
 describe("passwordResetErrorMessage", () => {
   it("returns null for the codes that would reveal a registered email", () => {
     expect(passwordResetErrorMessage({ code: "auth/user-not-found" })).toBeNull();
@@ -80,10 +81,8 @@ describe("passwordResetErrorMessage", () => {
   });
 });
 
-// Delete-account messages: specific where login is deliberately vague. The user
-// is already signed in, so naming the failure reveals nothing and saves them
-// guessing on a screen where the alternative is giving up on something they
-// meant to do.
+// Delete account: specific where login is vague, because the user is already
+// signed in and naming the failure reveals nothing.
 describe("deleteAccountErrorMessage", () => {
   it("names a wrong password plainly", () => {
     expect(deleteAccountErrorMessage({ code: "auth/wrong-password" })).toMatch(
@@ -91,18 +90,18 @@ describe("deleteAccountErrorMessage", () => {
     );
   });
 
+  // Recent Firebase versions report a bad password this way. Handling only the
+  // older code would drop it into the generic message, and the user would have
+  // no idea the password was the problem.
   it("treats the newer invalid-credential code as a wrong password too", () => {
-    // Recent Firebase versions report a bad password this way. Handling only the
-    // older code would drop it into the generic message, and the user would have
-    // no idea the password was the problem.
     expect(deleteAccountErrorMessage({ code: "auth/invalid-credential" })).toMatch(
       /password is not right/i
     );
   });
 
+  // The one failure here with a fix the user can carry out, so it must not be
+  // collapsed into "please try again", which would have them retry forever.
   it("tells the user to sign in again when the session is too old", () => {
-    // The one failure here with a fix the user can carry out, so it must not be
-    // collapsed into "please try again", which would have them retry forever.
     const message = deleteAccountErrorMessage({ code: "auth/requires-recent-login" });
     expect(message).toMatch(/log out/i);
     expect(message).toMatch(/log back in/i);
@@ -113,17 +112,17 @@ describe("deleteAccountErrorMessage", () => {
     expect(deleteAccountErrorMessage({ code: "auth/network-request-failed" })).toMatch(/network/i);
   });
 
+  // An unknown failure means the outcome is unknown, so the wording must not
+  // imply the account went.
   it("falls back to a message that does not claim anything was deleted", () => {
-    // An unknown failure means the outcome is unknown, so the wording must not
-    // imply the account went.
     const message = deleteAccountErrorMessage({ code: "auth/weird" });
     expect(message).toMatch(/could not delete/i);
   });
 
+  // Guards against somebody later copying loginErrorMessage over this one for
+  // consistency. The vagueness there exists to stop email enumeration, which
+  // cannot happen on a screen only a signed-in user can reach.
   it("does not hide the cause the way login does", () => {
-    // Guards against somebody later copying loginErrorMessage over this one for
-    // consistency. The vagueness there exists to stop email enumeration, which
-    // cannot happen on a screen only a signed-in user can reach.
     expect(deleteAccountErrorMessage({ code: "auth/wrong-password" })).not.toBe(
       "Incorrect email or password."
     );

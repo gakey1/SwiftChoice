@@ -1,23 +1,25 @@
-// Holds the app's active colour theme and hands it to every screen below it.
-// This is the single source of truth for which theme is showing. It mirrors the
-// shape of AuthProvider: one provider near the top of the tree, one hook
-// (useTheme) that screens read from.
+// The single source of truth for which colour theme is showing, shaped like
+// AuthProvider: one provider near the top, one useTheme() hook below it. The
+// choice is loaded on boot and saved on change.
 //
-// On boot it loads the saved choice from the device; when the theme changes it
-// saves the new choice. Screens read colours with useTheme().colors, so flipping
-// the theme re-renders the whole app in the new palette. Only colours live here;
-// spacing, radii and font names never change between themes and stay in tokens.ts.
+// Colours only. Spacing, radii and font names do not vary by theme, so they
+// stay in tokens.ts.
 
+// React itself, plus the hooks the provider is built from.
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
+// The palettes, their names, and the one that applies before a choice loads.
 import {
   DEFAULT_THEME,
   themes,
   type ThemeColors,
   type ThemeName,
 } from "@/theme/themes";
+// Where the choice is persisted between app opens.
 import { loadThemeName, saveThemeName } from "@/services/localdb/themeStorage";
 
+// What every consumer of useTheme() gets: the active colours, which theme they
+// belong to, and the two ways to change it.
 type ThemeContextValue = {
   // The active theme's colours. This is what screens read.
   colors: ThemeColors;
@@ -46,6 +48,7 @@ const DEFAULT_VALUE: ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue>(DEFAULT_VALUE);
 
+// Wraps the app, owns the current theme, and persists every change.
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [name, setName] = useState<ThemeName>(DEFAULT_THEME);
 
@@ -74,6 +77,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  // Memoised because a context value rebuilt on every render re-renders every
+  // consumer, which here is every screen in the app.
   const value = useMemo<ThemeContextValue>(
     () => ({
       colors: themes[name],

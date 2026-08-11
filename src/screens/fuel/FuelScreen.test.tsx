@@ -153,7 +153,7 @@ describe("FuelScreen", () => {
   });
 
   it("says a location goes to Google on Eat Out", async () => {
-    // US34. Eat Out is the default mode, so this is visible on arrival.
+    // Eat Out is the default mode, so this is visible on arrival.
     const { getByText } = await renderFuelScreen();
 
     expect(getByText(/sends your location, or the area you type, to Google/i)).toBeTruthy();
@@ -366,9 +366,8 @@ describe("formatDistance", () => {
   });
 });
 
-// The street address on the result card, added on Tracy's suggestion. A distance
-// tells you how far but not which way, so this is what makes an Eat Out result
-// something you can act on.
+// The street address on the result card. A distance tells you how far but not
+// which way, so this is what makes an Eat Out result something you can act on.
 describe("FuelScreen address", () => {
   it("shows the street address on a live place", async () => {
     const { getByText, findByText } = await renderFuelScreen();

@@ -84,7 +84,7 @@ The second half is genuinely measured: a new nullable `started_at` column on
 **Why 8 minutes and not the 20 from our survey.** Our Sem 1 research says 38% of
 respondents spend more than 20 minutes deliberating. That is a threshold for a
 minority, not an average, and it covers decisions in general, while this app is for
-micro-decisions, which `research.md` itself puts at "seconds to a few minutes". A
+micro-decisions, which our own research puts at "seconds to a few minutes". A
 20-minute baseline would have the card claim about 19 minutes saved on choosing
 lunch, which is the first thing anyone would challenge. Eight understates against
 our own research on purpose. For reference the mockup's own `3min` implies a

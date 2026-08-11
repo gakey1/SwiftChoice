@@ -1,22 +1,11 @@
-// Answers one question for the Focus module: what is it like outside right now,
-// where the user is. The Focus card uses this to tell someone heading to an
-// outdoor spot what to expect, so it asks for temperature and conditions as well
-// as the chance of rain.
-//
-// It started as a rain warning only. That version showed nothing at all unless
-// rain was at least likely, which meant the feature was invisible almost every
-// time an outdoor spot came up, and could not be demonstrated on purpose. The
-// figures below are always present, so the card always has something true to
-// say, and the umbrella line is now one sentence inside that rather than the
-// whole feature.
-//
-// Open-Meteo is used rather than a paid weather product because it needs no key,
-// no account and no card, so it adds no billing surface and keeps working even
-// if the Google billing used by Fuel ever lapses. See decision D-010. Widening
-// the question costs nothing: it is the same endpoint and the same single
-// request, with more fields named in the query string.
+// What it is like outside right now, where the user is. Focus uses this to tell
+// someone heading to an outdoor spot what to expect, so it asks for temperature
+// and conditions as well as the chance of rain.
 
-// Open-Meteo is free for this kind of use and needs no key.
+// Open-Meteo rather than a paid weather product: no key, no account, no card,
+// so it adds no billing surface and keeps working even if the Google billing
+// Fuel uses ever lapses. Asking for more fields costs nothing here, being the
+// same endpoint and the same single request.
 const ENDPOINT = "https://api.open-meteo.com/v1/forecast";
 
 // At or above this chance of rain, the umbrella advice is worth giving. Below it
@@ -24,7 +13,8 @@ const ENDPOINT = "https://api.open-meteo.com/v1/forecast";
 export const RAIN_LIKELY_PERCENT = 50;
 
 // A tagged result rather than an exception, matching locationService, so callers
-// never need a try and catch and a failed lookup simply shows nothing.
+// never need a try and catch and a failed lookup simply shows nothing. There is
+// one failure reason, because the caller does the same thing for all of them.
 export type OutdoorConditions =
   | {
       ok: true;
@@ -40,6 +30,7 @@ export type OutdoorConditions =
     }
   | { ok: false; reason: "unavailable" };
 
+// Where to look. The caller gets these from locationService.
 export type OutdoorConditionsParams = {
   latitude: number;
   longitude: number;

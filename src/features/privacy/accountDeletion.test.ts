@@ -1,10 +1,10 @@
-// Tests for account deletion (US33). Everything it touches is mocked, so these
+// Tests for account deletion. Everything it touches is mocked, so these
 // are about one thing above all others: the order.
 //
 // The Firestore rule is request.auth.uid == uid, so the account is what grants
 // permission to delete the account's data. If the Auth user goes first, or if a
 // failed cloud step is stepped over, whatever is left becomes permanently
-// undeletable, because no client can authenticate as that uid again and D-011
+// undeletable, because no client can authenticate as that uid again and there
 // left no Cloud Function to sweep up. That is the only unrecoverable mistake
 // available in this feature, so most of what follows exists to prove it cannot
 // happen rather than to prove the happy path works.
@@ -99,7 +99,8 @@ describe("deleteAccount, when everything works", () => {
   });
 
   it("clears the two-factor key and the reset flag, which clearing local data leaves alone", async () => {
-    // US31 deliberately leaves both, because there the account survives. Here it
+    // The on-device wipe deliberately leaves both, because there the account
+    // survives. Here it
     // does not, so a re-registration on this phone must not inherit a second
     // factor belonging to an account that no longer exists.
     await deleteAccount("correct-password");

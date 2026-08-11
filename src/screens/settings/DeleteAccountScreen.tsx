@@ -1,17 +1,14 @@
-// Deleting the account and everything with it (US33). A screen rather than a
-// confirmation box, for two reasons: it needs a password field, and the list of
-// what is about to go is too long to read inside an alert.
+// Deleting the account and everything with it. A screen rather than a
+// confirmation box, because it needs a password field and the list of what goes
+// is too long for an alert.
 //
-// The wording rule this follows is the one the clear-data flow established. That
-// screen had to say "on this phone", because the cloud copy of a decision
-// survives it. This one deletes that copy too, so it can say everything, and it
-// says so plainly. What it must not do is round up: the two lines about what
-// SwiftChoice cannot reach are there because a promise to delete data held by
-// Google or the weather service would be a promise we are not in a position to keep.
-//
-// A universal screen, so teal only. No module colour belongs here.
+// This one really does delete everything, so it says so, but it must not round
+// up: what SwiftChoice cannot reach is named. A universal screen, so teal only.
 
+// Holds the password and the two flags below.
 import { useState } from "react";
+// The scrolling layout, the password input, the confirmation alert and the
+// spinner shown while the deletion runs.
 import {
   ActivityIndicator,
   Alert,
@@ -21,18 +18,29 @@ import {
   TextInput,
   View,
 } from "react-native";
+// Keeps the content clear of the notch.
 import { SafeAreaView } from "react-native-safe-area-context";
+// The type for this screen's navigation prop.
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
+// The colour wash behind the content.
 import { AmbientBackground } from "@/components/AmbientBackground";
+// The shared button.
 import { Button } from "@/components/Button";
+// The cross and info glyphs used in the two lists.
 import { Icon } from "@/components/Icon";
+// The ordered deletion itself, which owns the steps and their failure handling.
 import { deleteAccount } from "@/features/privacy/accountDeletion";
+// The signed-in user, whose address is named on the password prompt.
 import { useAuth } from "@/hooks/useAuth";
+// The screen names this stack can navigate to.
 import type { AppStackParamList } from "@/navigation/types";
+// Design tokens: fonts, spacing, radii.
 import { T } from "@/theme/tokens";
+// The active theme's colours.
 import { useTheme } from "@/theme/ThemeProvider";
 
+// Takes no route params; it is reached from Settings.
 type DeleteAccountScreenProps = NativeStackScreenProps<AppStackParamList, "DeleteAccount">;
 
 // Everything that goes. Listed rather than summarised as "all your data",
@@ -56,6 +64,7 @@ const WHAT_STAYS: readonly string[] = [
   "This app itself, which stays installed and can be used to sign up again",
 ];
 
+// Shows what goes, what it cannot reach, and the password gate.
 export function DeleteAccountScreen({ navigation }: DeleteAccountScreenProps) {
   const { colors } = useTheme();
   const { user } = useAuth();
@@ -83,6 +92,7 @@ export function DeleteAccountScreen({ navigation }: DeleteAccountScreenProps) {
     );
   }
 
+  // Runs the deletion once both gates have passed.
   async function runDeletion(): Promise<void> {
     setDeleting(true);
 
@@ -93,7 +103,7 @@ export function DeleteAccountScreen({ navigation }: DeleteAccountScreenProps) {
         // Deliberately leaves the screen in its deleting state, rather than
         // clearing it in a finally. Success ends the session, the listener in
         // useAuth notices, and RootNavigator swaps the whole signed-in stack for
-        // the login screen (33.2). Navigating from here would race that, and
+        // the login screen. Navigating from here would race that, and
         // turning the button back on would offer to delete an account that has
         // already gone in whatever frames are left before the swap.
         return;
@@ -113,6 +123,7 @@ export function DeleteAccountScreen({ navigation }: DeleteAccountScreenProps) {
     }
   }
 
+  // The themed card surface, shared by all three cards below.
   const cardStyle = { backgroundColor: colors.card, borderColor: colors.cardLine };
 
   return (

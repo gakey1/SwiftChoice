@@ -1,13 +1,9 @@
-// The home dashboard, the first screen after login. It wears the Arcade look:
-// a soft ambient background, a glass player card showing your level and XP, a
-// daily quest nudge, the three module cards to tap into, and a THIS WEEK card
-// summarising your real decision history. Home is a universal screen, so its
-// own chrome is teal; each module card carries its own accent.
+// The home dashboard, the first screen after login: a player card with level
+// and XP, a daily quest nudge, the three module cards, and a THIS WEEK summary
+// of the real decision history.
 //
-// Gamification (level, XP, streak count, badges) is read from the shared
-// on-device progress store, the same one the Priority screen writes to. The
-// THIS WEEK figures come from the real decision history, with an empty state
-// until there is anything to show.
+// A universal screen, so its own chrome is teal and only the module cards
+// carry a module accent.
 
 import { useCallback, useState } from "react";
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";

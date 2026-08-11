@@ -35,7 +35,7 @@ const AppStack = createNativeStackNavigator<AppStackParamList>();
 export function RootNavigator() {
   const { user, initializing, emailVerified } = useAuth();
 
-  // The second-factor gate (D-012). `required` is whether this phone is
+  // The second-factor gate. `required` is whether this phone is
   // enrolled, `wiped` records that a password change just removed an enrolment
   // so the setup screen can say why, and `passed` is held in memory only, never
   // saved, so reopening the app asks again. Saving it would turn a step-up

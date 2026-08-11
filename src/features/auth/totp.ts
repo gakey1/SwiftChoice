@@ -1,30 +1,23 @@
-// The maths behind the six-digit codes, kept away from React and away from
-// storage so it can be tested on its own.
+// The maths behind the six-digit codes, kept away from React and from storage
+// so it can be tested on its own.
 //
-// TOTP means time-based one-time password. The device and the authenticator app
-// share one secret, both round the clock to a 30-second window, and both hash
-// the secret together with that window number. Same secret plus same window
-// gives the same six digits, so the code proves the other side holds the secret
-// without the secret ever being sent anywhere.
-//
-// What this factor is and is not, per D-012: the secret lives in the device
-// keychain, so this gates a sign-in on the phone that enrolled and nothing else.
-// A sign-in from a different phone has no secret to be challenged against. It is
-// a same-device step-up factor, not account-level two-factor authentication, and
-// it should never be described as the latter.
+// TOTP is time-based one-time password: both sides hash a shared secret with
+// the current 30-second window, so matching digits prove the other side holds
+// the secret without it ever being sent. Same-device only: the secret lives on
+// this phone and is never mirrored to the cloud.
 
+// Supplies the random bytes for a new secret.
 import * as Crypto from "expo-crypto";
+// Builds the codes and the otpauth URI an authenticator app reads.
 import * as OTPAuth from "otpauth";
 
 // What an authenticator app shows next to the code.
 const ISSUER = "SwiftChoice";
 
 // The settings every mainstream authenticator app assumes. SHA1 looks like the
-// weak choice and is the correct one here: RFC 6238 and every common app
-// (Google Authenticator, Authy, 1Password) default to it, so moving to SHA256
-// would produce codes that do not match what the user's app displays. The
-// hash is not protecting a password, it is deriving a six-digit number that
-// expires in 30 seconds.
+// weak choice and is the right one here: RFC 6238 and the common apps default
+// to it, so SHA256 would print codes that do not match the user's app. The hash
+// derives a number that expires in 30 seconds, it does not protect a password.
 const ALGORITHM = "SHA1";
 const DIGITS = 6;
 const PERIOD_SECONDS = 30;
@@ -42,18 +35,17 @@ const VALIDATION_WINDOW = 1;
 // Makes a new random secret, returned as base32 because that is the form
 // authenticator apps and otpauth URIs both use.
 //
-// The randomness comes from expo-crypto rather than from otpauth's own helper.
-// otpauth reaches for globalThis.crypto.getRandomValues and throws
-// "Cryptography API not available" when it is missing, which is the case on
-// React Native. Node has it, so this would have passed every test and failed
-// the first time a real user enrolled. Generating the bytes here means that
-// path is never taken.
+// The bytes come from expo-crypto, not otpauth's own helper, which needs
+// globalThis.crypto.getRandomValues and throws without it on React Native. Node
+// has it, so the helper would pass every test and fail on the first real
+// enrolment.
 export function generateSecret(): string {
   const bytes = Crypto.getRandomBytes(SECRET_BYTES);
   return new OTPAuth.Secret({ buffer: bytes.buffer as ArrayBuffer }).base32;
 }
 
-// Builds the otpauth object used for both generating and checking codes.
+// Builds the otpauth object used for both generating and checking codes, so the
+// settings above are applied in exactly one place.
 function buildTotp(secretBase32: string, accountLabel: string): OTPAuth.TOTP {
   return new OTPAuth.TOTP({
     issuer: ISSUER,

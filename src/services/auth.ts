@@ -1,12 +1,10 @@
-// All the login and sign up actions that talk to Firebase live here in one
-// place, so the screens just call these functions and never deal with Firebase
-// directly. Keeping them together also makes them easy to fake in tests.
+// Every login and sign-up action that talks to Firebase, so screens call these
+// and never touch Firebase directly, which also makes them easy to fake.
 //
-// None of these functions hide errors. If a Firebase call fails, the error is
-// thrown so the screen that called it can catch it and show the user a friendly
-// message (see features/auth/errorMessages). Having that in one spot keeps the
-// wording consistent instead of scattered around.
+// Nothing here swallows an error. Failures are thrown for the caller to turn
+// into wording, which keeps every message in features/auth/errorMessages.
 
+// The Firebase calls behind each function below.
 import {
   createUserWithEmailAndPassword,
   deleteUser,
@@ -19,7 +17,9 @@ import {
   updatePassword,
 } from "firebase/auth";
 
+// The configured Firebase auth instance.
 import { auth } from "@/services/firebase";
+// Writes the matching profile document a new account needs.
 import { createUserDocument } from "@/services/firestore/users";
 
 // Creates a new account and also saves a matching user record in the database.
@@ -85,7 +85,8 @@ export async function sendPasswordReset(email: string): Promise<void> {
 // Proves the person holding the phone is the account holder, by asking Firebase
 // to check their password again.
 //
-// Firebase keeps a session alive for weeks, which is what US05 asked for, but it
+// Firebase keeps a session alive for weeks, which is what staying signed in
+// between visits means, but it
 // means the session in somebody's hand could have been started a fortnight ago
 // by someone else. So Firebase refuses its destructive actions (deleteUser,
 // changing the email, changing the password) on a session older than a few
@@ -110,8 +111,8 @@ export async function reauthenticate(password: string): Promise<void> {
 // Replaces the signed-in user's password. Firebase treats this as a sensitive
 // action, so reauthenticate() has to have run recently or this throws
 // auth/requires-recent-login. The caller in features/auth/passwordChange owns
-// that ordering, along with the D-012 rule about what a password change does to
-// the second factor.
+// that ordering, along with the rule about what a password change does to the
+// second factor.
 export async function updateCurrentPassword(newPassword: string): Promise<void> {
   const user = auth.currentUser;
   if (!user) {
@@ -122,10 +123,10 @@ export async function updateCurrentPassword(newPassword: string): Promise<void> 
 }
 
 // Deletes the signed-in user's Firebase account. This is the very last step of
-// US33 and it is deliberately not exported anywhere near the data deletion:
-// the Firestore rule is request.auth.uid == uid, so every permission to delete
-// this user's documents comes from this account existing. Once this runs,
-// anything still in the cloud can never be deleted by anybody (D-011).
+// deleting an account, and it is deliberately not exported anywhere near the
+// data deletion: the Firestore rule is request.auth.uid == uid, so every
+// permission to delete this user's documents comes from this account existing.
+// Once this runs, anything still in the cloud can never be deleted by anybody.
 //
 // The order is enforced in features/privacy/accountDeletion, which is the only
 // thing that should call this.

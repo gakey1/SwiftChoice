@@ -1,21 +1,17 @@
-// Tests for the ambient wash.
-//
-// The thing worth pinning is that no native blur is involved. The wash was
-// built as hard circles under a heavy BlurView, and that failed differently on
-// each platform without failing loudly on either: Android buried the glows
-// under a tint sheet whose opacity is what `intensity` actually controls there,
-// and iOS blurred correctly but lifted the whole background to rgb(26,24,35)
-// where the theme asks for rgb(20,16,38). Both were invisible to the suite,
-// because a green test says nothing about a colour nobody measured.
-//
-// So these assert the shape of the output rather than how it looks, on both
-// platforms, since the whole point is that there is no longer a difference.
+// Tests for the ambient wash. They assert the shape of the output, not how it
+// looks: no native blur, one gradient per accent, and an opaque theme fill.
+// Both platforms, because the wash must be identical on each.
 
+// Platform, so a test can choose which one it runs as. View, to search the tree
+// for a background fill.
 import { Platform, View } from "react-native";
+// Renders a component into a tree the assertions can query.
 import { render } from "@testing-library/react-native";
 
+// The component under test.
 import { AmbientBackground } from "./AmbientBackground";
 
+// Fixed theme colours, so the wash does not need the real provider.
 jest.mock("@/theme/ThemeProvider", () => ({
   useTheme: () => ({
     colors: { bg: "#141026", fuel: "#FFB23E", priority: "#B98BFF", teal: "#22E0C4" },
@@ -23,8 +19,8 @@ jest.mock("@/theme/ThemeProvider", () => ({
   }),
 }));
 
-// Jest defaults every suite to "ios", so a platform-specific regression would
-// simply never run unless a test asks for the other one by name.
+// Runs the given function with Platform.OS forced to os, then restores it.
+// Jest defaults every suite to "ios", so the other one has to be asked for.
 function withPlatform(os: "ios" | "android", run: () => void) {
   const original = Platform.OS;
   Object.defineProperty(Platform, "OS", { value: os, configurable: true });
@@ -35,8 +31,11 @@ function withPlatform(os: "ios" | "android", run: () => void) {
   }
 }
 
+// Every case below runs against both.
 const PLATFORMS = ["ios", "android"] as const;
 
+// True when any View in the tree has the given background colour. Styles arrive
+// as nested arrays, so they are flattened before checking.
 function hasFill(tree: ReturnType<typeof render>, color: string): boolean {
   return tree.UNSAFE_queryAllByType(View).some((node: { props: { style?: unknown } }) =>
     [node.props.style]
@@ -49,6 +48,7 @@ function hasFill(tree: ReturnType<typeof render>, color: string): boolean {
 }
 
 describe("AmbientBackground", () => {
+  // Blur is what made the two platforms diverge, so its absence is pinned.
   it.each(PLATFORMS)("renders no BlurView at all on %s", (os) => {
     withPlatform(os, () => {
       const tree = render(<AmbientBackground />);
@@ -56,6 +56,7 @@ describe("AmbientBackground", () => {
     });
   });
 
+  // Three accents, so three radial gradients.
   it.each(PLATFORMS)("draws one radial glow per accent colour on %s", (os) => {
     withPlatform(os, () => {
       const tree = render(<AmbientBackground />);
@@ -63,6 +64,7 @@ describe("AmbientBackground", () => {
     });
   });
 
+  // The glows sit over an opaque base, so the wash can never read washed out.
   it.each(PLATFORMS)("fills opaquely with the theme background on %s", (os) => {
     withPlatform(os, () => {
       expect(hasFill(render(<AmbientBackground />), "#141026")).toBe(true);

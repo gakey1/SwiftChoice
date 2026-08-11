@@ -1,16 +1,18 @@
-// The list of the three modules (Fuel, Focus, Priority) with their colours and
-// wording, all kept in one place. Each module has its own colour: amber for
-// Fuel, green for Focus, and purple for Priority. Teal is the one colour used on
-// screens shared across all modules.
+// The three modules with their colours and wording: amber for Fuel, green for
+// Focus, purple for Priority, and teal on anything shared between them.
 //
-// Screens that belong to a single module take a module and use only that
-// module's colour, and the types below make a wrong module fail to build.
-// Screens shared across all modules take no module and use teal.
+// The types below are what enforce the module-colour rule. A single-module
+// screen takes a Module and gets only that colour; a wrong one fails to build.
 
+// The raw palette the module colours are drawn from.
 import { colors } from "@/theme/tokens";
 
+// The three modules, as a type. Anything keyed by this cannot miss one or gain
+// a fourth.
 export type ModuleKey = "fuel" | "focus" | "priority";
 
+// Everything a screen needs to render one module: its identity, its colours and
+// its wording, so no screen has to assemble those from separate lookups.
 export type Module = {
   key: ModuleKey;
   name: "Fuel" | "Focus" | "Priority";
@@ -18,13 +20,20 @@ export type Module = {
   // the only picture characters used anywhere in the app. Shown inside ModuleIcon
   // and a few other places as a quick visual label.
   glyph: string;
-  color: string; // the main colour, as a hex code
-  c700: string; // a darker shade, used when a button is pressed
-  tint: string; // a very faint version of the colour, for backgrounds
-  sub: string; // the small line under the module's card on the home screen
-  prompt: string; // the question shown at the top of the module's screen
+  // The main colour, as a hex code.
+  color: string;
+  // A darker shade, used when a button is pressed.
+  c700: string;
+  // A very faint version of the colour, for backgrounds.
+  tint: string;
+  // The small line under the module's card on the home screen.
+  sub: string;
+  // The question shown at the top of the module's screen.
+  prompt: string;
 };
 
+// The one definition of each module. Keyed by ModuleKey, so a new module
+// without a full entry is a compile error rather than a blank screen.
 export const MODULES: Record<ModuleKey, Module> = {
   fuel: {
     key: "fuel",

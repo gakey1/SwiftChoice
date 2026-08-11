@@ -3,7 +3,10 @@
 // missed, that the theme is deliberately left alone, that one broken store does
 // not stop the rest, and that a partial wipe is reported rather than hidden.
 
+// The function under test.
 import { clearLocalData } from "@/features/privacy/localData";
+// Every store it clears, mocked below. Importing all of them is what lets a
+// case prove nothing personal was missed.
 import { clearFocusPool } from "@/features/focus/focusPoolStorage";
 import { clearFuelPool } from "@/features/fuel/fuelPoolStorage";
 import { clearDecisions } from "@/features/history/historyStorage";

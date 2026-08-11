@@ -205,7 +205,7 @@ describe("FocusScreen", () => {
   });
 
   it("says a location goes to a weather service, before anything is searched", async () => {
-    // US34. The notice has to be readable before the control is used, not after
+    // The notice has to be readable before the control is used, not after
     // the collection has already happened.
     const { getByText } = render(<FocusScreen />);
 

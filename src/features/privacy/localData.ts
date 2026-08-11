@@ -1,14 +1,11 @@
-// Clears everything this app has stored on the phone (US31), in one place so
-// there is a single answer to "what is actually on my device".
+// Clears everything this app has stored on the phone, in one place so there is a
+// single answer to "what is on my device", and so deleting an account is this
+// plus the cloud rather than a second list that drifts.
 //
-// This is deliberately the on-device half of deleting an account (US33). Doing
-// it separately means the account flow is this, plus the cloud copies, plus
-// signing the user out, rather than a second list that could drift from this one.
-//
-// It does NOT touch the cloud. Accepted decisions are mirrored to Firestore
-// (D-008), and that copy survives this. Anything shown to the user about this
-// action has to say so, or we are claiming more than we did. See D-011.
+// It does NOT touch the cloud. What the user is told has to say so.
 
+// Every on-device store, one import per thing that gets cleared. The list below
+// is the only place that decides what "everything on this phone" means.
 import { clearFocusPool } from "@/features/focus/focusPoolStorage";
 import { clearFuelPool } from "@/features/fuel/fuelPoolStorage";
 import { clearDecisions } from "@/features/history/historyStorage";
@@ -29,8 +26,10 @@ export type ClearLocalDataResult = {
 
 // The theme is deliberately absent from this list. It is a look, not personal
 // data, and silently flipping somebody's app from dark to light is a confusing
-// side effect of a privacy action. Recorded in D-011 so it reads as a decision
+// side effect of a privacy action. Written down here so it reads as a decision
 // rather than an oversight.
+//
+// The names are user-facing, since a failed step is reported by name.
 const STEPS: { name: string; run: () => Promise<void> }[] = [
   { name: "preferences", run: clearPreferences },
   { name: "fuel pool", run: clearFuelPool },

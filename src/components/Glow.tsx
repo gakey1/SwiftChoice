@@ -1,23 +1,15 @@
-// A soft radial glow, for putting a halo behind something round.
-//
-// The obvious way to do this is a shadow, and it does not work. iOS draws a
-// coloured shadow from shadowColor and Android ignores that property entirely,
-// falling back to elevation, which is grey and has no colour of its own. So the
-// avatar's "glow" was a coloured halo on iPhone and a dull grey lift on Android.
-//
-// Elevation on a circle is worse than merely colourless: Android draws
-// elevation shadows from a polygon approximation of the view outline, so a
-// round view with elevation renders an octagonal band rather than a ring. That
-// is the same fault already fixed on the Focus result badge.
-//
-// A real view has neither problem. This draws the falloff as an SVG radial
-// gradient, which is the same technique the ambient background uses, so it is
-// identical on both platforms and genuinely the colour it is asked for.
+// A soft radial glow for putting a halo behind something round. An SVG gradient
+// rather than a shadow, because Android ignores shadowColor and falls back to
+// elevation, which is grey and renders a circle as an octagonal band.
 
+// Gives each glow a unique gradient id.
 import { useId } from "react";
+// The absolute-fill helper, so the glow sits behind its parent's content.
 import { StyleSheet } from "react-native";
+// The SVG primitives the glow is built from.
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 
+// Colour and size are required; the two falloff knobs have sensible defaults.
 export type GlowProps = {
   color: string;
   // Total width of the glow, including the empty space it fades out into. Make
@@ -30,6 +22,7 @@ export type GlowProps = {
   innerStop?: number;
 };
 
+// Draws one gradient and paints it across a square the size of the glow.
 export function Glow({ color, size, opacity = 0.5, innerStop = 0.42 }: GlowProps) {
   // Gradient ids share one document-wide namespace, so two glows on a screen
   // would otherwise collide and both take the first one's colour.

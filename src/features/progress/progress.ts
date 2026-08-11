@@ -19,17 +19,20 @@ export const LEVEL_TITLES = [
 // Home daily-quest pill, and the Accept handlers that actually award it.
 export const XP_PER_DECISION = 50;
 
-// XP needed to clear a given level. Grows a little each level.
+// XP needed to clear a given level. Grows a little each level, so later levels
+// take longer without the curve running away.
 export function capFor(level: number): number {
   return 400 + (level - 1) * 120;
 }
 
-// The title for a level, clamped to the last title once past the top.
+// The title for a level, clamped to the last title once past the top, so a
+// player beyond the final level still has a name rather than a blank.
 export function levelTitle(level: number): string {
   return LEVEL_TITLES[Math.min(level - 1, LEVEL_TITLES.length - 1)] ?? "Legend";
 }
 
-// How full the XP bar is for the current level, as a 0-1 fraction.
+// How full the XP bar is for the current level, as a 0-1 fraction. Clamped, so
+// a stored value outside the level's range cannot overflow the bar.
 export function xpFraction(xp: number, level: number): number {
   return Math.max(0, Math.min(1, xp / capFor(level)));
 }

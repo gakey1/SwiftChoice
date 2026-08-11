@@ -1,17 +1,21 @@
-// A small icon set for the gamification UI (streak flame, achievement badges,
-// module glyphs). Some shapes the mockup draws by hand do not exist in Feather
-// (a flame, a trophy, a fork and knife), so those come from MaterialCommunityIcons
-// and the rest from Feather. Both sets ship with @expo/vector-icons, so there is
-// no new dependency. Callers use one semantic name and this picks the right set.
+// The icon set for the gamification UI: streak flame, achievement badges,
+// module glyphs. Some shapes the mockup draws by hand are not in Feather (a
+// flame, a trophy, a fork and knife), so those come from MaterialCommunityIcons
+// and the rest from Feather. Both ship with @expo/vector-icons, so neither is a
+// new dependency. Callers give one semantic name and this picks the set.
 
+// The two icon sets this component draws from.
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+// Used to borrow each set's own list of valid names.
 import type { ComponentProps } from "react";
 
+// The names each set accepts, taken from the set itself so a typo fails to
+// compile rather than rendering nothing.
 type FeatherName = ComponentProps<typeof Feather>["name"];
 type MciName = ComponentProps<typeof MaterialCommunityIcons>["name"];
 
-// Semantic glyph names used across the gamification UI, mapped to whichever set
-// has the shape that matches the mockup.
+// The glyphs that come from MaterialCommunityIcons, because Feather has no
+// shape close enough to the mockup.
 const MCI: Record<string, MciName> = {
   fire: "fire",
   trophy: "trophy",
@@ -22,6 +26,7 @@ const MCI: Record<string, MciName> = {
   flag: "flag",
 };
 
+// The glyphs that come from Feather, which matches the app's line-icon look.
 const FEATHER: Record<string, FeatherName> = {
   check: "check-circle",
   star: "star",
@@ -31,6 +36,8 @@ const FEATHER: Record<string, FeatherName> = {
   zap: "zap",
 };
 
+// The names callers use. One list across both sets, so a screen never has to
+// know which library a glyph comes from.
 export type GameGlyph =
   | "fire"
   | "trophy"
@@ -46,12 +53,15 @@ export type GameGlyph =
   | "lock"
   | "zap";
 
+// Which glyph to draw, how big, and in what colour.
 export type GameIconProps = {
   glyph: GameGlyph;
   size?: number;
   color: string;
 };
 
+// Looks the name up in MaterialCommunityIcons first, then Feather, falling back
+// to a star so an unmapped name still draws something.
 export function GameIcon({ glyph, size = 20, color }: GameIconProps) {
   const mci = MCI[glyph];
   if (mci) {

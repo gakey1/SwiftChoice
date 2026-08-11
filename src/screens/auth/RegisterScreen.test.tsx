@@ -1,18 +1,23 @@
-// Tests for the sign up screen. The auth service is mocked, so these check the
-// screen's own behaviour: it validates the form, calls the service only with
-// good input, shows a form error when sign up fails, and links to login.
+// Tests for the sign up screen. The auth service is mocked, so these cover the
+// screen's own behaviour: it validates before submitting, calls the service only
+// with good input, surfaces a form error on failure, and links back to login.
 
+// Used to type the fake navigation prop.
 import type { ComponentProps } from "react";
+// Drives the form and waits for the async submit to settle.
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 
+// The screen under test.
 import { RegisterScreen } from "@/screens/auth/RegisterScreen";
+// The Firebase call it makes, mocked below.
 import { registerWithEmail } from "@/services/auth";
 
 jest.mock("@/services/auth", () => ({ registerWithEmail: jest.fn() }));
 
 const mockRegister = registerWithEmail as jest.Mock;
 
-// Renders the screen with a fake navigation object so the footer link can be checked.
+// Renders the screen with a fake navigation object, so the footer link can be
+// checked.
 function renderScreen() {
   const navigate = jest.fn();
   const props = { navigation: { navigate } } as unknown as ComponentProps<typeof RegisterScreen>;
@@ -32,6 +37,7 @@ describe("RegisterScreen", () => {
     jest.clearAllMocks();
   });
 
+  // Local validation runs first, so a bad form never costs a round trip.
   it("shows inline validation errors and does not call the service on invalid input", () => {
     renderScreen();
     fireEvent.press(screen.getByText("Create account"));
@@ -40,6 +46,7 @@ describe("RegisterScreen", () => {
     expect(mockRegister).not.toHaveBeenCalled();
   });
 
+  // The confirm field is not sent; only the email and the password are.
   it("calls the register service with valid input", async () => {
     mockRegister.mockResolvedValue("uid-123");
     renderScreen();

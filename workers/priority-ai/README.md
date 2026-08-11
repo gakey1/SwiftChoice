@@ -1,6 +1,6 @@
 ## Priority AI tie-breaker
 
-The Priority module first ranks tasks using SwiftChoice’s normal transparent rules:
+The Priority module first ranks tasks using SwiftChoice's normal transparent rules:
 
 1. Urgency and importance score
 2. Earlier deadline
@@ -54,7 +54,7 @@ Expo must be restarted after creating or changing `.env`:
 npx expo start -c
 ```
 
-The `-c` option clears Metro’s cache and ensures the new environment value is loaded.
+The `-c` option clears Metro's cache and ensures the new environment value is loaded.
 
 #### 4. Test the AI tie-breaker
 

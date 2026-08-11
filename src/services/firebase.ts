@@ -2,6 +2,7 @@
 // (login and the cloud database) imports it from here, so it only starts up
 // once and the rest of the app never touches Firebase directly.
 
+// Creating the app, and the two helpers used to avoid creating it twice.
 import { initializeApp, getApps, getApp } from "firebase/app";
 import type { FirebaseApp } from "firebase/app";
 // getReactNativePersistence really does exist and works when the app runs, but
@@ -11,10 +12,14 @@ import type { FirebaseApp } from "firebase/app";
 // @ts-expect-error firebase/auth React Native types are not exposed publicly
 import { initializeAuth, getReactNativePersistence, getAuth } from "firebase/auth";
 import type { Auth } from "firebase/auth";
+// The cloud database.
 import { getFirestore } from "firebase/firestore";
 import type { Firestore } from "firebase/firestore";
+// Where the signed-in session is kept between app restarts.
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+// Read from the environment rather than hardcoded, so the keys stay out of the
+// repository. EXPO_PUBLIC_ is the prefix Expo inlines into the app bundle.
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -52,4 +57,5 @@ try {
 // The cloud database, where accounts and history are stored.
 const db: Firestore = getFirestore(app);
 
+// The three handles the rest of the app imports.
 export { app, auth, db };

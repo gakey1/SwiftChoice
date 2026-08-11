@@ -1,22 +1,14 @@
-// Saves and loads the Priority screen's task board on the device, so a list
-// survives leaving the screen and closing the app. It uses AsyncStorage, the
-// same on-device store as the theme, the preferences and the gamification
-// progress; a task is an ordinary note, not a secret, so it does not belong in
-// Secure Store. Part of the on-device storage slice.
+// Saves and loads the Priority board on the device, so a list survives leaving
+// the screen and closing the app. AsyncStorage rather than Secure Store: a task
+// is an ordinary note, not a secret.
 //
-// This existed nowhere until now. Priority held its tasks in component state
-// and nothing else, so navigating away lost them, which was found by using the
-// app rather than by any test. Nothing in the WBS asked for the tasks to be
-// stored, and nothing in the app said they were not.
-//
-// The whole board is one record rather than three. A ranked order, the fact
-// that it is ranked, and the sentence explaining it only make sense together:
-// tasks restored without `isRanked` would offer to rank an already ranked list,
-// and `isRanked` restored without its reason would claim an explanation the
-// screen could not show.
+// The whole board is one record rather than three, because the tasks, the
+// is-ranked flag and the explanation only make sense together.
 
+// The on-device key-value store.
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+// One key, namespaced like every other store in this folder.
 const BOARD_KEY = "swiftchoice.priorityBoard";
 
 // Structurally the screen's Task, declared here rather than imported from it.
@@ -32,6 +24,7 @@ export type StoredTask = {
   status: "Pending" | "InProgress" | "Completed";
 };
 
+// The board as one unit: the list, whether it has been ranked, and why.
 export type TaskBoard = {
   tasks: StoredTask[];
   isRanked: boolean;
@@ -40,8 +33,10 @@ export type TaskBoard = {
   reasons: string[];
 };
 
+// What a first run, or an unreadable store, falls back to.
 export const EMPTY_BOARD: TaskBoard = { tasks: [], isRanked: false, reasons: [] };
 
+// The allowed values for the three enum-ish fields, used by the check below.
 const LEVELS = ["High", "Medium", "Low"] as const;
 const STATUSES = ["Pending", "InProgress", "Completed"] as const;
 

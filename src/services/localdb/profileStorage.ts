@@ -1,11 +1,13 @@
 // Saves and loads which profile avatar the user picked, on the device, so their
 // chosen robot shows on Home and in Settings next time. It uses AsyncStorage,
 // the same on-device store as the theme and the sign-in session; the avatar
-// choice is an ordinary preference, not a secret. Part of the on-device storage
-// slice. The stored value is just the avatar's index in the AVATARS list.
+// choice is an ordinary preference, not a secret. The stored value is just the
+// avatar's index in the AVATARS list.
 
+// The on-device key-value store.
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+// One key, namespaced like every other store in this folder.
 const AVATAR_KEY = "swiftchoice.avatarIndex";
 
 // Returns the saved avatar index, or 0 (the first avatar) if nothing valid is

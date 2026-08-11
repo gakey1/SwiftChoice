@@ -1,20 +1,8 @@
-// The icon a Focus spot shows on its result card.
-//
-// The design gives every spot its own picture rather than one icon for the
-// module, so a library and a park bench do not arrive looking identical even
-// though both are silent. The design uses emoji for this; the brand rules keep
-// emoji to the three module glyphs, so the same idea is done with the Feather
-// set already used everywhere else in the app.
-//
-// The icon is stored on the spot rather than worked out from its vibe, because
-// the two silent spots in the design have different pictures. Vibe cannot
-// produce that, and guessing from the name would break the moment somebody
-// names a spot something we did not anticipate.
-//
-// Everything goes through spotIcon() rather than being read straight off the
-// row. A Feather name that does not exist renders nothing at all, silently, and
-// that has already reached a merged screen once in this project.
+// The icon a Focus spot shows on its result card. Stored on the spot rather
+// than derived from its vibe, because two spots can share a vibe and still
+// want different pictures.
 
+// The icon component's own name type, so an unchecked string cannot reach it.
 import type { IconName } from "@/components/Icon";
 
 // The names a spot may use. Deliberately short: a handful that cover the kinds
@@ -33,16 +21,21 @@ export const SPOT_ICONS = [
   "map-pin",
 ] as const;
 
+// Derived from the list above, so adding a name in one place is enough.
 export type SpotIcon = (typeof SPOT_ICONS)[number];
 
 // Used when a spot has no icon, or one this build does not know. A pin says
-// "a place" without claiming anything about it, which is the right thing to say
+// "a place" without claiming anything more, which is the right thing to say
 // when we do not know.
 export const DEFAULT_SPOT_ICON: SpotIcon = "map-pin";
 
+// A Set rather than an array so the check below is a constant-time lookup
+// instead of a scan on every card render.
 const ALLOWED = new Set<string>(SPOT_ICONS);
 
-// Narrows whatever was stored to something that will actually draw.
+// Every read goes through here rather than straight off the row, because an
+// unknown Feather name renders nothing at all, silently. The IconName return
+// type is what stops an unchecked string reaching the icon component.
 export function spotIcon(stored: string | null | undefined): IconName {
   if (typeof stored === "string" && ALLOWED.has(stored)) {
     return stored as IconName;

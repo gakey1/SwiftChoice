@@ -3,8 +3,10 @@
 // back, that missing or invalid values fall back to the first avatar, and that a
 // save writes the key.
 
+// The store behind it, mocked below.
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+// The two functions under test.
 import { loadAvatarIndex, saveAvatarIndex } from "@/services/localdb/profileStorage";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
@@ -12,6 +14,7 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
   setItem: jest.fn(),
 }));
 
+// Typed handles on the mocks, so each case can set what is stored.
 const mockGetItem = AsyncStorage.getItem as jest.Mock;
 const mockSetItem = AsyncStorage.setItem as jest.Mock;
 

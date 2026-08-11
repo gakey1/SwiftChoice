@@ -1,24 +1,28 @@
 // The full account of what SwiftChoice collects, where it goes, and what stays
-// on the phone. Reached from the Your data row in Settings, and the place the
-// short notices around the app are the summary of (US34).
+// on the phone. The long form of the short notices shown around the app.
 //
-// The rule this screen is written to: say exactly what the app does, and no
-// more. The clear-data screen had to say "on this phone" because the cloud copy
-// of a decision survives, and claiming to delete more than we delete would be
-// the fastest way to lose someone's trust on the one screen they came to
-// looking for it. The same applies here, in the other direction: every line
-// below is checkable against the code, and nothing is softened.
+// Written to one rule: every line is checkable against the code, and nothing is
+// softened. This is the screen someone opens looking for the truth.
 
+// The scrolling layout, the text, and the two tappable document links.
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+// Keeps the content clear of the notch.
 import { SafeAreaView } from "react-native-safe-area-context";
+// The type for this screen's navigation prop.
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
+// The colour wash behind the content.
 import { AmbientBackground } from "@/components/AmbientBackground";
+// The arrow, phone and chevron glyphs used in the lists below.
 import { Icon } from "@/components/Icon";
+// The screen names this stack can navigate to.
 import type { AppStackParamList } from "@/navigation/types";
+// Design tokens: fonts, spacing, radii.
 import { T } from "@/theme/tokens";
+// The active theme's colours.
 import { useTheme } from "@/theme/ThemeProvider";
 
+// Takes no route params; it is reached from Settings.
 type DataAndPrivacyScreenProps = NativeStackScreenProps<
   AppStackParamList,
   "DataAndPrivacy"
@@ -63,6 +67,7 @@ const STAYS_ON_THE_PHONE: readonly string[] = [
   "Your Priority tasks, except the tied ones sent to break a draw",
 ];
 
+// Renders the two lists, the caveats, and the links to the full documents.
 export function DataAndPrivacyScreen({ navigation }: DataAndPrivacyScreenProps) {
   const { colors } = useTheme();
 

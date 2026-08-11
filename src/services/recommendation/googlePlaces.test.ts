@@ -3,7 +3,10 @@
 // that the field list stays inside the tier we chose, and that real responses
 // with missing fields do not break anything.
 
+// The result shape the fixtures build.
 import type { GooglePlaceResult } from "./googlePlaces";
+// The functions under test, plus the attribution string and the missing-key
+// error, both of which are part of the contract.
 import {
   fetchAreaCoordinates,
   fetchAreaSuggestions,
@@ -14,8 +17,12 @@ import {
   readableAddress,
 } from "./googlePlaces";
 
+// The key is read from the environment at call time, so it is captured here and
+// restored after each case rather than left set for the rest of the suite.
 const ORIGINAL_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_KEY;
 
+// Replaces fetch with one that answers with the given body, and hands back the
+// spy so a case can assert on the request that went out.
 function mockFetchOnce(body: unknown, ok = true, status = 200) {
   const spy = jest.fn(async () => ({
     ok,
@@ -245,7 +252,7 @@ describe("fetchNearbyPlaces", () => {
   });
 });
 
-// The street address, added on Tracy's suggestion 2026-08-08.
+// The street address shown on a result card.
 describe("readableAddress", () => {
   function place(fields: Partial<GooglePlaceResult>): GooglePlaceResult {
     return { displayName: { text: "Somewhere" }, ...fields };

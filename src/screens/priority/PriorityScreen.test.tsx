@@ -1,11 +1,14 @@
 // Tests for the Priority screen. The icon set and navigation are stubbed so it
-// renders under Jest. These exercise Tracy's task logic through the new UI:
-// adding a task, ranking, and completing. The gamification layer is presentation
-// only, so the checks focus on the task behaviour it wraps.
+// renders under Jest. These exercise the task logic through the UI: adding a
+// task, ranking, and completing. The gamification layer is presentation only,
+// so the checks focus on the task behaviour it wraps.
 
 import React from "react";
+// Renders the screen, drives it, and flushes the state updates it causes.
 import { render, fireEvent, act } from "@testing-library/react-native";
+// Spied on, since completing and clearing both go through a confirmation.
 import { Alert } from "react-native";
+// The screen under test.
 import { PriorityScreen } from "./PriorityScreen";
 
 // Stub the native icon set so this test does not pull in expo-font / expo-asset.

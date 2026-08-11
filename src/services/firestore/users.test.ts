@@ -3,8 +3,11 @@
 // field, that an unanswered survey reads back as null, that a value saved in an
 // older format is not trusted, and that the answer is remembered per user.
 
+// The Firestore calls the module makes, mocked below so they can be asserted on
+// without touching the network.
 import { collection, deleteDoc, doc, getDoc, getDocs, setDoc, writeBatch } from "firebase/firestore";
 
+// The functions under test.
 import {
   clearBudgetTierCache,
   deleteAllDecisions,
@@ -163,7 +166,7 @@ describe("getBudgetTier", () => {
   });
 });
 
-// Deleting the cloud copy of a user's decisions (US33). Firestore has no "delete
+// Deleting the cloud copy of a user's decisions. Firestore has no "delete
 // this collection" call at any tier, so the documents are listed and removed in
 // batches, and these check the splitting rather than Firestore itself.
 describe("deleteAllDecisions", () => {

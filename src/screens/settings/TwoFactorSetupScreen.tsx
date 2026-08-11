@@ -1,28 +1,32 @@
-// Turning two-factor authentication on or off. Reached from the Security row in
-// Settings, and also shown straight after a sign-in where a password change
-// invalidated an existing enrolment (D-012), with a banner explaining why.
+// Turning two-factor authentication on or off, from the Security row in
+// Settings. Also shown after a sign-in where a password change invalidated an
+// existing enrolment, with a banner explaining why.
 //
-// What this protects, stated plainly because it is easy to overclaim: the secret
-// is stored in this phone's keychain and nowhere else, so the code is asked for
-// when signing in on this phone. Signing in on a different phone is not
-// challenged, because there is no secret there to check against. It is a
-// same-device step-up factor, not account-level two-factor authentication.
-//
-// The current code is shown on screen during setup on purpose. It makes the
-// feature demonstrable on a simulator, or from a zip with no second device,
-// which is what the marking and the panel demo need.
+// A same-device step-up factor, not account-level two-factor authentication:
+// the secret lives in this phone's keychain and nowhere else.
 
+// Holds the enrolment state, and drives the rotating demo code.
 import { useCallback, useEffect, useState } from "react";
+// The layout and the text, plus Linking for handing the key to an
+// authenticator app.
 import { Linking, ScrollView, StyleSheet, Text, View } from "react-native";
+// Keeps the content clear of the notch.
 import { SafeAreaView } from "react-native-safe-area-context";
+// The type for this screen's navigation and route props.
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+// Copying the key out, for setting up on the same phone.
 import * as Clipboard from "expo-clipboard";
+// The QR code an authenticator app scans.
 import QRCode from "react-native-qrcode-svg";
 
+// The colour wash behind the content.
 import { AmbientBackground } from "@/components/AmbientBackground";
+// The shared button and code field.
 import { Button } from "@/components/Button";
 import { TextField } from "@/components/TextField";
+// The signed-in user, whose email labels the enrolment.
 import { useAuth } from "@/hooks/useAuth";
+// The TOTP maths: minting a secret, showing it, and checking a typed code.
 import {
   buildOtpauthUri,
   generateCode,
@@ -31,20 +35,27 @@ import {
   secondsUntilRotation,
   verifyCode,
 } from "@/features/auth/totp";
+// The screen names this stack can navigate to.
 import type { AppStackParamList } from "@/navigation/types";
+// The keychain the secret is read from, written to and cleared from.
 import {
   clearTotpSecret,
   getTotpSecret,
   saveTotpSecret,
 } from "@/services/localdb/totpStorage";
+// Design tokens: fonts, spacing, radii.
 import { T } from "@/theme/tokens";
+// The active theme's colours.
 import { useTheme } from "@/theme/ThemeProvider";
 
+// route.params.reason is set when a password change forced the user back here.
 type TwoFactorSetupScreenProps = NativeStackScreenProps<
   AppStackParamList,
   "TwoFactorSetup"
 >;
 
+// Three states in one screen: reading the stored secret, enrolled, and setting
+// up. Which one shows is decided by enrolledSecret and pendingSecret below.
 export function TwoFactorSetupScreen({
   navigation,
   route,
@@ -69,6 +80,9 @@ export function TwoFactorSetupScreen({
   const [copied, setCopied] = useState(false);
   const [handoffError, setHandoffError] = useState<string | null>(null);
 
+  // Reads the stored secret once on open, which decides whether this screen
+  // shows the enrolled state or the setup flow. The `active` guard stops a late
+  // read setting state after the screen has gone.
   useEffect(() => {
     let active = true;
     void (async () => {
@@ -178,7 +192,7 @@ export function TwoFactorSetupScreen({
         {/* Deliberately short. An earlier version explained the same-device
             limit across two paragraphs and read as a disclaimer, which buried
             the three enrolment options underneath it. The scope claim still has
-            to be here and has to be accurate (D-012), so it is kept as the last
+            to be here and has to be accurate, so it is kept as the last
             sentence rather than dropped. */}
         <Text style={[styles.body, { color: colors.ink2 }]}>
           Asks for a six-digit code from an authenticator app when you sign in

@@ -91,4 +91,4 @@ On the iOS simulator the button opened Apple's built-in **Passwords** app, which
 
 **Tracy:** decide how we demo the 2FA. On a real phone with Google Authenticator, using the one-tap button, is the convincing version and we can switch the on-screen code off. On an emulator we need the code on screen. I need the answer before I set the switch's default.
 
-**Both:** when we describe this at the panel, it is a same-device step-up factor, not account-level two-factor authentication. The key lives in this phone's keychain and nowhere else, so signing in on a different phone is not challenged. If one of us says "we have 2FA" and the panel asks about a second device, that gets awkward. This is written up in `docs/decisions.md` D-012.
+**Both:** when we describe this at the panel, it is a same-device step-up factor, not account-level two-factor authentication. The key lives in this phone's keychain and nowhere else, so signing in on a different phone is not challenged. If one of us says "we have 2FA" and the panel asks about a second device, that gets awkward.

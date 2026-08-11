@@ -1,40 +1,51 @@
-// The six-digit code asked for after signing in on a phone that has two-factor
-// authentication switched on. RootNavigator shows this between the sign-in and
-// the app, the same way VerifyEmailScreen sits in front of an unconfirmed
-// account: the app screens are not loaded until this passes.
+// The six-digit code asked for after signing in on an enrolled phone.
+// RootNavigator shows this between sign-in and the app, so no app screen loads
+// until it passes.
 //
-// The pass is held in memory only, never saved. Closing and reopening the app
-// asks again, which is the point of a step-up factor. Saving "already passed"
-// would reduce it to a one-time formality.
-//
-// The escape is Log out, not Skip. Somebody who cannot produce a code needs a
-// way off this screen that does not walk past the factor, and signing out is the
-// honest one: it returns them to the login screen with nothing gained.
+// The pass is held in memory only. Reopening the app asks again, which is the
+// point of a step-up factor, and the escape is Log out rather than Skip.
 
+// Holds the typed code and the demo display, and drives the countdown.
 import { useEffect, useState } from "react";
+// The layout, the keyboard handling and the text.
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+// Keeps the content clear of the notch and the home indicator.
 import { SafeAreaView } from "react-native-safe-area-context";
 
+// The colour wash behind the form.
 import { AmbientBackground } from "@/components/AmbientBackground";
+// The shared button and text field.
 import { Button } from "@/components/Button";
 import { TextField } from "@/components/TextField";
+// Whether this build may print the code on screen.
 import { showsDemoCodeOnChallenge } from "@/features/auth/demoCode";
+// The TOTP maths: the current code, its countdown, and the check itself.
 import { generateCode, secondsUntilRotation, verifyCode } from "@/features/auth/totp";
+// The signed-in user, whose email labels the TOTP account.
 import { useAuth } from "@/hooks/useAuth";
+// The only way off this screen without a code.
 import { logout } from "@/services/auth";
+// The secret stored on this device at enrolment.
 import { getTotpSecret } from "@/services/localdb/totpStorage";
+// Design tokens: fonts, spacing, radii.
 import { T } from "@/theme/tokens";
+// The active theme's colours.
 import { useTheme } from "@/theme/ThemeProvider";
 
+// Owned by RootNavigator rather than a stack, so this takes a callback instead
+// of a navigation prop.
 type TotpChallengeScreenProps = {
   // Called once the typed code checks out. RootNavigator uses this to let the
   // app through for the rest of this run.
   onPassed: () => void;
 };
 
+// Draws the code field, and the demo display in development builds.
 export function TotpChallengeScreen({ onPassed }: TotpChallengeScreenProps) {
   const { colors } = useTheme();
   const { user } = useAuth();
+  // The label has to match the one used at enrolment, or the codes will not
+  // agree. The fallback covers a session with no email on it.
   const accountLabel = user?.email ?? "SwiftChoice";
 
   const [typedCode, setTypedCode] = useState("");
@@ -48,6 +59,12 @@ export function TotpChallengeScreen({ onPassed }: TotpChallengeScreenProps) {
   // features/auth/demoCode.ts for why setup keeps it and this screen does not.
   const showDemoCode = showsDemoCodeOnChallenge();
 
+  // Recomputes the demo code and its countdown once a second, so the screen
+  // shows a code that visibly rotates rather than a frozen number.
+  //
+  // `active` guards against the async tick landing after the screen has gone,
+  // which would set state on an unmounted component. The cleanup clears both
+  // the flag and the interval, so nothing survives the screen.
   useEffect(() => {
     if (!showDemoCode) return undefined;
 
@@ -66,6 +83,7 @@ export function TotpChallengeScreen({ onPassed }: TotpChallengeScreenProps) {
     };
   }, [accountLabel, showDemoCode]);
 
+  // Reads the secret, then checks the typed code against it.
   async function handleVerify() {
     setError(null);
     setChecking(true);
@@ -81,9 +99,13 @@ export function TotpChallengeScreen({ onPassed }: TotpChallengeScreenProps) {
         return;
       }
 
+      // verifyCode accepts the neighbouring time windows as well as the current
+      // one, so a slow typist or a slightly wrong device clock still passes.
       if (verifyCode(secret, accountLabel, typedCode)) {
         onPassed();
       } else {
+        // One message for every wrong code. There is nothing more specific to
+        // say, and the code is gone in 30 seconds either way.
         setError("That code is not right. Check your authenticator and try again.");
       }
     } finally {
@@ -112,6 +134,8 @@ export function TotpChallengeScreen({ onPassed }: TotpChallengeScreenProps) {
             SwiftChoice.
           </Text>
 
+          {/* The demo panel, labelled as such so nobody mistakes it for part of
+              the product. Absent from release builds entirely. */}
           {showDemoCode ? (
             <View style={[styles.demo, { borderColor: colors.cardLine }]}>
               <Text style={[styles.demoLabel, { color: colors.ink3 }]}>
@@ -129,6 +153,7 @@ export function TotpChallengeScreen({ onPassed }: TotpChallengeScreenProps) {
             </View>
           ) : null}
 
+          {/* number-pad, since the code is always six digits. */}
           <TextField
             label="Six-digit code"
             value={typedCode}
@@ -164,6 +189,10 @@ export function TotpChallengeScreen({ onPassed }: TotpChallengeScreenProps) {
   );
 }
 
+// The page frame and wordmark shared with the other auth screens, plus the demo
+// panel: a bordered box whose code is set in the display size with wide letter
+// spacing, so it can be read off one device and typed into another. Colours are
+// applied above, so all of this follows the dark/light toggle.
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   flex: { flex: 1 },

@@ -1,38 +1,53 @@
-// The login screen. It checks what the user typed, signs them in, and then lets
-// the auth listener move them into the app. Built the same way as the register
-// screen.
-//
-// Every sign-in error shows the same general message on purpose. Telling the
-// user whether the email or the password was wrong would let someone work out
-// which emails are registered, so the message stays generic.
+// The login screen. Validates what was typed, signs the user in, and lets the
+// auth listener move them into the app. Built like the register screen.
 
+// Holds the two field values and the three flags below.
 import { useState } from "react";
+// The layout, the keyboard handling and the text.
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+// Keeps the content clear of the notch and the home indicator.
 import { SafeAreaView } from "react-native-safe-area-context";
+// The type for this screen's navigation prop.
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
+// The colour wash behind the form.
 import { AmbientBackground } from "@/components/AmbientBackground";
+// The shared button and text field.
 import { Button } from "@/components/Button";
 import { TextField } from "@/components/TextField";
+// Turns a Firebase failure into the one generic sign-in message.
 import { loginErrorMessage } from "@/features/auth/errorMessages";
+// The on-device form checks.
 import { hasErrors, validateLoginForm, type LoginErrors } from "@/features/auth/validation";
+// The screen names this stack can navigate to.
 import type { AuthStackParamList } from "@/navigation/types";
+// The Firebase sign-in call.
 import { loginWithEmail } from "@/services/auth";
+// Design tokens: fonts, spacing, radii.
 import { T } from "@/theme/tokens";
+// The active theme's colours.
 import { useTheme } from "@/theme/ThemeProvider";
 
+// navigation comes from the stack; this screen takes no route params.
 type LoginScreenProps = NativeStackScreenProps<AuthStackParamList, "Login">;
 
+// Draws the form and owns the sign-in attempt.
 export function LoginScreen({ navigation }: LoginScreenProps) {
   const { colors } = useTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  // Two separate error slots, because they answer different questions. errors
+  // is per field and comes from local validation; formError is one message for
+  // the whole attempt and comes back from Firebase.
   const [errors, setErrors] = useState<LoginErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
+
+  // Guards against a double submit while the request is in flight.
   const [submitting, setSubmitting] = useState(false);
 
-  // Runs when Log in is pressed. Check the form first, and stop if anything is
-  // wrong. Otherwise try to sign in and show a message if it fails.
+  // Validate first, then submit. Checking locally means an empty form never
+  // costs a network round trip, and the user gets an answer immediately.
   async function handleLogin() {
     const nextErrors = validateLoginForm({ email, password });
     setErrors(nextErrors);
@@ -42,11 +57,17 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
     setSubmitting(true);
     try {
       await loginWithEmail(email, password);
-      // No screen change happens here; the auth listener moves them into the app
-      // once sign in works.
+      // Nothing navigates here on purpose. The auth listener in useAuth sees the
+      // signed-in user and swaps the navigator, so there is one path into the
+      // app whether the user just logged in or was already signed in at launch.
     } catch (err) {
+      // Every sign-in failure collapses to one general message. Saying whether
+      // the email or the password was wrong would let someone probe which
+      // addresses are registered.
       setFormError(loginErrorMessage(err));
     } finally {
+      // finally, so the button is re-enabled on the failure path too and the
+      // user is not locked out of retrying.
       setSubmitting(false);
     }
   }
@@ -54,10 +75,16 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={["top", "bottom"]}>
       <AmbientBackground />
+      {/* The keyboard covers the lower half of a phone, so the form is lifted
+          out from under it. Only iOS needs the padding behaviour; Android
+          already resizes the window itself, and doing both double-shifts it. */}
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
+        {/* keyboardShouldPersistTaps="handled" lets a tap on Log in register
+            while the keyboard is open. Without it the first tap only dismisses
+            the keyboard and the button appears not to work. */}
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.brand}>
             <View style={[styles.logo, { backgroundColor: colors.teal }]}>
@@ -71,6 +98,9 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
             Log in to pick up where you left off.
           </Text>
 
+          {/* The autofill and keyboard hints matter as much as the label here:
+              they are what let a password manager fill the pair, and what stops
+              the phone capitalising the first letter of an email address. */}
           <TextField
             label="Email"
             value={email}
@@ -95,12 +125,17 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
             testID="login-password"
           />
 
+          {/* The whole-form error sits above the button, where the eye already
+              is when the press did not work. Field errors render inside their
+              own TextField instead. */}
           {formError ? (
             <Text style={styles.formError} testID="login-form-error">
               {formError}
             </Text>
           ) : null}
 
+          {/* Disabled and relabelled from the same flag, so the button cannot
+              say "Logging in..." while still being pressable. */}
           <View style={styles.action}>
             <Button onPress={handleLogin} disabled={submitting}>
               {submitting ? "Logging in..." : "Log in"}
@@ -132,6 +167,10 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
   );
 }
 
+// The page frame, the wordmark, the headings, the error line and the two links.
+// Shared with the register and reset screens by being copied rather than
+// extracted, since each screen owns its own layout. Colours are applied above,
+// so all of this follows the dark/light toggle.
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   flex: { flex: 1 },

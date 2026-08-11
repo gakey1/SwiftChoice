@@ -1,20 +1,24 @@
 // The set of profile avatars the user can pick from. They are the open-source
 // DiceBear "bottts" robots, downloaded once and bundled as local PNGs under
-// assets/avatars, so the app never fetches them at runtime (no network, nothing
-// leaves the device, which keeps the privacy-first pitch intact).
+// assets/avatars, so the app never fetches them at runtime: no network, and
+// nothing leaves the device, which keeps the privacy-first pitch intact.
 //
 // The chosen avatar is shown on the Home player card and in Settings. Which one
-// is selected is persisted in profileStorage (the on-device storage slice).
+// is selected is persisted in profileStorage.
 
+// The type require() returns for a bundled image.
 import type { ImageSourcePropType } from "react-native";
 
+// One robot: its name, its bundled image, and its signature colour.
 export type Avatar = {
   name: string;
   source: ImageSourcePropType;
-  // A signature colour, used for the selection glow so each robot feels distinct.
+  // Used for the selection glow, so each robot feels distinct when picked.
   color: string;
 };
 
+// The four that ship. require() rather than an import, because Metro resolves
+// these at bundle time, which is what makes them local rather than fetched.
 export const AVATARS: readonly Avatar[] = [
   { name: "Nova", source: require("../../../assets/avatars/Nova.png"), color: "#B98BFF" },
   { name: "Zed", source: require("../../../assets/avatars/Zed.png"), color: "#22E0C4" },

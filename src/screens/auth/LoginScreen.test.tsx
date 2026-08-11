@@ -1,18 +1,22 @@
-// Tests for the login screen. The auth service is mocked, so these check the
-// screen's own behaviour: it validates the form, calls the service only with
-// good input, shows one generic message when sign in fails, and links to sign up.
+// Tests for the login screen. The auth service is mocked, so these cover the
+// screen's own behaviour: it validates before submitting, calls the service only
+// with good input, shows one generic message on failure, and links onward.
 
+// Used to type the fake navigation prop.
 import type { ComponentProps } from "react";
+// Drives the form and waits for the async submit to settle.
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 
+// The screen under test.
 import { LoginScreen } from "@/screens/auth/LoginScreen";
+// The Firebase call it makes, mocked below.
 import { loginWithEmail } from "@/services/auth";
 
 jest.mock("@/services/auth", () => ({ loginWithEmail: jest.fn() }));
 
 const mockLogin = loginWithEmail as jest.Mock;
 
-// Renders the screen with a fake navigation object so the footer link can be checked.
+// Renders the screen with a fake navigation object, so the links can be checked.
 function renderScreen() {
   const navigate = jest.fn();
   const props = { navigation: { navigate } } as unknown as ComponentProps<typeof LoginScreen>;
@@ -31,6 +35,7 @@ describe("LoginScreen", () => {
     jest.clearAllMocks();
   });
 
+  // Local validation runs first, so a bad form never costs a round trip.
   it("shows inline validation errors and does not call the service on invalid input", () => {
     renderScreen();
     fireEvent.press(screen.getByText("Log in"));
@@ -50,6 +55,8 @@ describe("LoginScreen", () => {
     });
   });
 
+  // The wording is asserted exactly, since naming the wrong field is what would
+  // let somebody probe which emails are registered.
   it("shows one generic error message when sign-in fails", async () => {
     mockLogin.mockRejectedValue({ code: "auth/invalid-credential" });
     renderScreen();

@@ -3,8 +3,10 @@
 // these tests is that this app's settings actually interoperate with a standard
 // authenticator app.
 
+// Mocked below, so the random bytes are fixed.
 import * as Crypto from "expo-crypto";
 
+// The functions under test.
 import {
   buildOtpauthUri,
   generateCode,
@@ -18,8 +20,8 @@ jest.mock("expo-crypto", () => ({ getRandomBytes: jest.fn() }));
 
 const mockGetRandomBytes = Crypto.getRandomBytes as jest.Mock;
 
-// A known base32 secret, so the expected codes below are fixed values rather
-// than whatever the code under test happens to produce.
+// A known base32 secret and account label, so the codes below are fixed values
+// rather than whatever the code under test happens to produce.
 const SECRET = "JBSWY3DPEHPK3PXP";
 const LABEL = "a@b.com";
 
@@ -28,15 +30,15 @@ describe("generateSecret", () => {
     jest.clearAllMocks();
   });
 
+  // The argument matters. otpauth's built-in randomBytes throws on React
+  // Native, so this call is the whole reason enrolment works on a device. If
+  // somebody simplifies it back to new Secret({size}), tests still pass in Node
+  // and enrolment breaks on a phone.
   it("asks expo-crypto for 20 bytes, not otpauth's own generator", () => {
     mockGetRandomBytes.mockReturnValue(new Uint8Array(20).fill(7));
 
     generateSecret();
 
-    // The argument matters. otpauth's built-in randomBytes throws on React
-    // Native, so this call is the whole reason the enrolment screen works on a
-    // device. If someone "simplifies" this back to new Secret({size}), tests
-    // still pass in Node and enrolment breaks on a phone.
     expect(mockGetRandomBytes).toHaveBeenCalledWith(20);
   });
 
@@ -50,6 +52,7 @@ describe("generateSecret", () => {
   });
 });
 
+// The gate itself: what passes and what does not.
 describe("verifyCode", () => {
   it("accepts the code that is valid right now", () => {
     const code = generateCode(SECRET, LABEL);
@@ -64,7 +67,7 @@ describe("verifyCode", () => {
 
   it("rejects a wrong code", () => {
     const code = generateCode(SECRET, LABEL);
-    // Shift one digit so the code is well-formed but incorrect.
+    // Shift one digit, so the code is well-formed but incorrect.
     const firstDigit = Number(code[0]);
     const wrong = String((firstDigit + 1) % 10) + code.slice(1);
     expect(verifyCode(SECRET, LABEL, wrong)).toBe(false);
@@ -83,6 +86,8 @@ describe("verifyCode", () => {
   });
 });
 
+// The shape of a generated code, and that it is a function of the window rather
+// than of chance.
 describe("generateCode", () => {
   it("produces six digits", () => {
     expect(generateCode(SECRET, LABEL)).toMatch(/^\d{6}$/);
@@ -93,6 +98,7 @@ describe("generateCode", () => {
   });
 });
 
+// The URI is the contract with the authenticator app.
 describe("buildOtpauthUri", () => {
   it("carries the settings an authenticator app needs to match our codes", () => {
     const uri = buildOtpauthUri(SECRET, LABEL);
@@ -108,6 +114,7 @@ describe("buildOtpauthUri", () => {
   });
 });
 
+// The countdown on the demo display.
 describe("secondsUntilRotation", () => {
   it("counts down within the 30-second window", () => {
     // 1970-01-01T00:00:05Z is 5 seconds into a window, so 25 remain.
@@ -127,6 +134,7 @@ describe("secondsUntilRotation", () => {
   });
 });
 
+// Grouping is display-only, which the last case is there to prove.
 describe("groupSecret", () => {
   beforeEach(() => {
     mockGetRandomBytes.mockReturnValue(new Uint8Array(20).fill(7));
@@ -149,10 +157,10 @@ describe("groupSecret", () => {
     expect(groupSecret(secret).replace(/ /g, "")).toBe(secret);
   });
 
+  // If a spaced key were a different key, everyone who typed it in would enrol
+  // against a secret the app does not hold and be locked out on the next
+  // sign-in.
   it("produces a key an authenticator still accepts once spaces are stripped", () => {
-    // The whole point of grouping is that it is display-only. If a spaced key
-    // were a different key, everyone who typed it in would enrol against a
-    // secret the app does not hold and be locked out on the next sign-in.
     const secret = generateSecret();
     const typedBack = groupSecret(secret).replace(/\s/g, "");
     expect(verifyCode(typedBack, "a@b.com", generateCode(secret, "a@b.com"))).toBe(true);

@@ -1,16 +1,15 @@
-// A circular progress ring, the level gauge from the Arcade History mockup (the
-// mockup draws it with a CSS conic-gradient, which React Native has no direct
-// equivalent for). It is built from two rotating half-discs clipped to each
-// semicircle, so it needs no SVG library and no new dependency: the ring fills
-// clockwise from the top for any fraction 0-1.
-//
-// A hole in the middle (an inner circle in `innerColor`) turns the filled disc
-// into a ring of `thickness`, and `children` render centred inside the hole
-// (the level number and label).
+// The circular level gauge from the Arcade History mockup. React Native has no
+// conic-gradient, so it is two rotating half-discs, each clipped to its own
+// semicircle, filling clockwise from the top for any fraction 0-1. An inner
+// circle punches the hole that turns the disc into a ring, and children render
+// centred inside it.
 
+// The views the ring, the sweeps and the hole are built from.
 import { StyleSheet, View } from "react-native";
+// The type for whatever a caller puts in the centre.
 import type { ReactNode } from "react";
 
+// Size, thickness and fill, plus the three colours the ring is drawn in.
 export type ProgressRingProps = {
   size: number;
   thickness: number;
@@ -50,6 +49,7 @@ function RightSweep({ size, color, deg }: { size: number; color: string; deg: nu
   );
 }
 
+// Stacks the track, the two sweeps and the centre hole.
 export function ProgressRing({
   size,
   thickness,

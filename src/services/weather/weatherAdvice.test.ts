@@ -2,6 +2,8 @@
 // rules themselves, so every band is checked directly, including the boundaries,
 // because a band that is off by one degree is invisible in a screenshot.
 
+// The rules under test, plus the two thresholds, imported rather than typed in
+// again so a changed band cannot leave these passing against the old number.
 import {
   COLD_FEELS_LIKE_C,
   HOT_FEELS_LIKE_C,
@@ -11,8 +13,10 @@ import {
   shouldShowConditions,
   type Readings,
 } from "./weatherAdvice";
+// The rain threshold, for the same reason.
 import { RAIN_LIKELY_PERCENT } from "./weatherService";
 
+// A full set of readings, with only the fields a case cares about overridden.
 function readings(overrides: Partial<Readings> = {}): Readings {
   return {
     ok: true,

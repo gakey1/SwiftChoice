@@ -1,16 +1,22 @@
-// A pick-one input: a label, the value currently chosen, and a row of
-// equal-width buttons to choose from. Used for the Fuel choices (budget, prep
-// time, distance) and any similar pick-one input. The chosen button is tinted in
-// the module's colour (from the active theme), and the type makes sure the right
-// module is used.
+// A pick-one input: a label, the chosen value, and a row of equal-width
+// buttons. Used for the Fuel choices (budget, prep time, distance). The chosen
+// button is tinted in its module's colour, which the type system enforces.
 
+// Tap handling, the labels, and the row layout.
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+// The module type, which carries the key the accent is looked up by.
 import type { Module } from "@/theme/modules";
+// Looks up a module's accent in the active theme.
 import { moduleAccent } from "@/theme/themes";
+// The active theme's colours.
 import { useTheme } from "@/theme/ThemeProvider";
+// Design tokens: fonts, spacing, radii.
 import { T } from "@/theme/tokens";
 
+// Generic over the option type, so a caller passing budget levels gets back a
+// budget level. Without the generic every caller would receive a bare string
+// and have to cast it, which is where the wrong value gets in.
 export type OptionGroupProps<TValue extends string> = {
   label: string;
   options: readonly TValue[];
@@ -19,7 +25,8 @@ export type OptionGroupProps<TValue extends string> = {
   module: Module;
 };
 
-// Draws the label and the row of options, highlighting the one that is chosen.
+// Controlled, like TextField: the chosen value comes in as a prop and changes
+// go out through onChange, so this never disagrees with the screen's state.
 export function OptionGroup<TValue extends string>({
   label,
   options,
@@ -28,6 +35,10 @@ export function OptionGroup<TValue extends string>({
   module,
 }: OptionGroupProps<TValue>) {
   const { colors } = useTheme();
+
+  // The accent is looked up from the module rather than passed in as a colour,
+  // which is what keeps the module-colour rule enforceable: a Fuel group cannot
+  // be handed green, because the caller never chooses the colour at all.
   const accent = moduleAccent(colors, module.key);
   return (
     <View>
@@ -35,6 +46,8 @@ export function OptionGroup<TValue extends string>({
         <Text style={[styles.label, { color: colors.ink }]}>{label}</Text>
         <Text style={[styles.value, { color: accent.color }]}>{value}</Text>
       </View>
+      {/* Each option is flex: 1 inside a row, so the buttons share the width
+          evenly however many there are, rather than being sized by their text. */}
       <View style={styles.row}>
         {options.map((option) => {
           const selected = option === value;
@@ -49,6 +62,9 @@ export function OptionGroup<TValue extends string>({
                   borderColor: selected ? accent.color : colors.cardLine,
                 },
               ]}
+              // Announced as a radio, because that is what this is: one choice
+              // from a set. Passing selected as state rather than baking it
+              // into the label lets the screen reader phrase it its own way.
               accessibilityRole="radio"
               accessibilityState={{ selected }}
               accessibilityLabel={option}
@@ -64,6 +80,8 @@ export function OptionGroup<TValue extends string>({
   );
 }
 
+// The label-and-value header, the row of buttons, and one button. Colours are
+// set above, since they depend on which option is selected.
 const styles = StyleSheet.create({
   header: {
     flexDirection: "row",

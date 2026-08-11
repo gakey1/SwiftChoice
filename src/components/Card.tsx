@@ -1,16 +1,20 @@
-// A card surface with a border and a soft shadow. Its colours come from the
-// active theme (via useTheme), so it follows the dark/light Arcade toggle. It is
-// used all over the app: the module cards on the home screen, the recommendation
-// card, the settings rows, and the history list. The padding can be set, and a
-// passed `style` still overrides the themed surface and border.
+// A card surface with a border and a soft shadow, used all over the app: the
+// module cards on Home, the recommendation card, the settings rows, the history
+// list. Colours come from the active theme, so it follows the dark/light toggle.
 
+// The plain box, the tappable version, and the shared stylesheet.
 import { Pressable, StyleSheet, View } from "react-native";
+// The type for whatever a caller puts inside the card.
 import type { ReactNode } from "react";
+// The types for the style a caller can pass in.
 import type { StyleProp, ViewStyle } from "react-native";
 
+// Design tokens: spacing, radii, elevation presets.
 import { T } from "@/theme/tokens";
+// The active theme's colours.
 import { useTheme } from "@/theme/ThemeProvider";
 
+// Everything a caller can set. Only the contents are required.
 export type CardProps = {
   children: ReactNode;
   onPress?: () => void;
@@ -20,11 +24,11 @@ export type CardProps = {
   style?: StyleProp<ViewStyle>;
 };
 
-// If an onPress is given the card can be tapped, otherwise it is just a plain box.
+// If an onPress is given the card can be tapped, otherwise it is a plain box.
 export function Card({ children, onPress, pad = T.spacing[4], rest = false, style }: CardProps) {
   const { colors } = useTheme();
   const elevation = rest ? T.elevation.rest : T.elevation.card;
-  // Themed surface + border by default; a passed `style` still overrides them.
+  // Themed surface and border by default; a passed `style` still overrides them.
   const themed = { backgroundColor: colors.card, borderColor: colors.cardLine };
   const baseStyle = [styles.card, themed, { padding: pad }, elevation, style];
 
@@ -43,6 +47,8 @@ export function Card({ children, onPress, pad = T.spacing[4], rest = false, styl
   return <View style={baseStyle}>{children}</View>;
 }
 
+// The card's shape, and the dimming shown while a tappable card is held.
+// Colours, padding and shadow are applied above, not here.
 const styles = StyleSheet.create({
   card: {
     borderRadius: T.radii.card,

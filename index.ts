@@ -1,3 +1,5 @@
+// The app's entry point. Nothing runs before this file.
+
 import { registerRootComponent } from 'expo';
 
 import App from './App';

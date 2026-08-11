@@ -3,28 +3,50 @@
 // sign ups: the main app is not loaded until the user clicks the emailed link
 // and Firebase confirms the email is now verified.
 
+// Holds the two busy flags and the shared status line.
 import { useState } from "react";
+// The layout and the text.
 import { StyleSheet, Text, View } from "react-native";
+// Keeps the content clear of the notch and the home indicator.
 import { SafeAreaView } from "react-native-safe-area-context";
 
+// The colour wash behind the content.
 import { AmbientBackground } from "@/components/AmbientBackground";
+// The shared button, used for both actions.
 import { Button } from "@/components/Button";
+// The signed-in user and the re-check that updates emailVerified.
 import { useAuth } from "@/hooks/useAuth";
+// The two Firebase calls this screen offers.
 import { logout, resendVerificationEmail } from "@/services/auth";
+// Design tokens: fonts, spacing, radii.
 import { T } from "@/theme/tokens";
+// The active theme's colours.
 import { useTheme } from "@/theme/ThemeProvider";
 
+// Takes no props: everything it needs comes from useAuth.
 export function VerifyEmailScreen() {
   const { colors } = useTheme();
   const { user, refreshEmailVerified } = useAuth();
+
+  // One flag per button rather than one shared "busy". The two actions are
+  // independent, and a single flag would disable both while either ran.
   const [checking, setChecking] = useState(false);
   const [resending, setResending] = useState(false);
+
+  // One status line shared by both actions, since only the most recent outcome
+  // is worth showing and two stacked messages would contradict each other.
   const [status, setStatus] = useState<string | null>(null);
 
+  // Falls back to wording that still reads correctly in the sentences below,
+  // rather than printing an empty gap where the address should be.
   const email = user?.email ?? "your email";
 
-  // Runs when "I have verified" is pressed. Asks Firebase again. If the email is
-  // now verified the app opens on its own; if not, the user is asked to try again.
+  // Verification happens in the user's inbox, outside the app, so there is
+  // nothing to listen for. This re-asks Firebase on demand: the user says they
+  // have clicked the link, and the app checks rather than takes their word.
+  //
+  // Nothing here navigates. A verified result re-renders RootNavigator, which
+  // swaps this screen for the app, the same one-way-in rule login follows.
   async function handleCheckVerified() {
     setStatus(null);
     setChecking(true);
@@ -42,8 +64,9 @@ export function VerifyEmailScreen() {
     }
   }
 
-  // Runs when "Resend link" is pressed. Sends the email again and tells them
-  // where to look for it.
+  // Resends the link. The confirmation names the address and mentions spam,
+  // because a link that arrived but was filtered looks identical to one that
+  // never sent, and that is the most common reason people get stuck here.
   async function handleResend() {
     setStatus(null);
     setResending(true);
@@ -77,12 +100,15 @@ export function VerifyEmailScreen() {
           check your spam or junk folder.
         </Text>
 
+        {/* The outcome of whichever action ran last. */}
         {status ? (
           <Text style={[styles.status, { color: colors.ink }]} testID="verify-status">
             {status}
           </Text>
         ) : null}
 
+        {/* The main action, styled ahead of Resend, since re-checking is what
+            most people are here to do. */}
         <View style={styles.action}>
           <Button onPress={handleCheckVerified} disabled={checking}>
             {checking ? "Checking..." : "I have verified"}
@@ -114,6 +140,10 @@ export function VerifyEmailScreen() {
   );
 }
 
+// The page frame, the wordmark, the headings, the status line, the two stacked
+// actions and the footer link. The content is centred rather than top-aligned,
+// since this screen is short and has nothing to scroll. Colours are applied
+// above, so all of this follows the dark/light toggle.
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   content: {

@@ -1,13 +1,8 @@
-// Fuel module screen. It shows the meal filters (eat in or out, budget, prep
-// time, and distance), asks the recommendation engine for matches, then shows
-// one result card at a time with Accept and a single Reroll. Accept saves the
-// choice to history and goes back home. Fuel uses the amber module colour, taken
-// from the active theme; the whole screen wears the Arcade glass look (ambient
-// background, glass result card, mono on the coded bits) and follows the
-// dark/light toggle.
+// Fuel module screen. Meal filters (eat in or out, budget, prep time, distance)
+// go to the recommendation engine, which returns matches shown one card at a
+// time with Accept and a single Reroll. Accept saves to history and goes home.
 //
-// Styling only: the filter state, the recommendation call, the one-reroll cap,
-// and the accept-to-history wiring are exactly as written; only the look changed.
+// Amber, since this is a Fuel screen and the colour is scoped to it.
 
 import React, { useCallback, useRef, useState } from "react";
 import * as Crypto from "expo-crypto";
@@ -619,7 +614,7 @@ export function FuelScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* US34. Sits under Accept rather than after it, so it is read
+            {/* Sits under Accept rather than after it, so it is read
                 before the copy is made and not as an announcement afterwards. */}
             <DataNotice>
               Accepting saves this to your history and copies it to your account, so it is there
@@ -736,7 +731,7 @@ export function FuelScreen() {
           <Text style={styles.actionButtonText}>Decide for Me</Text>
         </TouchableOpacity>
 
-        {/* US34. Only on Eat Out, because Eat In never leaves the phone, and a
+        {/* Only on Eat Out, because Eat In never leaves the phone, and a
             notice shown where nothing is collected teaches people the notices
             mean nothing. */}
         {mealType === "out" && (

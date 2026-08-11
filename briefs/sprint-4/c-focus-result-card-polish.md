@@ -19,7 +19,7 @@ I first fixed that by sizing the row together, so all three shrank as one. It wa
 **Why those two words.** The design already does this. Its prototype puts the long word on the filter and a single short word on the result chip:
 
 ```js
-// docs/design-system/ui_kits/app/ScreensFuelFocus.jsx, line 138
+// From the design system prototype, ScreensFuelFocus.jsx, line 138
 { value: vibe==='Collaborative' ? 'Quiet' : 'Silent', label:'Vibe' }
 ```
 

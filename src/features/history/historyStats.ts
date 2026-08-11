@@ -1,19 +1,15 @@
-// Pure aggregations over the decision history, the numbers the History dashboard
-// shows: this-week count, reroll rate, the most active time of day, per-module
-// counts, and a seven-day bar series. They are plain functions of a decision
-// list (and, where time matters, an explicit "now"), so they never read the
-// clock during render and are trivial to unit test.
-//
-// These are the canonical definitions of "this week", "reroll rate" and so on.
-// When Bikash's dashboard backend (US27) produces an aggregated summary, it
-// should return these same field names so there is one definition, not two (see
-// briefs/sprint-3/gamification-data-shape-for-dashboard.md).
+// Pure aggregations over the decision history, and the canonical definitions of
+// "this week", "reroll rate" and the rest. Every one is a plain function of a
+// decision list plus an explicit "now", so none reads the clock during render.
 
+// The record shape these aggregate over, and its module field.
 import type { DecisionModuleType, DecisionRecord } from "@/features/history/historyStorage";
 
+// The two windows every figure below is measured against.
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
 
+// How many decisions each module accounts for.
 export type ModuleCounts = Record<DecisionModuleType, number>;
 
 // One bar in the seven-day chart: a weekday letter, how many decisions fell on
@@ -26,6 +22,7 @@ export type DayBar = {
   isToday: boolean;
 };
 
+// Everything the dashboard shows, computed in one pass.
 export type HistoryStats = {
   weekCount: number;
   allTime: number;
@@ -39,6 +36,7 @@ export type HistoryStats = {
   weekBars: DayBar[];
 };
 
+// Indexed by getDay(), which counts from Sunday.
 const WEEKDAY_LETTER = ["S", "M", "T", "W", "T", "F", "S"] as const;
 
 // Parses an ISO timestamp to epoch millis, or null if it is unusable, so a single
@@ -55,7 +53,8 @@ function hourLabel(hour: number): string {
   return `${h12}${period}`;
 }
 
-// Same calendar day as `now`.
+// Same calendar day as `now`. Compared field by field rather than by subtracting
+// millis, so it follows the local calendar rather than a fixed 24-hour window.
 function isSameDay(t: number, now: number): boolean {
   const a = new Date(t);
   const b = new Date(now);
@@ -66,6 +65,9 @@ function isSameDay(t: number, now: number): boolean {
   );
 }
 
+// Walks the history once, filling every figure the dashboard needs. One pass
+// rather than one per statistic, since the list grows with the user's whole use
+// of the app.
 export function computeHistoryStats(decisions: DecisionRecord[], now: number): HistoryStats {
   const weekAgo = now - WEEK_MS;
 
@@ -131,16 +133,12 @@ export function computeHistoryStats(decisions: DecisionRecord[], now: number): H
 }
 
 // How long the average decision took, in seconds, or null when nothing can be
-// measured. Not shown on any screen itself; it is the measured half of the
-// saved-time figure below, and is exported separately so US27's dashboard can
-// report the raw decide time without recomputing it. Only decisions that recorded a start are counted, which is why this
-// returns null rather than 0: no data and "instant" are different answers, and
-// showing 0s for the second would be a claim the app cannot support.
+// measured. null rather than 0, because no data and "instant" are different
+// answers and 0s would be a claim the app cannot support.
 //
-// Decisions saved before started_at existed have none, and are skipped rather
-// than guessed at. A negative or absurd gap is skipped too: those can only come
-// from the device clock moving between the two stamps, and one bad row would
-// otherwise drag the average somewhere meaningless.
+// Rows with no start stamp are skipped rather than guessed at, as are negative
+// or absurd gaps: those come from the device clock moving between the two
+// stamps, and one bad row would drag the average somewhere meaningless.
 export function averageDecideSeconds(decisions: DecisionRecord[]): number | null {
   const gaps: number[] = [];
 
@@ -163,13 +161,13 @@ const MAX_PLAUSIBLE_DECISION_MS = 60 * 60 * 1000;
 // one number here that is not measured, and everything about the saved-time
 // figure rests on it, so it lives alone with its reasoning attached.
 //
-// It is deliberately conservative. The Sem 1 survey (21 respondents) found 38%
+// It is deliberately conservative. The project survey (21 respondents) found 38%
 // spend more than 20 minutes deliberating before acting, but that is a threshold
 // for a minority rather than an average, and it covers decisions in general.
-// This app competes for micro-decisions, which research.md's own context-of-use
-// section puts at "seconds to a few minutes". Eight minutes sits well under the
-// survey figure on purpose: the claim understates, which is the safe direction
-// for a number the app makes about itself.
+// This app competes for micro-decisions, which take seconds to a few minutes.
+// Eight minutes sits well under the survey figure on purpose: the claim
+// understates, which is the safe direction for a number the app makes about
+// itself.
 //
 // Change it here and nowhere else. The basis is written down in the Terms of use
 // screen and in briefs/sprint-4/settings-home-and-priority-history.md, and both
