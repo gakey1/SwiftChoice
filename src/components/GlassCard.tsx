@@ -1,6 +1,9 @@
 // The card surface from the Arcade mockup. The name is historical: this was a
 // real BlurView, now an opaque fill on both platforms.
-// Do not add the blur back, and see docs/cheatsheet-android-rendering.md for why.
+//
+// Do not add the blur back. Blurring on Android needs a target view to snapshot,
+// and every way that plumbing fails renders a plain white card without raising
+// anything, so the suite stays green while the card is visibly wrong.
 
 import { StyleSheet, View } from "react-native";
 import type { StyleProp, ViewStyle } from "react-native";

@@ -57,7 +57,7 @@ Write it as a person would say it out loud. "Cheap, quick, and close to you" bea
 
 ### Reroll states
 
-The prototype has four things none of which exist yet. Reference image is at `docs/design/reference/reroll-states-prototype.png`.
+The prototype has four things none of which exist yet. Ask me for the reference image.
 
 1. A dot indicator showing how many rerolls are left.
 2. Back to the previous pick.

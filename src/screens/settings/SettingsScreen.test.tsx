@@ -115,7 +115,7 @@ describe("SettingsScreen", () => {
   });
 
   it("opens the data and privacy screen from Your data", async () => {
-    // US34 asks for the collection notices to be reachable in one place, not
+    // The collection notices have to be reachable in one place, not
     // only scattered next to the controls that cause them.
     render(
       <ThemeProvider>

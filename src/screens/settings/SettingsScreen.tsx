@@ -178,10 +178,10 @@ export function SettingsScreen() {
     }
   }
 
-  // Clears what this app has stored on the phone (US31). Deliberately worded to
+  // Clears what this app has stored on the phone. Deliberately worded to
   // say "on this phone", because accepted decisions are also mirrored to the
   // cloud and that copy survives this. Claiming more than we delete is the one
-  // thing a privacy action must not do. Deleting everything is US33.
+  // thing a privacy action must not do. Deleting the account goes further.
   async function handleClearLocalData(): Promise<void> {
     Alert.alert(
       "Clear Local Data?",
@@ -423,7 +423,7 @@ export function SettingsScreen() {
             are one tap apart in meaning and worlds apart in consequence, so they
             are deliberately not in the same group. It routes to its own screen
             rather than opening a confirmation here: it needs a password, and the
-            list of what goes is too long to read inside an alert (US33). */}
+            list of what goes is too long to read inside an alert. */}
         <Text style={[styles.sectionLabel, { color: colors.ink2 }]}>DANGER ZONE</Text>
         <View style={[styles.card, cardStyle]}>
           <SettingRow

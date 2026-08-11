@@ -152,7 +152,7 @@ let seeding: Promise<void> | null = null;
 // Fills an empty pool with the starting spots.
 //
 // Empty is the only trigger, which is right today because nothing in the app can
-// delete a spot yet. Once US12 adds that, someone clearing the pool on purpose
+// delete a spot yet. Once deleting one is possible, someone clearing the pool on purpose
 // would find it refilled on the next read, so this needs a flag recording that
 // the seed has run rather than inferring it from the row count.
 export async function seedFocusPoolIfEmpty(): Promise<void> {

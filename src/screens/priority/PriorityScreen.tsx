@@ -40,7 +40,7 @@ import { isPriorityTieBreakEnabled } from "@/features/priority/priorityAI";
 import { rankTasksWithAI } from "@/features/priority/priorityAIRanking";
 import { loadTaskBoard, saveTaskBoard } from "@/services/localdb/taskStorage";
 // ---------------------------------------------------------------------------
-// The decision logic (US22-24): the task shape and the actions that change it.
+// The decision logic: the task shape and the actions that change it.
 // ---------------------------------------------------------------------------
 
 export interface Task {

@@ -431,7 +431,7 @@ export function FocusScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* US34. Sits under Accept rather than after it, so it is read before
+          {/* Sits under Accept rather than after it, so it is read before
               the copy is made and not as an announcement afterwards. */}
           <DataNotice>
             Accepting saves this to your history and copies it to your account, so it is there
@@ -518,7 +518,7 @@ export function FocusScreen() {
           </Text>
         </TouchableOpacity>
 
-        {/* US34. Every recommendation, not only outdoor ones: the check runs
+        {/* Every recommendation, not only outdoor ones: the check runs
             each time, and what changes is whether the answer is worth showing. */}
         <DataNotice>
           Checks the weather where you are, so we can say if you need a jacket or an umbrella.

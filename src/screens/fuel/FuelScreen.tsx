@@ -614,7 +614,7 @@ export function FuelScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* US34. Sits under Accept rather than after it, so it is read
+            {/* Sits under Accept rather than after it, so it is read
                 before the copy is made and not as an announcement afterwards. */}
             <DataNotice>
               Accepting saves this to your history and copies it to your account, so it is there
@@ -731,7 +731,7 @@ export function FuelScreen() {
           <Text style={styles.actionButtonText}>Decide for Me</Text>
         </TouchableOpacity>
 
-        {/* US34. Only on Eat Out, because Eat In never leaves the phone, and a
+        {/* Only on Eat Out, because Eat In never leaves the phone, and a
             notice shown where nothing is collected teaches people the notices
             mean nothing. */}
         {mealType === "out" && (
