@@ -92,11 +92,34 @@ to a study spot.
 Allow it when the phone asks. If you decline, Fuel will ask you to type an area
 instead, and Focus will simply not show the weather line.
 
-An emulator has no location of its own until you give it one. On the iOS
-Simulator, use **Features, Location, Apple** or **Custom Location**. On Android,
-open Google Maps on the emulator and tap the my-location button first, then set
-a position from the emulator's own location controls. Setting a position while
-the emulator's GPS is not running has no effect.
+### Set the emulator's location first
+
+A simulator or emulator has no real position. Both default to somewhere in the
+United States, so if you skip this step Fuel will find you restaurants in
+California and Focus will report Californian weather. The app is working
+correctly when that happens, it is just being told it is in the wrong country.
+
+Set a position before you open Fuel or Focus. Melbourne CBD is
+**-37.8136, 144.9631**.
+
+**iOS Simulator.** With the simulator focused, go to **Features, Location,
+Custom Location**, enter the latitude and longitude above, then press OK. The
+default here is **Apple**, which is Cupertino in California.
+
+**Android emulator.** Click the **three dots** on the emulator's side toolbar to
+open Extended controls, choose **Location**, type the latitude and longitude
+into the two boxes, then click **Set location**. The default here is Mountain
+View, also in California.
+
+On Android there is one extra step that catches people out. The emulator only
+accepts a position while its GPS is actually running, and nothing starts it on
+its own. If the location does not take, open **Google Maps** on the emulator and
+tap the my-location button first, then set the position again. Android also
+forgets the position every time the emulator restarts, so it needs setting
+again after a cold boot.
+
+Once a position is set, open the app within a few minutes. The app caches a
+recent position for five minutes and will not go looking for a new one.
 
 ## What you should see
 
@@ -161,6 +184,10 @@ the project root, next to `package.json`, and restart with `npx expo start -c`.
 bundler cache with `npx expo start -c`.
 
 **"We could not get your location".** The simulator or emulator has no position
-set. See **Allowing location** above.
+set, or Android has forgotten it after a restart. See **Set the emulator's
+location first** above.
+
+**Fuel suggests restaurants in California.** The emulator is still on its
+default US position. Set a location as above, then reopen Fuel.
 
 For anything else, see the Troubleshooting section in `README.md`.
